@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',    
     'allauth.socialaccount.providers.github',    
     "corsheaders",
+    'drf_yasg',
+
 ]
 
 INSTALLED_APPS += [
