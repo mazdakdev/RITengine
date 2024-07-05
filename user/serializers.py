@@ -1,14 +1,20 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework import serializers, exceptions
-from dj_rest_auth.registration.serializers import RegisterSerializer    
+from dj_rest_auth.registration.serializers import RegisterSerializer
 from dj_rest_auth.serializers import LoginSerializer
 from allauth.account.adapter import get_adapter
+from .utils import generate_otp, send_otp_email
+from rest_framework.response import Response
+from rest_framework import status
+from django.utils import timezone
+from datetime import timedelta
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
 class CustomRegisterSerializer(RegisterSerializer):
     username = None
-
     class Meta:
         model = get_user_model()
         fields = [
@@ -27,10 +33,15 @@ class CustomRegisterSerializer(RegisterSerializer):
         adapter = get_adapter()
         user = adapter.new_user(request)
         self.cleaned_data = self.get_cleaned_data()
+        otp = generate_otp()
+        send_otp_email(user.email , otp)
+        user.otp = otp
+        print(otp)
+        user.otp_expiry_time = timezone.now() + timedelta(minutes=30)
         user.save()
         adapter.save_user(request, user, self)
-        return user
 
+        return user
 
 
 class CustomLoginSerializer(LoginSerializer):
@@ -40,3 +51,7 @@ class CustomLoginSerializer(LoginSerializer):
         return authenticate(self.context["request"], **options)
 
    
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['pk', 'email'] 

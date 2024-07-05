@@ -2,7 +2,16 @@ from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView, RegisterView
 from .serializers import CustomRegisterSerializer, CustomLoginSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 from dj_rest_auth.views import LoginView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.views import APIView
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from .serializers import UserSerializer
+
+User = get_user_model()
 
 class GitHubLogin(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
@@ -10,7 +19,48 @@ class GitHubLogin(SocialLoginView):
     client_class = OAuth2Client
 
 class CustomRegisterView(RegisterView):
-    serializer_class = CustomRegisterSerializer
+    def post(self, request, *args, **kwargs):
+        serializer = CustomRegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save(request)
+            return Response({'message': 'Verification code sent successfully.'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CustomLoginView(LoginView):
     serializer_class = CustomLoginSerializer
+
+class VerifyOTP(APIView):
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        otp = request.data.get('otp')
+                
+        if email and otp:
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            stored_otp = user.otp
+            otp_expiry_time = user.otp_expiry_time
+            current_time = timezone.now()
+
+            if otp_expiry_time < current_time:
+                return Response({"error": "OTP has expired"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if str(otp) == str(stored_otp):
+                user.otp = None
+                user.save()
+                refresh = RefreshToken.for_user(user)
+                access_token = refresh.access_token
+                user_serializer = UserSerializer(user)
+
+                return Response({
+                    "refresh":str(refresh),
+                    "access":str(access_token),
+                    "user":user_serializer.data
+                }, status=status.HTTP_200_OK)
+
+            else:
+                return Response({"error": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({"error": "Email and OTP are required"}, status=status.HTTP_400_BAD_REQUEST)

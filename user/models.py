@@ -20,6 +20,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    otp = models.CharField(max_length=6, blank=True, null=True)
+    otp_expiry_time = models.DateTimeField(blank=True, null=True)
 
     objects = UserManager()
 

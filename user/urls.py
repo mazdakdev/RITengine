@@ -7,5 +7,6 @@ from dj_rest_auth.views import LoginView
 urlpatterns = [
     path('register/', CustomRegisterView.as_view(), name='rest_register'),
     path('login/', CustomLoginView.as_view(), name='rest_login'),
-    path('github/', GitHubLogin.as_view(), name='github_login')
+    path('github/', GitHubLogin.as_view(), name='github_login'),
+    path('verify-otp/', VerifyOTP.as_view(), name='verify-otp'),
 ]
