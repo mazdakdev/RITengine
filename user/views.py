@@ -1,7 +1,7 @@
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView, RegisterView
-from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiExample
+from drf_spectacular.utils import extend_schema , inline_serializer
 from .serializers import *
 from rest_framework_simplejwt.tokens import RefreshToken
 from dj_rest_auth.views import LoginView
@@ -11,6 +11,11 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .serializers import UserSerializer
+from .api_docs import (
+    CustomLoginResponseSerializer, 
+    GithubReqSerializer, 
+    CustomRegisterResponseSerializer
+)
 
 
 User = get_user_model()
@@ -26,11 +31,9 @@ CustomLoginResponseSerializer = inline_serializer(
 
 
 @extend_schema(
-    request=inline_serializer(name="GithubReqSerializer", fields={
-        'code': serializers.CharField()
-    }),
+    request=GithubReqSerializer,
     responses={200: CustomLoginResponseSerializer},
-    description="Github's oauth",
+    description="Github's Oauth"
 )
 class GitHubLogin(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
@@ -40,12 +43,7 @@ class GitHubLogin(SocialLoginView):
 
 @extend_schema(
     request=CustomRegisterSerializer,
-    responses={200: inline_serializer(
-            name='CustomRegisterResponse',
-            fields={
-                'message': serializers.CharField(default="Verification code sent successfully."),
-            }
-        )}
+    responses={200: CustomRegisterResponseSerializer}
 )
 class CustomRegisterView(RegisterView):
     def post(self, request, *args, **kwargs):
@@ -57,8 +55,8 @@ class CustomRegisterView(RegisterView):
 
 
 @extend_schema(
-    request=CustomLoginSerializer,
-    responses={200: CustomLoginResponseSerializer}
+    request=CustomRegisterSerializer,
+    responses={200: CustomRegisterResponseSerializer}
 )
 class CustomLoginView(LoginView):
     serializer_class = CustomLoginSerializer
