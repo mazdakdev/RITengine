@@ -14,16 +14,17 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class CustomRegisterSerializer(RegisterSerializer):
-    username = None
     class Meta:
         model = get_user_model()
         fields = [
-            "email"
+            "username",
+            "email",
             "password",
         ]
 
     def get_cleaned_data(self):
         return {
+            "username": self.validated_data.get("username", ""),
             "email": self.validated_data.get("email", ""),
             "password1": self.validated_data.get("password1", ""),
             "password2": self.validated_data.get("password2", ""),
@@ -45,8 +46,6 @@ class CustomRegisterSerializer(RegisterSerializer):
 
 
 class CustomLoginSerializer(LoginSerializer):
-    username = None
-
     def authenticate(self, **options):
         return authenticate(self.context["request"], **options)
 
@@ -54,13 +53,13 @@ class CustomLoginSerializer(LoginSerializer):
 class CustomLoginResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['pk', 'email'] 
+        fields = ['pk', 'email', "username"] 
 
    
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['pk', 'email'] 
+        fields = ['pk', 'email', 'username']  #TODO: must add all the fields
 
 class OTPSerializer(serializers.Serializer):
     otp = serializers.IntegerField()

@@ -147,11 +147,9 @@ SIMPLE_JWT = {
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = 'none'
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'RITengine ENDPOINTs',
@@ -194,7 +192,7 @@ USE_I18N = True
 USE_TZ = True
 
 REST_AUTH_REGISTER_SERIALIZER = 'user.serializers.CustomRegisterSerializer'
-REST_AUTH_LOGIN_SERIALIZER = 'user.serializers.CustomRegisterSerializer'
+REST_AUTH_LOGIN_SERIALIZER = 'user.serializers.CustomLoginSerializer'
 
 
 # Static files (CSS, JavaScript, Images)
