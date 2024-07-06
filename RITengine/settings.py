@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.github',    
     "corsheaders",
     'drf_spectacular',
+    'phonenumber_field',
 ]
 
 INSTALLED_APPS += [
@@ -193,7 +194,7 @@ USE_TZ = True
 
 REST_AUTH_REGISTER_SERIALIZER = 'user.serializers.CustomRegisterSerializer'
 REST_AUTH_LOGIN_SERIALIZER = 'user.serializers.CustomLoginSerializer'
-
+SOCIALACCOUNT_ADAPTER = 'user.adapters.CustomSocialAccountAdapter'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/

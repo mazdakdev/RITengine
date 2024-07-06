@@ -14,7 +14,7 @@ from django.utils import timezone
 from .serializers import UserSerializer
 from .permissions import IsOTPVerified
 from .api_docs import *
-
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -26,7 +26,6 @@ CustomLoginResponseSerializer = inline_serializer(
         'user': serializers.ListField(child=UserSerializer())
     }
 )
-
 
 @extend_schema(
     request=GithubReqSerializer,
@@ -119,3 +118,28 @@ class Profile(APIView):
         user = request.user
         user_serializer = UserSerializer(user)
         return Response(user_serializer.data, status=status.HTTP_200_OK)
+
+
+class ChangeUsername(APIView):
+    permission_classes = [IsAuthenticated, IsOTPVerified]
+    
+    def post(self, request, *args, **kwargs):
+        serializer = ChangeUsernameSerializer(data=request.data)
+        if serializer.is_valid():
+            new_username = serializer.validated_data['username']
+            user = request.user
+            user_serializer = UserSerializer(user)
+            try:
+                if user.username == new_username:
+                    return Response({"message": "new username is the same with the old one."}, status=status.HTTP_400_BAD_REQUEST)
+
+                if User.objects.filter(username=new_username).exists():
+                    return Response({"message": "Username already taken."}, status=status.HTTP_400_BAD_REQUEST)
+                 
+               
+                user.username = new_username
+                user.save()
+                return Response({"message": "Username changed successfully.", "user":user_serializer.data}, status=status.HTTP_200_OK)
+            except ObjectDoesNotExist:
+                return Response({"message": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import RegexValidator
 from django.db import models
 
@@ -33,7 +34,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     inv_code = models.CharField(max_length=17, blank=True, null=True)
     birthday = models.DateField(null=True, blank=True)
     role = models.CharField(max_length=50, blank=True, null=True)
-
+    image = models.ImageField(blank=True, null=True)
+    phone_number = PhoneNumberField(blank=True)
     otp = models.CharField(max_length=6, blank=True, null=True)
     is_otp_verified = models.BooleanField(default=False)
     otp_expiry_time = models.DateTimeField(blank=True, null=True)
@@ -51,7 +53,5 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return self.username
 
 #TODO: encrypt OTP
-#TODO: add phonenumber field
-#TODO: add Image field
-#TODO: username for OAUTH
+#TODO: TOTP
 #TODO: login through username *or email

@@ -64,3 +64,11 @@ class UserSerializer(serializers.ModelSerializer):
 class OTPSerializer(serializers.Serializer):
     otp = serializers.IntegerField()
     email = serializers.EmailField()
+
+class ChangeUsernameSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=50, required=True)
+
+    def validate_username(self, value):
+        if not value.isalnum(): #TODO: regex
+            raise serializers.ValidationError("Username must be alphanumeric.")
+        return value
