@@ -1,4 +1,5 @@
 from drf_spectacular.utils import inline_serializer
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes
 from rest_framework import serializers
 from .serializers import UserSerializer
 
@@ -13,7 +14,7 @@ CustomLoginResponseSerializer = inline_serializer(
 
 
 GithubReqSerializer = inline_serializer(name="GithubReqSerializer", fields={
-    'code': serializers.CharField()
+    'access_token': serializers.CharField()
 })
 
 CustomRegisterResponseSerializer = inline_serializer(
@@ -22,3 +23,12 @@ CustomRegisterResponseSerializer = inline_serializer(
         'message': serializers.CharField(default="Verification code sent successfully."),
     }
 )
+
+
+
+UserProfileParams = OpenApiParameter(
+                name='Authorization',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.HEADER,
+                description='Bearer token for authentication',
+            )

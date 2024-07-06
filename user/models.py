@@ -21,6 +21,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     otp = models.CharField(max_length=6, blank=True, null=True)
+    is_otp_verified = models.BooleanField(default=False)
     otp_expiry_time = models.DateTimeField(blank=True, null=True)
 
     objects = UserManager()
@@ -30,3 +31,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+#TODO: encrypt OTP

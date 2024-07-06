@@ -180,7 +180,6 @@ SOCIALACCOUNT_PROVIDERS = {
             'key': ''
         }
     },
-
 }
 
 # Internationalization

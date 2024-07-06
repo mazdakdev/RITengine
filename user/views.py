@@ -2,6 +2,7 @@ from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView, RegisterView
 from drf_spectacular.utils import extend_schema , inline_serializer
+from rest_framework.permissions import IsAuthenticated
 from .serializers import *
 from rest_framework_simplejwt.tokens import RefreshToken
 from dj_rest_auth.views import LoginView
@@ -11,11 +12,8 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .serializers import UserSerializer
-from .api_docs import (
-    CustomLoginResponseSerializer, 
-    GithubReqSerializer, 
-    CustomRegisterResponseSerializer
-)
+from .permissions import IsOTPVerified
+from .api_docs import *
 
 
 User = get_user_model()
@@ -39,6 +37,12 @@ class GitHubLogin(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
     callback_url = "https://127.0.0.1:3000/oath/callback/github"
     client_class = OAuth2Client
+
+    def process_login(self):
+        super().process_login()
+        self.request.user.is_otp_verified = True
+        self.request.user.save()
+
 
 
 @extend_schema(
@@ -86,6 +90,7 @@ class VerifyOTP(APIView):
             
             if str(otp) == str(stored_otp):
                 user.otp = None
+                user.is_otp_verified = True
                 user.save()
                 refresh = RefreshToken.for_user(user)
                 access_token = refresh.access_token
@@ -101,3 +106,16 @@ class VerifyOTP(APIView):
                 return Response({"error": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
         
         return Response({"error": "Email and OTP are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
+    responses={200: UserSerializer},
+    parameters=[UserProfileParams]
+)
+class Profile(APIView):
+    permission_classes = [IsAuthenticated, IsOTPVerified]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        user_serializer = UserSerializer(user)
+        return Response(user_serializer.data, status=status.HTTP_200_OK)

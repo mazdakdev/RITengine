@@ -9,4 +9,6 @@ urlpatterns = [
     path('login/', CustomLoginView.as_view(), name='rest_login'),
     path('github/', GitHubLogin.as_view(), name='github_login'),
     path('verify-otp/', VerifyOTP.as_view(), name='verify-otp'),
+    path('me/', Profile.as_view(), name='profile'),
+    path('accounts/', include('allauth.urls')),
 ]
