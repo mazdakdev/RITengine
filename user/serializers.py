@@ -50,8 +50,18 @@ class CustomLoginSerializer(LoginSerializer):
     def authenticate(self, **options):
         return authenticate(self.context["request"], **options)
 
+
+class CustomLoginResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['pk', 'email'] 
+
    
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['pk', 'email'] 
+
+class OTPSerializer(serializers.Serializer):
+    otp = serializers.IntegerField()
+    email = serializers.EmailField()
