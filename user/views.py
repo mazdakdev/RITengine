@@ -17,7 +17,6 @@ from .api_docs import *
 User = get_user_model()
 
 
-
 @extend_schema(
     request=GithubReqSerializer,
     responses={200: CustomLoginResponseSerializer},
@@ -32,7 +31,6 @@ class GitHubLoginView(SocialLoginView):
         super().process_login()
         self.request.user.is_otp_verified = True
         self.request.user.save()
-
 
 
 @extend_schema(
@@ -100,3 +98,25 @@ class VerifyOTPView(APIView):
                 return Response({"error": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
         
         return Response({"error": "Email and OTP are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetView(APIView):
+    def post(self, request):
+        serializer = PasswordResetSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.context['user']
+            otp = user.generate_otp()
+            return Response({'detail': 'OTP sent to email.'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetConfirmView(APIView):
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            new_password = serializer.validated_data['new_password']
+            user.set_password(new_password)
+            user.save()
+            return Response({'detail': 'Password has been reset.'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

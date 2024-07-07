@@ -10,6 +10,8 @@ urlpatterns = [
     path('github/', GitHubLoginView.as_view(), name='github_login'),
     path('verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
     path("me/", CustomUserDetailsView.as_view(), name="user_details"),
-    path("passowrd/change", PasswordChangeView.as_view(), name='rest_password_change'),
+    path("password/change/", PasswordChangeView.as_view(), name='rest_password_change'),
+    path("password/reset/", PasswordResetView.as_view(), name='rest_password_reset'),
+    path("password/reset/confirm/", PasswordResetConfirmView.as_view(), name='rest_password_reset_confirm'),
     path('accounts/', include('allauth.urls')),
 ]

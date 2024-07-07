@@ -46,6 +46,7 @@ class CustomLoginSerializer(LoginSerializer):
         password = attrs.get("password")
 
         if not username and not email: #TODO: Must add phonenumber too
+            #TODO: could be improved see L:82
             raise serializers.ValidationError("Either username or email must be set.")
 
         user = None
@@ -78,3 +79,46 @@ class OTPSerializer(serializers.Serializer):
     otp = serializers.IntegerField()
     email = serializers.EmailField()
 
+class PasswordResetSerializer(serializers.Serializer):
+    identifier = serializers.CharField()
+
+    def validate_identifier(self, value):
+        try:
+            user = User.objects.get(username=value)
+        except User.DoesNotExist:
+            try:
+                user = User.objects.get(email=value)
+            except User.DoesNotExist:
+                raise serializers.ValidationError("No user found with this identifier.")
+        
+        self.context['user'] = user
+        return value
+
+
+from rest_framework import serializers
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    identifier = serializers.CharField()
+    otp = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        identifier = attrs.get('identifier')
+        otp = attrs.get('otp')
+
+        try:
+            user = User.objects.get(username=identifier)
+        except User.DoesNotExist:
+            try:
+                user = User.objects.get(email=identifier)
+            except User.DoesNotExist:
+                raise serializers.ValidationError("No user found with this identifier.")
+        
+        if user.otp != otp:
+            raise serializers.ValidationError("Invalid OTP.")
+        
+        if timezone.now() > user.otp_expiry_time:
+            raise serializers.ValidationError("OTP has expired.")
+
+        attrs['user'] = user
+        return attrs
