@@ -4,7 +4,7 @@ from dj_rest_auth.registration.serializers import RegisterSerializer
 from dj_rest_auth.serializers import LoginSerializer
 from allauth.account.adapter import get_adapter
 from django.utils import timezone
-from datetime import timedelta
+from dj_rest_auth.serializers import UserDetailsSerializer
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -69,25 +69,12 @@ class CustomLoginSerializer(LoginSerializer):
        return super().authenticate(**options)
 
 
-class CustomLoginResponseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['pk', 'email', "username"] 
-
-   
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['pk', 'email', 'username']  #TODO: must add all the fields
+        fields = ['pk', 'email', 'username'] 
 
 class OTPSerializer(serializers.Serializer):
     otp = serializers.IntegerField()
     email = serializers.EmailField()
 
-class ChangeUsernameSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=50, required=True)
-
-    def validate_username(self, value):
-        if not value.isalnum(): #TODO: regex
-            raise serializers.ValidationError("Username must be alphanumeric.")
-        return value
