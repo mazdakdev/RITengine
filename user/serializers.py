@@ -1,12 +1,10 @@
 from django.conf import settings
-from django.contrib.auth import get_user_model, authenticate
-from rest_framework import serializers, exceptions
+from django.contrib.auth import authenticate
+from rest_framework import serializers
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from dj_rest_auth.serializers import LoginSerializer
 from allauth.account.adapter import get_adapter
 from .utils import generate_otp, send_otp_email
-from rest_framework.response import Response
-from rest_framework import status
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
@@ -35,7 +33,7 @@ class CustomRegisterSerializer(RegisterSerializer):
         user = adapter.new_user(request)
         self.cleaned_data = self.get_cleaned_data()
         otp = generate_otp()
-        send_otp_email(user.email , otp)
+        send_otp_email(user.email, otp)
         user.otp = otp
         print(otp)
         user.otp_expiry_time = timezone.now() + timedelta(minutes=30)
@@ -46,8 +44,36 @@ class CustomRegisterSerializer(RegisterSerializer):
 
 
 class CustomLoginSerializer(LoginSerializer):
+    username = serializers.CharField(required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        username = attrs.get("username")
+        email = attrs.get("email")
+        password = attrs.get("password")
+
+        if not username and not email: #TODO: Must add phonenumber too
+            raise serializers.ValidationError("Either username or email must be set.")
+
+        user = None
+
+        if email:
+            try:
+                user = User.objects.get(email=email)
+                username = user.username
+            except User.DoesNotExist:
+                raise serializers.ValidationError("Email address or Password is invalid.")
+
+        if username:
+            user = authenticate(request=self.context.get("request"), username=username, password=password)
+            if not user:
+                raise serializers.ValidationError("Invalid Credentials")
+
+        attrs['user'] = user
+        return attrs
+
     def authenticate(self, **options):
-        return authenticate(self.context["request"], **options)
+       return super().authenticate(**options)
 
 
 class CustomLoginResponseSerializer(serializers.ModelSerializer):
