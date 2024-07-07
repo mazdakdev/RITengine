@@ -1,10 +1,8 @@
-from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from dj_rest_auth.serializers import LoginSerializer
 from allauth.account.adapter import get_adapter
-from .utils import generate_otp, send_otp_email
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
@@ -32,12 +30,7 @@ class CustomRegisterSerializer(RegisterSerializer):
         adapter = get_adapter()
         user = adapter.new_user(request)
         self.cleaned_data = self.get_cleaned_data()
-        otp = generate_otp()
-        send_otp_email(user.email, otp)
-        user.otp = otp
-        print(otp)
-        user.otp_expiry_time = timezone.now() + timedelta(minutes=30)
-        user.save()
+        user.generate_otp()
         adapter.save_user(request, user, self)
 
         return user

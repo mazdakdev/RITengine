@@ -1,16 +1,23 @@
+from datetime import timedelta
+
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import RegexValidator
+from django.core.mail import send_mail
+from .utils import generate_random_numbers
+from django.conf import settings
 from django.db import models
+
 
 class UserManager(BaseUserManager):
     def create_user(self, username, email, password=None, **extra_fields):
         if not email:
             raise ValueError('The Email field must be set')
-        
+
         if not username:
             raise ValueError('The username field must be set')
-        
+
         email = self.normalize_email(email)
         user = self.model(username=username, email=email, **extra_fields)
         user.set_password(password)
@@ -21,6 +28,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(email, password, **extra_fields)
+
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username_regex = RegexValidator(
@@ -43,7 +51,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(auto_now=True)
 
-
     objects = UserManager()
 
     USERNAME_FIELD = 'username'
@@ -52,6 +59,18 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.username
 
+    def generate_otp(self):
+        otp = generate_random_numbers()
+        print(otp)  # DEBUG ONLY
+        self.otp = otp
+        self.otp_expiry_time = timezone.now() + timedelta(minutes=30)
+        self.save()
+
+        from_email = settings.EMAIL_HOST_USER
+        recipient_list = [self.email]
+        send_mail("OTP CODE", str(otp), from_email, recipient_list)
+
+
+
 #TODO: encrypt OTP
 #TODO: TOTP
-#TODO: login through username *or email

@@ -14,7 +14,6 @@ from django.utils import timezone
 from .serializers import UserSerializer
 from .permissions import IsOTPVerified
 from .api_docs import *
-from django.urls import reverse
 
 User = get_user_model()
 
