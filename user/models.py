@@ -1,14 +1,12 @@
 from datetime import timedelta
-
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import RegexValidator
 from django.core.mail import send_mail
-from .utils import generate_random_numbers
 from django.conf import settings
 from django.db import models
-
+import pyotp
 
 class UserManager(BaseUserManager):
     def create_user(self, username, email, password=None, **extra_fields):
@@ -33,7 +31,7 @@ class UserManager(BaseUserManager):
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username_regex = RegexValidator(
         regex=r'^(?!\d)[^\@]*$',
-        message="username mus't not start with numeric values nor contains @"
+        message="username must not start with numeric values nor contains @"
     )
     username = models.CharField(unique=True, max_length=15, validators=[username_regex])
     email = models.EmailField(unique=True)
@@ -48,6 +46,15 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_otp_verified = models.BooleanField(default=False)
     otp_expiry_time = models.DateTimeField(blank=True, null=True)
 
+    TWO_FA_CHOICES = [
+        ('email_otp', 'Email OTP'),
+        ('sms_otp', 'SMS OTP'),
+        ('google_auth', 'Google Authenticator'),
+    ]
+    two_fa_method = models.CharField(max_length=20, choices=TWO_FA_CHOICES,blank=True, null=True)
+    is_two_fa_enabled = models.BooleanField(default=False)
+    totp_key = models.CharField(max_length=32, blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(auto_now=True)
 
@@ -60,17 +67,17 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return self.username
 
     def generate_otp(self):
-        otp = generate_random_numbers()
-        print(otp)  # DEBUG ONLY
+        otp = pyotp.TOTP(pyotp.random_base32()).now()
         self.otp = otp
+        print(otp)
         self.otp_expiry_time = timezone.now() + timedelta(minutes=30)
         self.save()
 
-        from_email = settings.EMAIL_HOST_USER
-        recipient_list = [self.email]
-        send_mail("OTP CODE", str(otp), from_email, recipient_list)
+        return otp
 
+    def send_email(self, subject, message):
+        pass
 
+    def send_sms(self, message):
+        pass
 
-#TODO: encrypt OTP
-#TODO: TOTP
