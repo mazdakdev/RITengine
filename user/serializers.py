@@ -2,6 +2,9 @@ from allauth.account.adapter import get_adapter
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django_otp.plugins.otp_email.models import EmailDevice
+# from django_twilio.models import TwilioSMSDevice
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -37,11 +40,14 @@ class CustomLoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
     password = serializers.CharField(style={'input_type': 'password'})
+    otp = serializers.CharField(required=False, allow_blank=True) # for 2fa
+
 
     def validate(self, attrs):
         username = attrs.get("username")
         email = attrs.get("email")
         password = attrs.get("password")
+        otp = attrs.get("otp")
 
         if not username and not email:
             raise serializers.ValidationError("Either username or email must be set.")
@@ -60,18 +66,28 @@ class CustomLoginSerializer(serializers.Serializer):
             if not user:
                 raise serializers.ValidationError("Invalid Credentials")
 
-        if user and user_has_device(user):
-            # User has 2FA enabled, require 2FA code
-            if 'otp_code' not in attrs:
-                raise serializers.ValidationError("You must provide a 2FA code to log in.")
+            #2FA Verification
+            if user.preferred_2fa:
+                if not otp:  # OTP is required but not provided
+                    raise serializers.ValidationError("2FA token is required for this user.")
 
-            otp_code = attrs.get('otp_code')
+                # Retrieve the user's preferred 2FA method
+                preferred_2fa = user.preferred_2fa
 
-            # Verify 2FA code
-            totp_device = TOTPDevice.objects.get(user=user)
-            totp = pyotp.TOTP(totp_device.config_url.split('=')[1])  # Extract secret key from config_url
-            if not totp.verify(otp_code):
-                raise serializers.ValidationError("Invalid 2FA code")
+                if preferred_2fa == 'email':
+                    device = EmailDevice.objects.filter(user=user).first()
+                elif preferred_2fa == 'sms':
+                    # device = TwilioSMSDevice.objects.filter(user=user).first()
+                    pass
+                elif preferred_2fa == 'totp':
+                    device = TOTPDevice.objects.filter(user=user).first()
+                else:
+                    device = None
+
+                if device and device.verify_token(otp):
+                    attrs['user'] = user
+                else:
+                    raise serializers.ValidationError("Invalid 2FA token.")
 
         attrs['user'] = user
         return attrs
@@ -88,15 +104,6 @@ class UserSerializer(serializers.ModelSerializer):
 class OTPSerializer(serializers.Serializer):
     otp = serializers.IntegerField()
     email = serializers.EmailField()
-
-class TwoFAVerifySerializer(serializers.Serializer):
-    code = serializers.IntegerField()
-
-class TwoFASetupSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(required=False)
-    google_auth_secret = serializers.CharField(read_only=True)
-    method = serializers.ChoiceField(choices=['google_auth', 'sms', 'email'])
-
 
 class PasswordResetSerializer(serializers.Serializer):
     identifier = serializers.CharField()

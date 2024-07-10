@@ -1,5 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from phonenumber_field.modelfields import PhoneNumberField
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django_otp.plugins.otp_email.models import EmailDevice
 from django.core.validators import RegexValidator
 from django.core.mail import send_mail
 from django.db import models
@@ -41,7 +43,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     is_email_verified = models.BooleanField(default=False)
     otp_secret = models.CharField(max_length=32, blank=True, null=True)
-    is_2fa_enabled = models.BooleanField(default=False)
+    # twilio_device = models.OneToOneField(TwilioSMSDevice, null=True, blank=True, on_delete=models.SET_NULL)
+    email_device = models.OneToOneField(EmailDevice, null=True, blank=True, on_delete=models.SET_NULL)
+    totp_device = models.OneToOneField(TOTPDevice, null=True, blank=True, on_delete=models.SET_NULL)
+    preferred_2fa = models.CharField(max_length=20, choices=[
+        ('email', 'Email'),
+        ('sms', 'SMS'),
+        ('totp', 'TOTP'),
+    ], null=True, blank=True)
   
     created_at = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(auto_now=True)

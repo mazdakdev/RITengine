@@ -10,7 +10,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
-from django.utils import timezone
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django_otp.plugins.otp_email.models import EmailDevice
+from rest_framework.permissions import IsAuthenticated
 from .api_docs import *
 import pyotp
 
@@ -53,6 +55,23 @@ class CustomRegisterView(RegisterView):
 )
 class CustomLoginView(LoginView):
     serializer_class = CustomLoginSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+
+        user_serializer = UserSerializer(user)
+
+        return Response({
+            'access': str(access_token),
+            'refresh': str(refresh),
+            'user': user_serializer.data
+        }, status=status.HTTP_200_OK)
 
 
 class CustomUserDetailsView(UserDetailsView):
@@ -116,54 +135,63 @@ class PasswordResetConfirmView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class TwoFASetupView(APIView):
+class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated]
-
     def post(self, request):
-        serializer = TwoFASetupSerializer(data=request.data)
-        if serializer.is_valid():
-            method = serializer.validated_data.get('method')
-            user = request.user
+        user = request.user
+        method = request.data.get('method')
 
-            if not user.is_2fa_enabled:
+        if not user.preferred_2fa:
 
-                if method == 'google_auth' :
-                    secret = pyotp.random_base32()
-                    user.otp_secret = secret
-                    user.save()
-                    return Response({'google_auth_secret': secret}, status=status.HTTP_200_OK)
+            if method == 'email':
+                device = EmailDevice(user=request.user, confirmed=False)
+                otp_code = device.generate_challenge()
+                user.send_mail("2fa verification", otp_code)
 
-                elif method == 'sms':
-                    pass
-                    # phone_number = serializer.validated_data.get('phone_number')
-                    # # Store the phone number in the user profile (you need to add this field)
-                    # user.phone_number = phone_number
-                    # user.save()
-                    # # Send verification SMS using Twilio
-                    # client = Client('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN')
-                    # otp_code = pyotp.TOTP(user.otp_secret).now()
-                    # client.messages.create(body=f'Your OTP code is {otp_code}', from_='+1234567890', to=phone_number)
-                    # return Response({'message': 'SMS sent'}, status=status.HTTP_200_OK)
+            elif method == 'sms':
+                pass
+                # device = TwilioSMSDevice(user=request.user, confirmed=False)
+                # otp_code = device.generate_challenge()
+                # user.send_sms()
 
-                elif method == 'email':
-                    otp_code = pyotp.TOTP(user.otp_secret).now()
-                    user.send_mail('Your 2FA Code',
-                        f'Your 2FA code is {otp_code}')
-                  
-            return Response({'message': "User has already 2fa enabled"}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            elif method == 'totp':
+                device = TOTPDevice.objects.create(user=user, confirmed=False)
+                return Response({"provisioning_uri": device.config_url}, status=status.HTTP_200_OK)
+
+            else:
+                return Response({'message': 'Invalid method (you must provide a method).'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class TwoFAVerifyView(APIView):
-    def post(self, request):
-        serializer = TwoFAVerifySerializer(data=request.data)
-        if serializer.is_valid():
-            code = serializer.validated_data['code']
-            user = request.user
-            totp = pyotp.TOTP(user.otp_secret)
-            if totp.verify(code):
-                user.is_2fa_enabled = True
+            # return Response({'message': '2FA setup initiated. Please verify to complete.'}, status=status.HTTP_200_OK)
+
+        return Response({'message':'User has already 2fa enabled.'})
+
+
+class Verify2FASetupView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request, *args, **kwargs):
+        method = request.data.get('method')
+        otp_code = request.data.get('otp')
+        user = request.user
+
+        if method == 'email':
+            device = EmailDevice.objects.filter(user=request.user, confirmed=False).first()
+        elif method == 'sms':
+            # device = TwilioSMSDevice.objects.filter(user=request.user, confirmed=False).first()
+            pass
+        elif method == 'totp':
+            device = TOTPDevice.objects.filter(user=request.user, confirmed=False).first()
+        else:
+            return Response({'message': 'Invalid method.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if device:
+            if device.verify_token(otp_code):
+                device.confirmed = True
+                device.save()
+                user.preferred_2fa = method
                 user.save()
-                return Response({'message': '2FA verified'}, status=status.HTTP_200_OK)
-            return Response({'error': 'Invalid 2FA code'}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'message': '2FA setup completed.'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'message': 'Invalid OTP code.'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'message': 'Device not found.'}, status=status.HTTP_400_BAD_REQUEST)

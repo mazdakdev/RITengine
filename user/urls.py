@@ -14,6 +14,6 @@ urlpatterns = [
     path("password/reset/", PasswordResetView.as_view(), name='rest_password_reset'),
     path("password/reset/confirm/", PasswordResetConfirmView.as_view(), name='rest_password_reset_confirm'),
     path('accounts/', include('allauth.urls')),
-    path('2fa/setup/', TwoFASetupView.as_view(), name="two_fa_setup"),
-    path('2fa/verify/', TwoFAVerifyView.as_view(), name="two_fa_verify"),
+    path('2fa/enable/', Enable2FAView.as_view(), name="two_fa_enable"),
+    path('2fa/verify/', Verify2FASetupView.as_view(), name="two_fa_verify"),
 ]
