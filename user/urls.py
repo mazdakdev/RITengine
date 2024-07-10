@@ -2,11 +2,15 @@
 from django.contrib import admin
 from django.urls import path, include
 from .views import *
-from dj_rest_auth.views import LoginView, PasswordChangeView
+from dj_rest_auth.views import PasswordChangeView
+from dj_rest_auth.jwt_auth import get_refresh_view
+from rest_framework_simplejwt.views import TokenVerifyView
 
 urlpatterns = [
     path('register/', CustomRegisterView.as_view(), name='rest_register'),
     path('login/', CustomLoginView.as_view(), name='rest_login'),
+    path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('token/refresh/', get_refresh_view().as_view(), name='token_refresh'),
     path('github/', GitHubLoginView.as_view(), name='github_login'),
     path('register/complete/', CompleteRegistrationView.as_view(), name='register_complete'),
     path("me/", CustomUserDetailsView.as_view(), name="user_details"),
