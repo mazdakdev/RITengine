@@ -1,11 +1,9 @@
-from django.contrib.auth import authenticate
-from rest_framework import serializers
-from dj_rest_auth.registration.serializers import RegisterSerializer
-from dj_rest_auth.serializers import LoginSerializer
 from allauth.account.adapter import get_adapter
-from django.utils import timezone
-from dj_rest_auth.serializers import UserDetailsSerializer
+from dj_rest_auth.registration.serializers import RegisterSerializer
+from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from rest_framework import serializers
 
 User = get_user_model()
 
@@ -30,23 +28,22 @@ class CustomRegisterSerializer(RegisterSerializer):
         adapter = get_adapter()
         user = adapter.new_user(request)
         self.cleaned_data = self.get_cleaned_data()
-        user.generate_otp()
         adapter.save_user(request, user, self)
-
+        # a signal will be called to send the otp.
         return user
 
 
-class CustomLoginSerializer(LoginSerializer):
+class CustomLoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
+    password = serializers.CharField(style={'input_type': 'password'})
 
     def validate(self, attrs):
         username = attrs.get("username")
         email = attrs.get("email")
         password = attrs.get("password")
 
-        if not username and not email: #TODO: Must add phonenumber too
-            #TODO: could be improved see L:82
+        if not username and not email:
             raise serializers.ValidationError("Either username or email must be set.")
 
         user = None
@@ -62,6 +59,19 @@ class CustomLoginSerializer(LoginSerializer):
             user = authenticate(request=self.context.get("request"), username=username, password=password)
             if not user:
                 raise serializers.ValidationError("Invalid Credentials")
+
+        if user and user_has_device(user):
+            # User has 2FA enabled, require 2FA code
+            if 'otp_code' not in attrs:
+                raise serializers.ValidationError("You must provide a 2FA code to log in.")
+
+            otp_code = attrs.get('otp_code')
+
+            # Verify 2FA code
+            totp_device = TOTPDevice.objects.get(user=user)
+            totp = pyotp.TOTP(totp_device.config_url.split('=')[1])  # Extract secret key from config_url
+            if not totp.verify(otp_code):
+                raise serializers.ValidationError("Invalid 2FA code")
 
         attrs['user'] = user
         return attrs
@@ -79,6 +89,15 @@ class OTPSerializer(serializers.Serializer):
     otp = serializers.IntegerField()
     email = serializers.EmailField()
 
+class TwoFAVerifySerializer(serializers.Serializer):
+    code = serializers.IntegerField()
+
+class TwoFASetupSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(required=False)
+    google_auth_secret = serializers.CharField(read_only=True)
+    method = serializers.ChoiceField(choices=['google_auth', 'sms', 'email'])
+
+
 class PasswordResetSerializer(serializers.Serializer):
     identifier = serializers.CharField()
 
@@ -93,9 +112,6 @@ class PasswordResetSerializer(serializers.Serializer):
         
         self.context['user'] = user
         return value
-
-
-from rest_framework import serializers
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     identifier = serializers.CharField()

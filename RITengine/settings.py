@@ -52,6 +52,10 @@ INSTALLED_APPS = [
     "corsheaders",
     'drf_spectacular',
     'phonenumber_field',
+    'django_otp',
+    'django_otp.plugins.otp_email',
+    'django_otp.plugins.otp_totp',
+    'django_twilio',
 ]
 
 INSTALLED_APPS += [
@@ -179,6 +183,16 @@ SOCIALACCOUNT_PROVIDERS = {
             'key': ''
         }
     },
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://localhost:6379/0",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
 }
 
 # Internationalization

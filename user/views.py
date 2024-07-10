@@ -11,9 +11,9 @@ from rest_framework import status
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from .permissions import IsOTPVerified
 from .api_docs import *
 import pyotp
+
 
 User = get_user_model()
 
@@ -56,51 +56,44 @@ class CustomLoginView(LoginView):
 
 
 class CustomUserDetailsView(UserDetailsView):
-    permission_classes = [IsAuthenticated, IsOTPVerified]
+    permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
 
-
-@extend_schema(
-    request=OTPSerializer,
-    responses={200: CustomLoginResponseSerializer}
-)
-class VerifyOTPView(APIView):
-    def post(self, request, *args, **kwargs):
-        email = request.data.get('email')
-        otp = request.data.get('otp')
-
-        if email and otp:
+class CompleteRegistrationView(APIView):
+    def post(self, request):
+        serializer = OTPSerializer(data=request.data)
+        if serializer.is_valid():
+            otp_code = serializer.validated_data['otp']
+            email = serializer.validated_data['email']
             try:
                 user = User.objects.get(email=email)
+
+                if not user.is_email_verified:
+                    if user.otp_secret:
+                        totp = pyotp.TOTP(user.otp_secret, interval=300)
+
+                        if totp.verify(otp_code):
+                            user.is_email_verified = True
+                            user.save()
+                            refresh = RefreshToken.for_user(user)
+                            access_token = refresh.access_token
+                            user_serializer = UserSerializer(user)
+
+                            return Response({
+                                'message': 'Email verified.',
+                                'access': str(access_token),
+                                'refresh': str(refresh),
+                                'user': user_serializer.data
+                            }, status=status.HTTP_200_OK)
+                        else:
+                            return Response({'message': 'Invalid OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        return Response({'message': 'User OTP Secret not found.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'message': "User's email has already been verified."})
             except User.DoesNotExist:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'message': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            stored_otp = user.otp
-            otp_expiry_time = user.otp_expiry_time
-            current_time = timezone.now()
-
-            if otp_expiry_time < current_time:
-                return Response({"error": "OTP has expired"}, status=status.HTTP_400_BAD_REQUEST)
-
-            if str(otp) == str(stored_otp):
-                user.otp = None
-                user.is_otp_verified = True
-                user.save()
-                refresh = RefreshToken.for_user(user)
-                access_token = refresh.access_token
-                user_serializer = UserSerializer(user)
-
-                return Response({
-                    "refresh": str(refresh),
-                    "access": str(access_token),
-                    "user": user_serializer.data
-                }, status=status.HTTP_200_OK)
-
-            else:
-                return Response({"error": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({"error": "Email and OTP are required"}, status=status.HTTP_400_BAD_REQUEST)
-
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class PasswordResetView(APIView):
     def post(request):
@@ -110,7 +103,6 @@ class PasswordResetView(APIView):
             otp = user.generate_otp()
             return Response({'detail': 'OTP sent to email.'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class PasswordResetConfirmView(APIView):
     def post(request):
@@ -124,18 +116,54 @@ class PasswordResetConfirmView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class TwoFaSetupView(APIView):
-    permission_classes = [IsAuthenticated, IsOTPVerified]
+class TwoFASetupView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-       user = request.user
-       
-       if not user.totp_key or user.two_fa_method != "google_auth":
-            user.two_fa_method = "google_auth"
-            user.totp_key = pyotp.random_base32()
-            user.save()
-        
-       totp = pyotp.TOTP(user.totp_key)
-       qr_code_url = totp.provisioning_uri(user.email, issuer_name="RITengine")
-    
-       return Response({'qr_code_url': qr_code_url})
+    def post(self, request):
+        serializer = TwoFASetupSerializer(data=request.data)
+        if serializer.is_valid():
+            method = serializer.validated_data.get('method')
+            user = request.user
+
+            if not user.is_2fa_enabled:
+
+                if method == 'google_auth' :
+                    secret = pyotp.random_base32()
+                    user.otp_secret = secret
+                    user.save()
+                    return Response({'google_auth_secret': secret}, status=status.HTTP_200_OK)
+
+                elif method == 'sms':
+                    pass
+                    # phone_number = serializer.validated_data.get('phone_number')
+                    # # Store the phone number in the user profile (you need to add this field)
+                    # user.phone_number = phone_number
+                    # user.save()
+                    # # Send verification SMS using Twilio
+                    # client = Client('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN')
+                    # otp_code = pyotp.TOTP(user.otp_secret).now()
+                    # client.messages.create(body=f'Your OTP code is {otp_code}', from_='+1234567890', to=phone_number)
+                    # return Response({'message': 'SMS sent'}, status=status.HTTP_200_OK)
+
+                elif method == 'email':
+                    otp_code = pyotp.TOTP(user.otp_secret).now()
+                    user.send_mail('Your 2FA Code',
+                        f'Your 2FA code is {otp_code}')
+                  
+            return Response({'message': "User has already 2fa enabled"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TwoFAVerifyView(APIView):
+    def post(self, request):
+        serializer = TwoFAVerifySerializer(data=request.data)
+        if serializer.is_valid():
+            code = serializer.validated_data['code']
+            user = request.user
+            totp = pyotp.TOTP(user.otp_secret)
+            if totp.verify(code):
+                user.is_2fa_enabled = True
+                user.save()
+                return Response({'message': '2FA verified'}, status=status.HTTP_200_OK)
+            return Response({'error': 'Invalid 2FA code'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
