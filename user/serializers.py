@@ -42,7 +42,6 @@ class CustomLoginSerializer(serializers.Serializer):
     password = serializers.CharField(style={'input_type': 'password'})
     otp = serializers.CharField(required=False, allow_blank=True) # for 2fa
 
-
     def validate(self, attrs):
         username = attrs.get("username")
         email = attrs.get("email")
@@ -67,20 +66,24 @@ class CustomLoginSerializer(serializers.Serializer):
                 raise serializers.ValidationError("Invalid Credentials")
 
             #2FA Verification
-            if user.preferred_2fa:
-                if not otp:  # OTP is required but not provided
+            preferred_2fa = user.preferred_2fa
+
+            if preferred_2fa:
+                if not otp and user.preferred_2fa == "totp":  # OTP is required but not provided
                     raise serializers.ValidationError("2FA token is required for this user.")
 
-                # Retrieve the user's preferred 2FA method
-                preferred_2fa = user.preferred_2fa
+                elif preferred_2fa == 'email' and not otp:
+                    raise serializers.ValidationError("2FA email otp is required for this user (you must request it).")
 
-                if preferred_2fa == 'email':
-                    device = EmailDevice.objects.filter(user=user).first()
                 elif preferred_2fa == 'sms':
-                    # device = TwilioSMSDevice.objects.filter(user=user).first()
                     pass
+
                 elif preferred_2fa == 'totp':
                     device = TOTPDevice.objects.filter(user=user).first()
+
+                elif preferred_2fa == "email":
+                    device = EmailDevice.objects.filter(user=user).first()
+
                 else:
                     device = None
 

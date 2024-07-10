@@ -32,7 +32,7 @@ class GitHubLoginView(SocialLoginView):
 
     def process_login(self):
         super().process_login()
-        self.request.user.is_otp_verified = True
+        self.request.user.is_email_verified = True
         self.request.user.save()
 
 
@@ -134,6 +134,19 @@ class PasswordResetConfirmView(APIView):
             return Response({'detail': 'Password has been reset.'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class Request2FAView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if not user.preferred_2fa:
+            return  Response({"message":"2fa is not enabled for this user."}, status=status.HTTP_400_BAD_REQUEST)
+        if user.preferred_2fa == "email":
+            device = EmailDevice.objects.filter(user=user).first()
+            device.generate_challenge()
+            return Response({"message":"email sent"})
+        elif user.preferred_2fa == "phone":
+            pass
 
 class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated]
@@ -145,8 +158,9 @@ class Enable2FAView(APIView):
 
             if method == 'email':
                 device = EmailDevice(user=request.user, confirmed=False)
-                otp_code = device.generate_challenge()
-                user.send_mail("2fa verification", otp_code)
+                device.generate_challenge()
+                # user.send_mail("2fa verification", otp_code)
+                return Response({'message': 'Email sent.'}, status=status.HTTP_200_OK)
 
             elif method == 'sms':
                 pass
@@ -195,3 +209,10 @@ class Verify2FASetupView(APIView):
                 return Response({'message': 'Invalid OTP code.'}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({'message': 'Device not found.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+#TODO: Password RESET --> if user has 2fa ---> proceed with 2fa ---> if not ---> an otp confirmation
+#TODO: Twilio
+#TODO: other social auths
+#TODO: check 2fa for oauth based users
+#TODO: identifier
