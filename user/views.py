@@ -15,6 +15,7 @@ from django_otp.plugins.otp_email.models import EmailDevice
 from rest_framework.permissions import IsAuthenticated
 from .api_docs import *
 import pyotp
+from .utils import generate_otp
 
 
 User = get_user_model()
@@ -113,19 +114,9 @@ class CompleteRegistrationView(APIView):
                 return Response({'message': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class PasswordResetView(APIView):
-    def post(request):
+    def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.context['user']
-            otp = user.generate_otp()
-            return Response({'detail': 'OTP sent to email.'}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class PasswordResetConfirmView(APIView):
-    def post(request):
-        serializer = PasswordResetConfirmSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
             new_password = serializer.validated_data['new_password']
@@ -140,13 +131,30 @@ class Request2FAView(APIView):
     def post(self, request):
         user = request.user
         if not user.preferred_2fa:
-            return  Response({"message":"2fa is not enabled for this user."}, status=status.HTTP_400_BAD_REQUEST)
+            return  Response({"message":"User has not any 2fa method enable."}, status=status.HTTP_200_OK)
+
         if user.preferred_2fa == "email":
             device = EmailDevice.objects.filter(user=user).first()
             device.generate_challenge()
             return Response({"message":"email sent"})
         elif user.preferred_2fa == "phone":
             pass
+
+        elif user.preferred_2fa == "totp":
+            return Response({"message": "No need to request 2fa for this user. (totp)"})
+
+class RequestOTPView(APIView):
+    def post(self, request):
+        serializer = OTPRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            user = User.objects.filter(email=email).first()
+            otp, secret = generate_otp()
+            user.send_mail("otp", otp.now())
+            user.otp_secret = secret
+            user.save()
+            return Response("otp was send")
+        return  Response("error")
 
 class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated]
@@ -211,13 +219,14 @@ class Verify2FASetupView(APIView):
             return Response({'message': 'Device not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+#TODO: disable normal login for oauth based users (HIGH-PRIORITY)
+#TODO: other social auths (HIGH-PRIORITY)
+#TODO: Docs (HIGH-PRIORITY)
+#TODO: better responses (HIGH-PRIORITY)
+#TODO: password change 2fa or otp (HIGH-PRIORITY)
 
-#TODO: Password RESET --> if user has 2fa ---> proceed with 2fa ---> if not ---> an otp confirmation
-#TODO: check 2fa for oauth based users
-#TODO: Twilio
-#TODO: other social auths
-#TODO: Bug in otp send in complete
-#TODO: backup codes
-#TODO: change 2fa method
-#TODO: Docs
-#TODO: users with oauth should only be logged in using their previous method
+# -------------------
+
+#TODO: Twilio (LOW-PRIORITY)
+#TODO: backup codes (LOW-PRIORITY)
+#TODO: change 2fa method (LOW-PRIORITY)
