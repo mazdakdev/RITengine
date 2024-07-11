@@ -211,8 +211,13 @@ class Verify2FASetupView(APIView):
             return Response({'message': 'Device not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+
 #TODO: Password RESET --> if user has 2fa ---> proceed with 2fa ---> if not ---> an otp confirmation
+#TODO: check 2fa for oauth based users
 #TODO: Twilio
 #TODO: other social auths
-#TODO: check 2fa for oauth based users
-#TODO: identifier
+#TODO: Bug in otp send in complete
+#TODO: backup codes
+#TODO: change 2fa method
+#TODO: Docs
+#TODO: users with oauth should only be logged in using their previous method

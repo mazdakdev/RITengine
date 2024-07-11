@@ -37,35 +37,36 @@ class CustomRegisterSerializer(RegisterSerializer):
 
 
 class CustomLoginSerializer(serializers.Serializer):
-    username = serializers.CharField(required=False, allow_blank=True)
-    email = serializers.EmailField(required=False, allow_blank=True)
+    identifier = serializers.CharField()
     password = serializers.CharField(style={'input_type': 'password'})
-    otp = serializers.CharField(required=False, allow_blank=True) # for 2fa
+    otp = serializers.CharField(required=False, allow_blank=True) #for 2fa
 
     def validate(self, attrs):
-        username = attrs.get("username")
-        email = attrs.get("email")
+        identifier = attrs.get("identifier")
         password = attrs.get("password")
         otp = attrs.get("otp")
 
-        if not username and not email:
-            raise serializers.ValidationError("Either username or email must be set.")
+        if not identifier:
+            raise serializers.ValidationError("Identifier must be set.")
 
         user = None
 
-        if email:
+        try:
+            user = User.objects.get(username=identifier)
+            username = user.username
+        except User.DoesNotExist:
             try:
-                user = User.objects.get(email=email)
+                user = User.objects.get(email=identifier)
                 username = user.username
             except User.DoesNotExist:
-                raise serializers.ValidationError("Email address or Password is invalid.")
+                raise serializers.ValidationError("No user found with this identifier.")
 
         if username:
             user = authenticate(request=self.context.get("request"), username=username, password=password)
             if not user:
                 raise serializers.ValidationError("Invalid Credentials")
 
-            #2FA Verification
+            # 2FA Verification
             preferred_2fa = user.preferred_2fa
 
             if preferred_2fa:
