@@ -1,21 +1,23 @@
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
-from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
-from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth import get_user_model
-import random
-import string
+from django.core.exceptions import ValidationError
+
 
 User = get_user_model()
 
 class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
     def populate_user(self, request, sociallogin, data):
+        if not data.get('email'):
+            raise ValidationError("Email is required to continue registration and nothing was provided by the provider.")
+
         user = sociallogin.user
         user.email = data.get('email')
-        user.first_name = data.get('name').split()[0]
-        user.last_name = data.get('name').split()[-1]
-
-        # Generate a username
         user.username = self.generate_unique_username(user.email)
+
+        if data.get('name'):
+            user.fname = data.get('name').split()[0]
+            user.lname = data.get('name').split()[-1]
+
         return user
 
     #TODO: this approach must be changed
