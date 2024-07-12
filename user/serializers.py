@@ -150,5 +150,27 @@ class PasswordResetSerializer(serializers.Serializer):
             else:
                 raise serializers.ValidationError("Invalid 2FA token.")
 
-class OTPRequestSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+
+class Request2FASerializer(serializers.Serializer):
+    identifier = serializers.CharField()
+
+    def validate(self, attrs):
+        identifier = attrs.get("identifier")
+
+        if not identifier:
+            raise serializers.ValidationError("Identifier must be set.")
+
+        try:
+            user = User.objects.get(username=identifier)
+            username = user.username
+
+        except User.DoesNotExist:
+            try:
+                user = User.objects.get(email=identifier)
+                username = user.username
+
+            except User.DoesNotExist:
+                raise serializers.ValidationError("No user found with this identifier.")
+
+        attrs["user"] = user
+        return attrs

@@ -20,5 +20,4 @@ urlpatterns = [
     path('2fa/enable/', Enable2FAView.as_view(), name="two_fa_enable"),
     path('2fa/verify/', Verify2FASetupView.as_view(), name="two_fa_verify"),
     path('2fa/request/', Request2FAView.as_view(), name="two_fa_request"),
-    path('otp/request/', RequestOTPView.as_view(), name="otp_request"),
 ]

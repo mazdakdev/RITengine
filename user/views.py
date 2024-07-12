@@ -126,35 +126,28 @@ class PasswordResetView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class Request2FAView(APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request):
-        user = request.user
-        if not user.preferred_2fa:
-            return  Response({"message":"User has not any 2fa method enable."}, status=status.HTTP_200_OK)
-
-        if user.preferred_2fa == "email":
-            device = EmailDevice.objects.filter(user=user).first()
-            device.generate_challenge()
-            return Response({"message":"email sent"})
-        elif user.preferred_2fa == "phone":
-            pass
-
-        elif user.preferred_2fa == "totp":
-            return Response({"message": "No need to request 2fa for this user. (totp)"})
-
-class RequestOTPView(APIView):
-    def post(self, request):
-        serializer = OTPRequestSerializer(data=request.data)
+        serializer = Request2FASerializer(data=request.data)
         if serializer.is_valid():
-            email = serializer.validated_data['email']
-            user = User.objects.filter(email=email).first()
-            otp, secret = generate_otp()
-            user.send_mail("otp", otp.now())
-            user.otp_secret = secret
-            user.save()
-            return Response("otp was send")
-        return  Response("error")
+            user = serializer.validated_data['user']
+            if not user.preferred_2fa:
+                otp, secret = generate_otp()
+                user.send_mail("otp", otp.now())
+                user.otp_secret = secret
+                user.save()
+                return Response("otp was send")
+
+            if user.preferred_2fa == "email":
+                device = EmailDevice.objects.filter(user=user).first()
+                device.generate_challenge()
+                return Response({"message":"email sent"})
+
+            elif user.preferred_2fa == "phone":
+                pass
+
+            elif user.preferred_2fa == "totp":
+                return Response({"message": "No need to request 2fa for this user. (totp)"})
+
 
 class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated]
