@@ -1,7 +1,7 @@
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView, RegisterView
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiParameter, OpenApiTypes
 from rest_framework.permissions import IsAuthenticated
 from .serializers import *
 from dj_rest_auth.views import LoginView, UserDetailsView
@@ -12,19 +12,18 @@ from django.contrib.auth import get_user_model
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_email.models import EmailDevice
 from rest_framework.permissions import IsAuthenticated
-from .api_docs import *
 import pyotp
 from .utils import generate_otp, get_jwt_token
 from .permissions import IsNotOAuthUser
-from datetime import datetime
+
 
 User = get_user_model()
 
-
 @extend_schema(
-    request=GithubReqSerializer,
-    responses={200: CustomLoginResponseSerializer},
-    description="Github's Oauth"
+    request=inline_serializer(name="GithubReqSerializer", fields={
+        'access_token': serializers.CharField()
+    }),
+    description="Github's Oauth",
 )
 class GitHubLoginView(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
@@ -40,7 +39,6 @@ class GitHubLoginView(SocialLoginView):
 
 @extend_schema(
     request=CustomRegisterSerializer,
-    responses={200: CustomRegisterResponseSerializer}
 )
 class CustomRegisterView(RegisterView):
     def post(self, request, *args, **kwargs):
@@ -60,8 +58,7 @@ class CustomRegisterView(RegisterView):
 
 
 @extend_schema(
-    request=CustomRegisterSerializer,
-    responses={200: CustomLoginResponseSerializer}
+    request=CustomLoginSerializer,
 )
 class CustomLoginView(LoginView):
     serializer_class = CustomLoginSerializer
@@ -71,7 +68,7 @@ class CustomLoginView(LoginView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
 
-        access, refresh, access_exp, refresh_exp = get_jwt_token()
+        access, refresh, access_exp, refresh_exp = get_jwt_token(user)
         user_serializer = UserSerializer(user)
 
         return Response({
@@ -86,7 +83,17 @@ class CustomLoginView(LoginView):
             }
         }, status=status.HTTP_200_OK)
 
-
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            name='Authorization',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.HEADER,
+            description='Bearer token for authentication',
+            required=True,
+        ),
+        ],
+)
 class CustomUserDetailsView(UserDetailsView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
@@ -109,6 +116,9 @@ class CustomUserDetailsView(UserDetailsView):
             }, status=status.HTTP_403_FORBIDDEN)
         return super().partial_update(request, *args, **kwargs)
 
+@extend_schema(
+    request=OTPSerializer,
+)
 class CompleteRegistrationView(APIView):
     def post(self, request):
         serializer = OTPSerializer(data=request.data)
@@ -125,7 +135,7 @@ class CompleteRegistrationView(APIView):
                         if totp.verify(otp_code):
                             user.is_email_verified = True
                             user.save()
-                            access, refresh, access_exp, refresh_exp = get_jwt_token()
+                            access, refresh, access_exp, refresh_exp = get_jwt_token(user)
                             access_token = refresh.access_token
                             user_serializer = UserSerializer(user)
 
@@ -174,7 +184,9 @@ class CompleteRegistrationView(APIView):
             'error_code': 'error-serializer-validation'
         }, status=status.HTTP_400_BAD_REQUEST)
 
-
+@extend_schema(
+    request=PasswordResetSerializer,
+)
 class PasswordResetView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     def post(self, request):
@@ -196,6 +208,18 @@ class PasswordResetView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    request=PasswordChangeSerializer,
+    parameters=[
+        OpenApiParameter(
+            name='Authorization',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.HEADER,
+            description='Bearer token for authentication',
+            required=True,
+        ),
+    ],
+ )
 class PasswordChangeView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     def post(self, request, *args, **kwargs):
@@ -217,7 +241,9 @@ class PasswordChangeView(APIView):
             'error_code': 'error-serializer-validation'
         }, status=status.HTTP_400_BAD_REQUEST)
 
-
+@extend_schema(
+    request=Request2FASerializer,
+ )
 class Request2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     def post(self, request):
@@ -259,105 +285,144 @@ class Request2FAView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    request=Enable2FASerializer,
+    parameters=[
+        OpenApiParameter(
+            name='Authorization',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.HEADER,
+            description='Bearer token for authentication',
+            required=True,
+        ),
+    ],
+ )
 class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
 
     def post(self, request):
         user = request.user
-        method = request.data.get('method')
+        serializer = Enable2FASerializer(data=request.data)
 
-        if not user.preferred_2fa:
+        if serializer.is_valid():
+            method = serializer.validated_data['method']
 
-            if method == 'email':
-                device = EmailDevice(user=request.user, confirmed=False)
-                device.generate_challenge()
-                # user.send_mail("2fa verification", otp_code)
-                return Response({
-                    'status': 'success',
-                    'details': 'an E-mail has been sent to the User.',
-                }, status=status.HTTP_200_OK)
+            if not user.preferred_2fa:
 
-            elif method == 'sms':
-                pass
-                # device = TwilioSMSDevice(user=request.user, confirmed=False)
-                # otp_code = device.generate_challenge()
-                # user.send_sms()
+                if method == 'email':
+                    device = EmailDevice(user=request.user, confirmed=False)
+                    device.generate_challenge()
+                    # user.send_mail("2fa verification", otp_code)
+                    return Response({
+                        'status': 'success',
+                        'details': 'an E-mail has been sent to the User.',
+                    }, status=status.HTTP_200_OK)
 
-            elif method == 'totp':
-                device = TOTPDevice.objects.create(user=user, confirmed=False)
-                return Response({
-                    'status': 'success',
-                    'data':{
-                        "provisioning_uri": device.config_url
-                    }
+                elif method == 'sms':
+                    pass
+                    # device = TwilioSMSDevice(user=request.user, confirmed=False)
+                    # otp_code = device.generate_challenge()
+                    # user.send_sms()
 
-                }, status=status.HTTP_200_OK)
+                elif method == 'totp':
+                    device = TOTPDevice.objects.create(user=user, confirmed=False)
+                    return Response({
+                        'status': 'success',
+                        'data':{
+                            "provisioning_uri": device.config_url
+                        }
 
-            else:
-                return Response({
-                    'status': 'error',
-                    'details': 'Invalid or not provided method.',
-                    'error_code': 'error-invalid-2fa-method'
-                }, status=status.HTTP_400_BAD_REQUEST)
+                    }, status=status.HTTP_200_OK)
+
+                else:
+                    return Response({
+                        'status': 'error',
+                        'details': 'Invalid or not provided method.',
+                        'error_code': 'error-invalid-2fa-method'
+                    }, status=status.HTTP_400_BAD_REQUEST)
 
             # return Response({'message': '2FA setup initiated. Please verify to complete.'}, status=status.HTTP_200_OK)
 
+            return Response({
+                'status': 'error',
+                'details': 'User has already 2fa enabled.',
+                'error': 'error-2fa-already-enabled'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         return Response({
             'status': 'error',
-            'details': 'User has already 2fa enabled.',
-            'error': 'error-2fa-already-enabled'
+            'details': serializer.errors,
+            'error_code': 'error-serializer-validation'
         }, status=status.HTTP_400_BAD_REQUEST)
 
-
+@extend_schema(
+    request=Verify2FASerializer,
+    parameters=[
+        OpenApiParameter(
+            name='Authorization',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.HEADER,
+            description='Bearer token for authentication',
+            required=True,
+        ),
+    ],
+ )
 class Verify2FASetupView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
 
     def post(self, request, *args, **kwargs):
-        method = request.data.get('method')
-        otp_code = request.data.get('otp')
-        user = request.user
+        serializer = Verify2FASerializer(data=request.data)
+        if serializer.is_valid():
+            method = serializer.validated_data['method']
+            otp_code = serializer.validated_data['otp']
+            user = request.user
 
-        if method == 'email':
-            device = EmailDevice.objects.filter(user=request.user, confirmed=False).first()
-        elif method == 'sms':
-            # device = TwilioSMSDevice.objects.filter(user=request.user, confirmed=False).first()
-            pass
-        elif method == 'totp':
-            device = TOTPDevice.objects.filter(user=request.user, confirmed=False).first()
-        else:
-            return Response({
-                'status': 'error',
-                'details': 'Invalid method.',
-                'error_code': 'error-invalid-2fa-method'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        if device:
-            if device.verify_token(otp_code):
-                device.confirmed = True
-                device.save()
-                user.preferred_2fa = method
-                user.save()
-                return Response({
-                    'status': 'success',
-                    'details': '2FA setup completed.'
-                }, status=status.HTTP_200_OK)
+            if method == 'email':
+                device = EmailDevice.objects.filter(user=request.user, confirmed=False).first()
+            elif method == 'sms':
+                # device = TwilioSMSDevice.objects.filter(user=request.user, confirmed=False).first()
+                pass
+            elif method == 'totp':
+                device = TOTPDevice.objects.filter(user=request.user, confirmed=False).first()
             else:
                 return Response({
                     'status': 'error',
-                    'details': 'Invalid OTP code.',
-                    'error_code': 'error-invalid-otp'
+                    'details': 'Invalid method.',
+                    'error_code': 'error-invalid-2fa-method'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if device:
+                if device.verify_token(otp_code):
+                    device.confirmed = True
+                    device.save()
+                    user.preferred_2fa = method
+                    user.save()
+                    return Response({
+                        'status': 'success',
+                        'details': '2FA setup completed.'
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        'status': 'error',
+                        'details': 'Invalid OTP code.',
+                        'error_code': 'error-invalid-otp'
+
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({
+                    'status': 'error',
+                    'details': 'Device not found.',
+                    'error_code': 'error-2fa-device-404'
 
                 }, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({
-                'status': 'error',
-                'details': 'Device not found.',
-                'error_code': 'error-2fa-device-404'
 
-            }, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'status': 'error',
+            'details': serializer.errors,
+            'error_code': 'error-serializer-validation'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
-#TODO: Docs (HIGH-PRIORITY) .
 #TODO: other social auths (HIGH-PRIORITY)
 
 # -------------------
@@ -365,4 +430,3 @@ class Verify2FASetupView(APIView):
 #TODO: Twilio (LOW-PRIORITY)
 #TODO: backup codes (LOW-PRIORITY)
 #TODO: change 2fa method (LOW-PRIORITY)
-#TODO: Too many Duplicate code in serializers.py

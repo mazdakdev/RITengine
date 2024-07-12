@@ -216,3 +216,23 @@ class Request2FASerializer(serializers.Serializer):
 
             attrs["user"] = user
             return attrs
+
+class Enable2FASerializer(serializers.Serializer):
+    method = serializers.ChoiceField(
+        choices=[
+            ('email', 'email'),
+            ('totp', 'totp'),
+            ('phone', 'phone'),
+        ])
+
+
+class Verify2FASerializer(serializers.Serializer):
+    method = serializers.ChoiceField(
+        choices=[
+            ('email', 'email'),
+            ('totp', 'totp'),
+            ('phone', 'phone'),
+        ])
+    otp = serializers.CharField(max_length=6)
+
+#TODO: Reuse Duplicate Codes
