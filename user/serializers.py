@@ -150,6 +150,48 @@ class PasswordResetSerializer(serializers.Serializer):
             else:
                 raise serializers.ValidationError("Invalid 2FA token.")
 
+class PasswordChangeSerializer(serializers.Serializer):
+    otp = serializers.CharField(max_length=6)
+    new_password1 = serializers.CharField(write_only=True)
+    new_password2 = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        otp = attrs.get('otp')
+        new_password1 = attrs.get('new_password1')
+        new_password2 = attrs.get('new_password2')
+
+        if not otp:
+            raise serializers.ValidationError("OTP is required.")
+
+        if new_password1 != new_password2:
+            raise serializers.ValidationError("New passwords do not match.")
+
+        user = self.context['request'].user
+
+        if not user.preferred_2fa:
+            totp = pyotp.TOTP(user.otp_secret, interval=300)
+            if totp.verify(otp):
+                return attrs
+            else:
+                raise serializers.ValidationError("Invalid or expired OTP.")
+
+        else:
+            if user.preferred_2fa == "email":
+                device = EmailDevice.objects.filter(user=user).first()
+
+            elif user.preferred_2fa == "totp":
+                device = TOTPDevice.objects.filter(user=user).first()
+
+            elif user.preferred_2fa == "phone":
+                pass
+
+            if device and device.verify_token(otp):
+               return attrs
+
+            else:
+                raise serializers.ValidationError("Invalid 2FA token.")
+
+
 
 class Request2FASerializer(serializers.Serializer):
     identifier = serializers.CharField()
@@ -160,17 +202,17 @@ class Request2FASerializer(serializers.Serializer):
         if not identifier:
             raise serializers.ValidationError("Identifier must be set.")
 
-        try:
-            user = User.objects.get(username=identifier)
-            username = user.username
+        else:
 
-        except User.DoesNotExist:
             try:
-                user = User.objects.get(email=identifier)
-                username = user.username
+                user = User.objects.get(username=identifier)
 
             except User.DoesNotExist:
-                raise serializers.ValidationError("No user found with this identifier.")
+                try:
+                    user = User.objects.get(email=identifier)
 
-        attrs["user"] = user
-        return attrs
+                except User.DoesNotExist:
+                    raise serializers.ValidationError("No user found with this identifier.")
+
+            attrs["user"] = user
+            return attrs

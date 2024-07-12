@@ -2,7 +2,6 @@
 from django.contrib import admin
 from django.urls import path, include
 from .views import *
-from dj_rest_auth.views import PasswordChangeView
 from dj_rest_auth.jwt_auth import get_refresh_view
 from rest_framework_simplejwt.views import TokenVerifyView
 

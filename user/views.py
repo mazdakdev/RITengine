@@ -16,7 +16,7 @@ from rest_framework.permissions import IsAuthenticated
 from .api_docs import *
 import pyotp
 from .utils import generate_otp
-
+from dj_rest_auth.views import PasswordChangeView
 
 User = get_user_model()
 
@@ -79,6 +79,7 @@ class CustomUserDetailsView(UserDetailsView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
 
+
 class CompleteRegistrationView(APIView):
     def post(self, request):
         serializer = OTPSerializer(data=request.data)
@@ -114,6 +115,8 @@ class CompleteRegistrationView(APIView):
                 return Response({'message': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class PasswordResetView(APIView):
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
@@ -125,6 +128,21 @@ class PasswordResetView(APIView):
             return Response({'detail': 'Password has been reset.'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class PasswordChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request, *args, **kwargs):
+
+        serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            new_password = serializer.validated_data['new_password1']
+            user = request.user
+            user.set_password(new_password)
+            user.save()
+            return Response({'detail': 'Password has been changed.'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class Request2FAView(APIView):
     def post(self, request):
         serializer = Request2FASerializer(data=request.data)
@@ -135,22 +153,24 @@ class Request2FAView(APIView):
                 user.send_mail("otp", otp.now())
                 user.otp_secret = secret
                 user.save()
-                return Response("otp was send")
+                return Response({"message": "otp was sent"})
 
             if user.preferred_2fa == "email":
                 device = EmailDevice.objects.filter(user=user).first()
                 device.generate_challenge()
-                return Response({"message":"email sent"})
+                return Response({"message": "email sent"})
 
             elif user.preferred_2fa == "phone":
                 pass
 
             elif user.preferred_2fa == "totp":
                 return Response({"message": "No need to request 2fa for this user. (totp)"})
+        return Response({"message": serializer.errors})
 
 
 class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated]
+
     def post(self, request):
         user = request.user
         method = request.data.get('method')
@@ -174,16 +194,17 @@ class Enable2FAView(APIView):
                 return Response({"provisioning_uri": device.config_url}, status=status.HTTP_200_OK)
 
             else:
-                return Response({'message': 'Invalid method (you must provide a method).'}, status=status.HTTP_400_BAD_REQUEST)
-
+                return Response({'message': 'Invalid method (you must provide a method).'},
+                                status=status.HTTP_400_BAD_REQUEST)
 
             # return Response({'message': '2FA setup initiated. Please verify to complete.'}, status=status.HTTP_200_OK)
 
-        return Response({'message':'User has already 2fa enabled.'})
+        return Response({'message': 'User has already 2fa enabled.'})
 
 
 class Verify2FASetupView(APIView):
     permission_classes = [IsAuthenticated]
+
     def post(self, request, *args, **kwargs):
         method = request.data.get('method')
         otp_code = request.data.get('otp')
@@ -211,12 +232,10 @@ class Verify2FASetupView(APIView):
         else:
             return Response({'message': 'Device not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
-
 #TODO: disable normal login for oauth based users (HIGH-PRIORITY)
 #TODO: other social auths (HIGH-PRIORITY)
 #TODO: Docs (HIGH-PRIORITY)
 #TODO: better responses (HIGH-PRIORITY)
-#TODO: password change 2fa or otp (HIGH-PRIORITY)
 
 # -------------------
 
