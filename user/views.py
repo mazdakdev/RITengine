@@ -4,7 +4,6 @@ from dj_rest_auth.registration.views import SocialLoginView, RegisterView
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework.permissions import IsAuthenticated
 from .serializers import *
-from rest_framework_simplejwt.tokens import RefreshToken
 from dj_rest_auth.views import LoginView, UserDetailsView
 from rest_framework.response import Response
 from rest_framework import status
@@ -15,8 +14,9 @@ from django_otp.plugins.otp_email.models import EmailDevice
 from rest_framework.permissions import IsAuthenticated
 from .api_docs import *
 import pyotp
-from .utils import generate_otp
+from .utils import generate_otp, get_jwt_token
 from .permissions import IsNotOAuthUser
+from datetime import datetime
 
 User = get_user_model()
 
@@ -47,8 +47,16 @@ class CustomRegisterView(RegisterView):
         serializer = CustomRegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save(request)
-            return Response({'message': 'Verification code sent successfully.'}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'status': "success",
+                'details': 'Verification code sent successfully.'
+
+            }, status=status.HTTP_200_OK)
+        return Response({
+            'status': 'error',
+            'details': {serializer.errors},
+            'error_code': "error-serializer-validation"
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @extend_schema(
@@ -63,16 +71,19 @@ class CustomLoginView(LoginView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
 
-        # Generate JWT tokens
-        refresh = RefreshToken.for_user(user)
-        access_token = refresh.access_token
-
+        access, refresh, access_exp, refresh_exp = get_jwt_token()
         user_serializer = UserSerializer(user)
 
         return Response({
-            'access': str(access_token),
-            'refresh': str(refresh),
-            'user': user_serializer.data
+            'status': "success",
+            'data': {
+                'access': str(access),
+                'refresh': str(refresh),
+                'access_expiration': access_exp,
+                'refresh_expiration': refresh_exp,
+                'user': user_serializer.data,
+
+            }
         }, status=status.HTTP_200_OK)
 
 
@@ -82,12 +93,20 @@ class CustomUserDetailsView(UserDetailsView):
 
     def update(self, request, *args, **kwargs):
         if request.user.is_oauth_based:
-            return Response({'detail': 'Method "PUT" not allowed for OAuth-based users.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({
+                'status': 'error',
+                'details': 'Method "PUT" not allowed for OAuth-based users.',
+                'error_code': 'error-oauth-restricted'
+            }, status=status.HTTP_403_FORBIDDEN)
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
         if request.user.is_oauth_based:
-            return Response({'detail': 'Method "PATCH" not allowed for OAuth-based users.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({
+                'status': 'error',
+                'details': 'Method "PATCH" not allowed for OAuth-based users.',
+                'error_code': 'error-oauth-restricted'
+            }, status=status.HTTP_403_FORBIDDEN)
         return super().partial_update(request, *args, **kwargs)
 
 class CompleteRegistrationView(APIView):
@@ -106,25 +125,54 @@ class CompleteRegistrationView(APIView):
                         if totp.verify(otp_code):
                             user.is_email_verified = True
                             user.save()
-                            refresh = RefreshToken.for_user(user)
+                            access, refresh, access_exp, refresh_exp = get_jwt_token()
                             access_token = refresh.access_token
                             user_serializer = UserSerializer(user)
 
                             return Response({
-                                'message': 'Email verified.',
-                                'access': str(access_token),
-                                'refresh': str(refresh),
-                                'user': user_serializer.data
-                            }, status=status.HTTP_200_OK)
-                        else:
-                            return Response({'message': 'Invalid OTP.'}, status=status.HTTP_400_BAD_REQUEST)
-                    else:
-                        return Response({'message': 'User OTP Secret not found.'}, status=status.HTTP_400_BAD_REQUEST)
-                return Response({'message': "User's email has already been verified."})
-            except User.DoesNotExist:
-                return Response({'message': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
+                                'status': "success",
+                                'data': {
+                                    'access': str(access),
+                                    'refresh': str(refresh),
+                                    'access_expiration': access_exp,
+                                    'refresh_expiration': refresh_exp,
+                                    'user': user_serializer.data,
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                }
+                            }, status=status.HTTP_200_OK)
+
+                        else:
+                            return Response({
+                                'status': 'error',
+                                'details': 'Invalid OTP.',
+                                'error_code': 'error-invalid-otp',
+                            }, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        return Response({
+                            'status': 'error',
+                            'details': 'User OTP Secret not found.',
+                            'error_code': 'error-otp-secret-404'
+                        }, status=status.HTTP_400_BAD_REQUEST)
+
+                return Response({
+                    'status': 'error',
+                    'details': "User's email has already been verified.",
+                    'error_code': 'error-user-already-verified'
+                })
+
+            except User.DoesNotExist:
+                return Response({
+                    'status': 'success',
+                    'details': 'Invalid email.',
+                    'error_code': 'error-user-not-found'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'status': 'error',
+            'details': serializer.errors,
+            'error_code': 'error-serializer-validation'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PasswordResetView(APIView):
@@ -136,8 +184,16 @@ class PasswordResetView(APIView):
             new_password = serializer.validated_data['new_password']
             user.set_password(new_password)
             user.save()
-            return Response({'detail': 'Password has been reset.'}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'status': 'success',
+                'details': 'Password has been reset.'
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            'status': 'error',
+            'details': serializer.errors,
+            'error_code': 'error-serializer-validation'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PasswordChangeView(APIView):
@@ -150,8 +206,16 @@ class PasswordChangeView(APIView):
             user = request.user
             user.set_password(new_password)
             user.save()
-            return Response({'detail': 'Password has been changed.'}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'status': 'success',
+                'details': 'Password has been changed.'
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            'status': 'error',
+            'details': serializer.errors,
+            'error_code': 'error-serializer-validation'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class Request2FAView(APIView):
@@ -165,19 +229,34 @@ class Request2FAView(APIView):
                 user.send_mail("otp", otp.now())
                 user.otp_secret = secret
                 user.save()
-                return Response({"message": "otp was sent"})
+                return Response({
+                    'status': 'success',
+                    "details": "an otp has been sent successfully to the user."
+                })
 
             if user.preferred_2fa == "email":
                 device = EmailDevice.objects.filter(user=user).first()
                 device.generate_challenge()
-                return Response({"message": "email sent"})
+                return Response({
+                    'status': 'success',
+                    "message": "an E-mail has been sent successfully to the user."
+                })
 
             elif user.preferred_2fa == "phone":
                 pass
 
             elif user.preferred_2fa == "totp":
-                return Response({"message": "No need to request 2fa for this user. (totp)"})
-        return Response({"message": serializer.errors})
+                return Response({
+                    'status': 'error',
+                    "details": "No need to request 2FA for this user (CHECK THE AUTHENTICATOR APP).",
+                    'error_code': "error_2fa_request_totp"
+                })
+
+        return Response({
+            'status': 'error',
+            'details': serializer.errors,
+            'error_code': 'error-serializer-validation'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class Enable2FAView(APIView):
@@ -193,7 +272,10 @@ class Enable2FAView(APIView):
                 device = EmailDevice(user=request.user, confirmed=False)
                 device.generate_challenge()
                 # user.send_mail("2fa verification", otp_code)
-                return Response({'message': 'Email sent.'}, status=status.HTTP_200_OK)
+                return Response({
+                    'status': 'success',
+                    'details': 'an E-mail has been sent to the User.',
+                }, status=status.HTTP_200_OK)
 
             elif method == 'sms':
                 pass
@@ -203,15 +285,28 @@ class Enable2FAView(APIView):
 
             elif method == 'totp':
                 device = TOTPDevice.objects.create(user=user, confirmed=False)
-                return Response({"provisioning_uri": device.config_url}, status=status.HTTP_200_OK)
+                return Response({
+                    'status': 'success',
+                    'data':{
+                        "provisioning_uri": device.config_url
+                    }
+
+                }, status=status.HTTP_200_OK)
 
             else:
-                return Response({'message': 'Invalid method (you must provide a method).'},
-                                status=status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    'status': 'error',
+                    'details': 'Invalid or not provided method.',
+                    'error_code': 'error-invalid-2fa-method'
+                }, status=status.HTTP_400_BAD_REQUEST)
 
             # return Response({'message': '2FA setup initiated. Please verify to complete.'}, status=status.HTTP_200_OK)
 
-        return Response({'message': 'User has already 2fa enabled.'})
+        return Response({
+            'status': 'error',
+            'details': 'User has already 2fa enabled.',
+            'error': 'error-2fa-already-enabled'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class Verify2FASetupView(APIView):
@@ -230,7 +325,11 @@ class Verify2FASetupView(APIView):
         elif method == 'totp':
             device = TOTPDevice.objects.filter(user=request.user, confirmed=False).first()
         else:
-            return Response({'message': 'Invalid method.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'status': 'error',
+                'details': 'Invalid method.',
+                'error_code': 'error-invalid-2fa-method'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         if device:
             if device.verify_token(otp_code):
@@ -238,14 +337,26 @@ class Verify2FASetupView(APIView):
                 device.save()
                 user.preferred_2fa = method
                 user.save()
-                return Response({'message': '2FA setup completed.'}, status=status.HTTP_200_OK)
+                return Response({
+                    'status': 'success',
+                    'details': '2FA setup completed.'
+                }, status=status.HTTP_200_OK)
             else:
-                return Response({'message': 'Invalid OTP code.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    'status': 'error',
+                    'details': 'Invalid OTP code.',
+                    'error_code': 'error-invalid-otp'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({'message': 'Device not found.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'status': 'error',
+                'details': 'Device not found.',
+                'error_code': 'error-2fa-device-404'
+
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
-#TODO: better responses (HIGH-PRIORITY).
 #TODO: Docs (HIGH-PRIORITY) .
 #TODO: other social auths (HIGH-PRIORITY)
 
