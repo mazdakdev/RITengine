@@ -16,7 +16,7 @@ from rest_framework.permissions import IsAuthenticated
 from .api_docs import *
 import pyotp
 from .utils import generate_otp
-from dj_rest_auth.views import PasswordChangeView
+from .permissions import IsNotOAuthUser
 
 User = get_user_model()
 
@@ -34,6 +34,7 @@ class GitHubLoginView(SocialLoginView):
     def process_login(self):
         super().process_login()
         self.request.user.is_email_verified = True
+        self.request.user.is_oauth_based = True
         self.request.user.save()
 
 
@@ -79,6 +80,15 @@ class CustomUserDetailsView(UserDetailsView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
 
+    def update(self, request, *args, **kwargs):
+        if request.user.is_oauth_based:
+            return Response({'detail': 'Method "PUT" not allowed for OAuth-based users.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        if request.user.is_oauth_based:
+            return Response({'detail': 'Method "PATCH" not allowed for OAuth-based users.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
 
 class CompleteRegistrationView(APIView):
     def post(self, request):
@@ -118,6 +128,7 @@ class CompleteRegistrationView(APIView):
 
 
 class PasswordResetView(APIView):
+    permission_classes = [IsAuthenticated, IsNotOAuthUser]
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
         if serializer.is_valid():
@@ -130,7 +141,7 @@ class PasswordResetView(APIView):
 
 
 class PasswordChangeView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsNotOAuthUser]
     def post(self, request, *args, **kwargs):
 
         serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
@@ -144,6 +155,7 @@ class PasswordChangeView(APIView):
 
 
 class Request2FAView(APIView):
+    permission_classes = [IsAuthenticated, IsNotOAuthUser]
     def post(self, request):
         serializer = Request2FASerializer(data=request.data)
         if serializer.is_valid():
@@ -169,7 +181,7 @@ class Request2FAView(APIView):
 
 
 class Enable2FAView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsNotOAuthUser]
 
     def post(self, request):
         user = request.user
@@ -203,7 +215,7 @@ class Enable2FAView(APIView):
 
 
 class Verify2FASetupView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsNotOAuthUser]
 
     def post(self, request, *args, **kwargs):
         method = request.data.get('method')
@@ -232,13 +244,14 @@ class Verify2FASetupView(APIView):
         else:
             return Response({'message': 'Device not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
-#TODO: disable normal login for oauth based users (HIGH-PRIORITY)
+
+#TODO: better responses (HIGH-PRIORITY).
+#TODO: Docs (HIGH-PRIORITY) .
 #TODO: other social auths (HIGH-PRIORITY)
-#TODO: Docs (HIGH-PRIORITY)
-#TODO: better responses (HIGH-PRIORITY)
 
 # -------------------
 
 #TODO: Twilio (LOW-PRIORITY)
 #TODO: backup codes (LOW-PRIORITY)
 #TODO: change 2fa method (LOW-PRIORITY)
+#TODO: Too many Duplicate code in serializers.py
