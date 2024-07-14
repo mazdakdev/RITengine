@@ -59,7 +59,8 @@ INSTALLED_APPS = [
 ]
 
 INSTALLED_APPS += [
-    "user"
+    "user",
+    "engine",
 ]
 
 SITE_ID = 1
@@ -214,3 +215,5 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+
+OPENAI_API_KEY = "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"
