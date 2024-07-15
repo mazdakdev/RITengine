@@ -88,6 +88,7 @@ class CustomLoginSerializer(serializers.Serializer):
 
                 else:
                     device = None
+                    
 
                 if device and device.verify_token(otp):
                     attrs['user'] = user

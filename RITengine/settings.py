@@ -29,7 +29,9 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = '127.0.0.1,localhost'.split(',')
+ALLOWED_HOSTS = [
+    "*"
+]
 
 # Application definition
 
@@ -220,6 +222,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 OPENAI_API_KEY = "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"
 
-CORS_ALLOWED_ORIGINS = 'http://localhost:3000,http://127.0.0.1:3000'.split(',')
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+]
 
 CORS_ALLOW_CREDENTIALS = True

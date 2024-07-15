@@ -45,9 +45,9 @@ pydantic_core==2.14.5
 PyJWT==2.8.0
 pyotp==2.9.0
 python-dateutil==2.8.2
+python-dotenv==1.0.1
 pytz==2023.3.post1
 PyYAML==6.0.1
-redis==5.0.7
 referencing==0.35.1
 requests==2.32.3
 requests-oauthlib==2.0.0

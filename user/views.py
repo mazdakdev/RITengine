@@ -52,7 +52,7 @@ class CustomRegisterView(RegisterView):
             }, status=status.HTTP_200_OK)
         return Response({
             'status': 'error',
-            'details': {serializer.errors},
+            'details': serializer.errors,
             'error_code': "error-serializer-validation"
         }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -172,7 +172,7 @@ class CompleteRegistrationView(APIView):
 
             except User.DoesNotExist:
                 return Response({
-                    'status': 'success',
+                    'status': '',
                     'details': 'Invalid email.',
                     'error_code': 'error-user-not-found'
 
@@ -424,7 +424,7 @@ class Verify2FASetupView(APIView):
 
 
 #TODO: other social auths (HIGH-PRIORITY)
-
+#TODO: check is_email_verified at login
 # -------------------
 
 #TODO: Twilio (LOW-PRIORITY)
