@@ -54,7 +54,7 @@ class CustomRegisterView(RegisterView):
             'status': 'error',
             'details': serializer.errors,
             'error_code': "error-serializer-validation"
-        }, status=status.HTTP_400_BAD_REQUEST)
+        }, status=status.HTTP_400_BAD_REQUEgiST)
 
 
 @extend_schema(
