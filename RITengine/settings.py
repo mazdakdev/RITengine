@@ -36,6 +36,7 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -60,6 +61,7 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_email',
     'django_otp.plugins.otp_totp',
     'django_twilio',
+    'channels',
 ]
 
 INSTALLED_APPS += [
@@ -102,6 +104,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "RITengine.wsgi.application"
+ASGI_APPLICATION = "RITengine.asgi.application"
+
 
 
 # Database

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Engine
+from .models import Engine, Chat, Message
 
 class StreamGeneratorSerializer(serializers.Serializer):
     engine_id = serializers.IntegerField()
@@ -10,3 +10,13 @@ class EngineSerializer(serializers.ModelSerializer):
         model = Engine
         fields = '__all__'
 
+class ChatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Chat
+        fields = '__all__'
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Message
+        fields = '__all__'
