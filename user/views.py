@@ -54,7 +54,7 @@ class CustomRegisterView(RegisterView):
             'status': 'error',
             'details': serializer.errors,
             'error_code': "error-serializer-validation"
-        }, status=status.HTTP_400_BAD_REQUEgiST)
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @extend_schema(
@@ -65,23 +65,30 @@ class CustomLoginView(LoginView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
 
-        access, refresh, access_exp, refresh_exp = get_jwt_token(user)
-        user_serializer = UserSerializer(user)
+            access, refresh, access_exp, refresh_exp = get_jwt_token(user)
+            user_serializer = UserSerializer(user)
+
+            return Response({
+                'status': "success",
+                'data': {
+                    'access': str(access),
+                    'refresh': str(refresh),
+                    'access_expiration': access_exp,
+                    'refresh_expiration': refresh_exp,
+                    'user': user_serializer.data,
+
+                }
+            }, status=status.HTTP_200_OK)
 
         return Response({
-            'status': "success",
-            'data': {
-                'access': str(access),
-                'refresh': str(refresh),
-                'access_expiration': access_exp,
-                'refresh_expiration': refresh_exp,
-                'user': user_serializer.data,
+            'status': 'error',
+            'details': serializer.errors,
+            'error_code': 'error-serializer-validation'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
-            }
-        }, status=status.HTTP_200_OK)
 
 @extend_schema(
     parameters=[
