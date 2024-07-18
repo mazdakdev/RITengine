@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Engine, Chat, Message
+from .models import Engine, Chat, Message, Assist
+
 
 class StreamGeneratorSerializer(serializers.Serializer):
     engine_id = serializers.IntegerField()
@@ -21,3 +22,8 @@ class MessageSerializer(serializers.ModelSerializer):
         model = Message
         fields = '__all__'
 
+
+class AssistSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Assist
+        fields = '__all__'

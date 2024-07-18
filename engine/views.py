@@ -1,10 +1,10 @@
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
-from .models import Chat, Engine, Message
+from .models import Chat, Engine, Message, Assist
 from rest_framework import generics
 from django.conf import settings
 from openai import AsyncOpenAI
-from .serializers import EngineSerializer, ChatSerializer, MessageSerializer
+from .serializers import EngineSerializer, ChatSerializer, MessageSerializer, AssistSerializer
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework import status
 
@@ -53,7 +53,13 @@ class ChatsMessagesListView(generics.ListAPIView):
         return Message.objects.filter(chat=chat).order_by('timestamp')
 
 
+class AssistsListView(generics.ListAPIView):
+    serializer_class = AssistSerializer
+    lookup_field = 'id'
+    queryset = Assist.objects.all()
 
-#TODO: login and save chats
-
+class AssistsDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Engine.objects.all()
+    serializer_class = AssistSerializer
+    lookup_field = 'id'
 

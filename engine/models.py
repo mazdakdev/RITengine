@@ -16,7 +16,7 @@ class Message(models.Model):
     SENDER_CHOICES = (
         ('user', 'User'),
         ('engine', 'RIT-engine'),
-    ) # TODO: different prompts
+    ) #IDEA: different prompts
 
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
     text = models.TextField()
@@ -35,3 +35,10 @@ class Engine(models.Model):
         return self.name
 
 
+class Assist(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    icon = models.ImageField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name

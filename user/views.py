@@ -90,6 +90,7 @@ class CustomLoginView(LoginView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+
 @extend_schema(
     parameters=[
         OpenApiParameter(
@@ -162,7 +163,7 @@ class CompleteRegistrationView(APIView):
                             return Response({
                                 'status': 'error',
                                 'details': 'Invalid OTP.',
-                                'error_code': 'error-invalid-otp',
+                                'error_code': 'error-invalid-value',
                             }, status=status.HTTP_400_BAD_REQUEST)
                     else:
                         return Response({
@@ -432,8 +433,6 @@ class Verify2FASetupView(APIView):
 
 #TODO: other social auths (HIGH-PRIORITY)
 #TODO: check is_email_verified at login
-# -------------------
-
 #TODO: Twilio (LOW-PRIORITY)
 #TODO: backup codes (LOW-PRIORITY)
 #TODO: change 2fa method (LOW-PRIORITY)
