@@ -67,6 +67,7 @@ INSTALLED_APPS = [
 INSTALLED_APPS += [
     "user",
     "engine",
+    "legal",
 ]
 
 SITE_ID = 1
