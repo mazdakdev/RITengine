@@ -63,37 +63,39 @@ class CustomLoginSerializer(serializers.Serializer):
                 raise serializers.ValidationError("No user found with this identifier.")
 
         if username:
-            user = authenticate(request=self.context.get("request"), username=username, password=password)
-            if not user:
-                raise serializers.ValidationError("Invalid Credentials")
+            if not user.is_email_verified:
+                user = authenticate(request=self.context.get("request"), username=username, password=password)
+                if not user:
+                    raise serializers.ValidationError("Invalid Credentials")
 
-            # 2FA Verification
-            preferred_2fa = user.preferred_2fa
+                # 2FA Verification
+                preferred_2fa = user.preferred_2fa
 
-            if preferred_2fa:
-                if not otp and user.preferred_2fa == "totp":  # OTP is required but not provided
-                    raise serializers.ValidationError("2FA token is required for this user.")
+                if preferred_2fa:
+                    if not otp and user.preferred_2fa == "totp":  # OTP is required but not provided
+                        raise serializers.ValidationError("2FA token is required for this user.")
 
-                elif preferred_2fa == 'email' and not otp:
-                    raise serializers.ValidationError("2FA email otp is required for this user (you must request it).")
+                    elif preferred_2fa == 'email' and not otp:
+                        raise serializers.ValidationError("2FA email otp is required for this user (you must request it).")
 
-                elif preferred_2fa == 'sms':
-                    pass
+                    elif preferred_2fa == 'sms':
+                        pass
 
-                elif preferred_2fa == 'totp':
-                    device = TOTPDevice.objects.filter(user=user).first()
+                    elif preferred_2fa == 'totp':
+                        device = TOTPDevice.objects.filter(user=user).first()
 
-                elif preferred_2fa == "email":
-                    device = EmailDevice.objects.filter(user=user).first()
+                    elif preferred_2fa == "email":
+                        device = EmailDevice.objects.filter(user=user).first()
 
-                else:
-                    device = None
-                    
+                    else:
+                        device = None
 
-                if device and device.verify_token(otp):
-                    attrs['user'] = user
-                else:
-                    raise serializers.ValidationError("Invalid 2FA token.")
+
+                    if device and device.verify_token(otp):
+                        attrs['user'] = user
+                    else:
+                        raise serializers.ValidationError("Invalid 2FA token.")
+            raise serializers.ValidationError("User's E-mail is not yet verified")
 
         attrs['user'] = user
         return attrs

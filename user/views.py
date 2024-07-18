@@ -253,7 +253,7 @@ class PasswordChangeView(APIView):
     request=Request2FASerializer,
  )
 class Request2FAView(APIView):
-    permission_classes = [IsAuthenticated, IsNotOAuthUser]
+    permission_classes = [IsNotOAuthUser,]
     def post(self, request):
         serializer = Request2FASerializer(data=request.data)
         if serializer.is_valid():
