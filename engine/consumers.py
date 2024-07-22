@@ -11,8 +11,6 @@ from django.contrib.auth.models import AnonymousUser
 User = get_user_model()
 
 class ChatConsumer(AsyncWebsocketConsumer):
-
-
     async def connect(self):
         print("WebSocket connection attempt")
         self.user = self.scope.get("user", AnonymousUser())
@@ -84,3 +82,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             sender=sender,
             timestamp=timezone.now()
         )
+
+
+#TODO: load chats
+#TODO: change engine in the middle of the chat
+
+#TODO: Projects
+# _img
+# _title
+# _descr
+# list of users' projects
+# list of messages of projects
+# CRUD;
+
+#TODO: Share - Viewer (share chats, projects or bookmarks)
+#TODO: Id, link, viewer
+#TODO: viewrs _ viewer_id, has_acceess

@@ -63,7 +63,7 @@ class CustomLoginSerializer(serializers.Serializer):
                 raise serializers.ValidationError("No user found with this identifier.")
 
         if username:
-            if not user.is_email_verified:
+            if user.is_email_verified:
                 user = authenticate(request=self.context.get("request"), username=username, password=password)
                 if not user:
                     raise serializers.ValidationError("Invalid Credentials")
@@ -95,7 +95,8 @@ class CustomLoginSerializer(serializers.Serializer):
                         attrs['user'] = user
                     else:
                         raise serializers.ValidationError("Invalid 2FA token.")
-            raise serializers.ValidationError("User's E-mail is not yet verified")
+            else:
+                raise serializers.ValidationError("User's E-mail is not yet verified")
 
         attrs['user'] = user
         return attrs
