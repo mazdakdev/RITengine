@@ -11,7 +11,6 @@ from .views import (
     BookmarksDetailView
  )
 
-
 urlpatterns = [
     path('engines/', EngineListCreateView.as_view(), name='engine_list'),
     path('engines/<int:id>/', EngineDetailView.as_view(), name='engine_detail'),
