@@ -88,9 +88,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 #TODO: change engine in the middle of the chat
 
 #TODO: Projects
-# _img
-# _title
-# _descr
 # list of users' projects
 # list of messages of projects
 # CRUD;
