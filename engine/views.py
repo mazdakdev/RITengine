@@ -8,7 +8,6 @@ from .serializers import (
     ChatSerializer,
     MessageSerializer,
     AssistSerializer,
-    BookmarkSerializer
 )
 
 from .models import (
@@ -16,7 +15,6 @@ from .models import (
     Engine,
     Message,
     Assist,
-    Bookmark
 )
 
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
@@ -73,26 +71,6 @@ class AssistsDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Assist.objects.all()
     serializer_class = AssistSerializer
     lookup_field = 'id'
-
-
-class BookmarksListView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated,]
-    serializer_class = BookmarkSerializer
-
-    def get_queryset(self):
-        return Bookmark.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-
-class BookmarksDetailView(generics.RetrieveDestroyAPIView):
-    permission_classes = [IsAuthenticated, ]
-    serializer_class = BookmarkSerializer
-    lookup_field = 'id'
-
-    def get_queryset(self):
-        return Bookmark.objects.filter(user=self.request.user)
 
 
 #TODO: Except HTTP 404

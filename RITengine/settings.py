@@ -69,6 +69,7 @@ INSTALLED_APPS += [
     "engine",
     "legal",
     "project",
+    "bookmark",
 ]
 
 SITE_ID = 1

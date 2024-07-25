@@ -7,8 +7,6 @@ from .views import (
     ChatsMessagesListView,
     AssistsDetailView,
     AssistsListView,
-    BookmarksListView,
-    BookmarksDetailView
  )
 
 urlpatterns = [
@@ -19,6 +17,4 @@ urlpatterns = [
     path('chats/<int:id>/messages/', ChatsMessagesListView.as_view(), name='chat_detail'),
     path('assists/', AssistsListView.as_view(), name='assist_list'),
     path('assists/<int:id>/', AssistsDetailView.as_view(), name='assist_detail'),
-    path('bookmarks/', BookmarksListView.as_view(), name='bookmarks_list'),
-    path('bookmarks/<int:id>/', BookmarksDetailView.as_view(), name='bookmarks_detail'),
 ]
