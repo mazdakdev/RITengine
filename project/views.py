@@ -56,11 +56,12 @@ class AddMessageToProjectView(generics.GenericAPIView):
             raise NotFound('Message not found.')
 
         project.messages.add(message)
-        return Response({'status': 'message added to project'}, status=status.HTTP_200_OK)
+        return Response({
+            "status": "success",
+            'details': 'message added to project'
+        }, status=status.HTTP_200_OK)
 
 
 class GenerateProjectLinkView(GenerateShareableLinkView):
     def get_object(self):
         return get_object_or_404(Project, id=self.kwargs.get('id'))
-
-#TODO: Better Error Handling

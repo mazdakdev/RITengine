@@ -80,5 +80,3 @@ class AssistsDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = AssistSerializer
     lookup_field = 'id'
 
-
-#TODO: Except HTTP 404

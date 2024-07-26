@@ -124,6 +124,5 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         return [{'role': 'user' if msg['sender'] == 'user' else 'system', 'content': msg['text']} for msg in messages]
 
-#TODO: Share - Viewer (share chats, projects or bookmarks)
-#TODO: Id, link, viewer
-#TODO: viewrs _ viewer_id, has_acceess
+#TODO: BUG: engine does not exists
+#TODO: multiple engines
