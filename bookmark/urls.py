@@ -1,10 +1,12 @@
 from django.urls import path
 from bookmark.views import (
     BookmarksListView,
-    BookmarksDetailView
+    BookmarksDetailView,
+    GenerateBookmarkLinkView
 )
 
 urlpatterns = [
-    path('bookmarks/', BookmarksListView.as_view(), name='bookmarks_list'),
-    path('bookmarks/<int:id>/', BookmarksDetailView.as_view(), name='bookmarks_detail'),
+    path('', BookmarksListView.as_view(), name='bookmark_list'),
+    path('<int:id>/', BookmarksDetailView.as_view(), name='bookmark_detail'),
+    path('<int:id>/generate-link/', GenerateBookmarkLinkView.as_view(), name='bookmark_link'),
 ]

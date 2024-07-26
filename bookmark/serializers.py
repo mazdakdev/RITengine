@@ -7,9 +7,8 @@ class BookmarkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Bookmark
-        # fields = ['id', 'user', 'message_id']  # Include other fields as needed
-        # read_only_fields = ['id', 'user']
-        fields = "__all__"
+        fields = ['id', 'user', 'message_id']  # Include other fields as needed
+        read_only_fields = ['id', 'user']
 
     def create(self, validated_data):
         message_id = validated_data.pop('message_id')

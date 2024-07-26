@@ -2,7 +2,11 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from django.conf import settings
 from openai import AsyncOpenAI
+from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
+
+from share.views import GenerateShareableLinkView, AccessSharedContentView
 from .serializers import (
     EngineSerializer,
     ChatSerializer,
@@ -16,6 +20,7 @@ from .models import (
     Message,
     Assist,
 )
+
 
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
@@ -61,6 +66,9 @@ class ChatsMessagesListView(generics.ListAPIView):
 
         return Message.objects.filter(chat=chat).order_by('timestamp')
 
+class GenerateChatLinkView(GenerateShareableLinkView):
+    def get_object(self):
+        return get_object_or_404(Chat, id=self.kwargs.get('id'))
 
 class AssistsListView(generics.ListCreateAPIView):
     serializer_class = AssistSerializer

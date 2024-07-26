@@ -4,7 +4,8 @@ from .views import (
     ProjectMessagesListView,
     ProjectCreateView,
     ProjectRetrieveUpdateDestroyView,
-    AddMessageToProjectView
+    AddMessageToProjectView,
+    GenerateProjectLinkView
 )
 
 urlpatterns = [
@@ -13,4 +14,6 @@ urlpatterns = [
     path('create/', ProjectCreateView.as_view(), name='project_create'),
     path('<int:id>/', ProjectRetrieveUpdateDestroyView.as_view(), name='project_detail'),
     path('<int:project_id>/add-message/<int:message_id>/', AddMessageToProjectView.as_view(), name='add_msg_to_proj'),
+    path('<int:id>/generate-link/', GenerateProjectLinkView.as_view(), name='project_link'),
 ]
+

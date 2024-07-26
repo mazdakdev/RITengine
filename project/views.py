@@ -1,8 +1,10 @@
 from rest_framework import generics, status
 from rest_framework.exceptions import NotFound
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from share.views import GenerateShareableLinkView
 from .models import Project, Message
 from .serializers import ProjectSerializer
 from engine.serializers import MessageSerializer
@@ -55,5 +57,10 @@ class AddMessageToProjectView(generics.GenericAPIView):
 
         project.messages.add(message)
         return Response({'status': 'message added to project'}, status=status.HTTP_200_OK)
+
+
+class GenerateProjectLinkView(GenerateShareableLinkView):
+    def get_object(self):
+        return get_object_or_404(Project, id=self.kwargs.get('id'))
 
 #TODO: Better Error Handling

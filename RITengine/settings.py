@@ -70,6 +70,7 @@ INSTALLED_APPS += [
     "legal",
     "project",
     "bookmark",
+    "share",
 ]
 
 SITE_ID = 1

@@ -1,6 +1,8 @@
 from rest_framework import generics
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from bookmark.serializers import BookmarkSerializer
+from share.views import GenerateShareableLinkView
 from .models import Bookmark
 
 
@@ -22,3 +24,7 @@ class BookmarksDetailView(generics.RetrieveDestroyAPIView):
 
     def get_queryset(self):
         return Bookmark.objects.filter(user=self.request.user)
+
+class GenerateBookmarkLinkView(GenerateShareableLinkView):
+    def get_object(self):
+        return get_object_or_404(Bookmark, id=self.kwargs.get('id'))
