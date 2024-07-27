@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_email',
     'django_otp.plugins.otp_totp',
     'django_twilio',
+    'otp_twilio',
     'channels',
 ]
 
@@ -71,6 +72,7 @@ INSTALLED_APPS += [
     "project",
     "bookmark",
     "share",
+
 ]
 
 SITE_ID = 1
@@ -149,7 +151,7 @@ REST_AUTH = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), #TODO: just for test
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -237,3 +239,4 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 FRONTEND_URL  = "http://127.0.0.1:3000"
+SMS_PROVIDER = "melipayamak"

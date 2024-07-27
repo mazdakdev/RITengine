@@ -2,7 +2,6 @@ from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView, RegisterView
 from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiParameter, OpenApiTypes
-from rest_framework.permissions import IsAuthenticated
 from .serializers import *
 from dj_rest_auth.views import LoginView, UserDetailsView
 from rest_framework.response import Response
@@ -11,6 +10,7 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_email.models import EmailDevice
+from .models import SMSDevice
 from rest_framework.permissions import IsAuthenticated
 import pyotp
 from .utils import generate_otp, get_jwt_token
@@ -44,7 +44,7 @@ class CustomRegisterView(RegisterView):
     def post(self, request, *args, **kwargs):
         serializer = CustomRegisterSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save(request)
+            serializer.save(request)
             return Response({
                 'status': "success",
                 'details': 'Verification code sent successfully.'
@@ -276,7 +276,7 @@ class Request2FAView(APIView):
                     "message": "an E-mail has been sent successfully to the user."
                 })
 
-            elif user.preferred_2fa == "phone":
+            elif user.preferred_2fa == "sms":
                 pass
 
             elif user.preferred_2fa == "totp":
@@ -318,19 +318,23 @@ class Enable2FAView(APIView):
             if not user.preferred_2fa:
 
                 if method == 'email':
-                    device = EmailDevice(user=request.user, confirmed=False)
+                    device = EmailDevice(user=user, confirmed=False)
                     device.generate_challenge()
-                    # user.send_mail("2fa verification", otp_code)
+
                     return Response({
                         'status': 'success',
                         'details': 'an E-mail has been sent to the User.',
                     }, status=status.HTTP_200_OK)
 
                 elif method == 'sms':
-                    pass
-                    # device = TwilioSMSDevice(user=request.user, confirmed=False)
-                    # otp_code = device.generate_challenge()
-                    # user.send_sms()
+                    device = SMSDevice(user=user, number=user.phone_number, confirmed=False)
+                    device.generate_challenge()
+
+                    return Response({
+                        'status': 'success',
+                        'details': 'an SMS has been sent to the User.',
+                    }, status=status.HTTP_200_OK)
+
 
                 elif method == 'totp':
                     device = TOTPDevice.objects.create(user=user, confirmed=False)
@@ -386,12 +390,11 @@ class Verify2FASetupView(APIView):
             user = request.user
 
             if method == 'email':
-                device = EmailDevice.objects.filter(user=request.user, confirmed=False).first()
+                device = EmailDevice.objects.filter(user=user, confirmed=False).first()
             elif method == 'sms':
-                # device = TwilioSMSDevice.objects.filter(user=request.user, confirmed=False).first()
-                pass
+               device = SMSDevice.objects.filter(number=user.phone_number, confirmed=False).first()
             elif method == 'totp':
-                device = TOTPDevice.objects.filter(user=request.user, confirmed=False).first()
+                device = TOTPDevice.objects.filter(user=user, confirmed=False).first()
             else:
                 return Response({
                     'status': 'error',

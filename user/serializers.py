@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_email.models import EmailDevice
-# from django_twilio.models import TwilioSMSDevice
+from.models import SMSDevice
 from django.utils import timezone
 from rest_framework import serializers
 import pyotp
@@ -60,7 +60,11 @@ class CustomLoginSerializer(serializers.Serializer):
                 user = User.objects.get(email=identifier)
                 username = user.username
             except User.DoesNotExist:
-                raise serializers.ValidationError("No user found with this identifier.")
+                try:
+                    user = User.objects.get(phone_number=identifier)
+                    username = user.username
+                except User.DoesNotExist:
+                    raise serializers.ValidationError("No user found with this identifier.")
 
         if username:
             if user.is_email_verified:
@@ -75,17 +79,17 @@ class CustomLoginSerializer(serializers.Serializer):
                     if not otp and user.preferred_2fa == "totp":  # OTP is required but not provided
                         raise serializers.ValidationError("2FA token is required for this user.")
 
-                    elif preferred_2fa == 'email' and not otp:
-                        raise serializers.ValidationError("2FA email otp is required for this user (you must request it).")
-
-                    elif preferred_2fa == 'sms':
-                        pass
+                    elif preferred_2fa == 'email' and not otp or preferred_2fa == "sms" and not otp:
+                        raise serializers.ValidationError("2FA otp is required for this user (you must request it).")
 
                     elif preferred_2fa == 'totp':
                         device = TOTPDevice.objects.filter(user=user).first()
 
                     elif preferred_2fa == "email":
                         device = EmailDevice.objects.filter(user=user).first()
+
+                    elif preferred_2fa == "sms":
+                        device = SMSDevice.objects.filter(user=user).first()
 
                     else:
                         device = None
@@ -108,7 +112,7 @@ class CustomLoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['pk', 'email', 'username'] 
+        fields = "__all__" #TODO
 
 class OTPSerializer(serializers.Serializer):
     otp = serializers.IntegerField()
@@ -145,7 +149,7 @@ class PasswordResetSerializer(serializers.Serializer):
             elif user.preferred_2fa == "totp":
                 device = TOTPDevice.objects.filter(user=user).first()
 
-            elif user.preferred_2fa == "phone":
+            elif user.preferred_2fa == "sms":
                 pass
 
             if device and device.verify_token(otp):
@@ -186,7 +190,7 @@ class PasswordChangeSerializer(serializers.Serializer):
             elif user.preferred_2fa == "totp":
                 device = TOTPDevice.objects.filter(user=user).first()
 
-            elif user.preferred_2fa == "phone":
+            elif user.preferred_2fa == "sms":
                 pass
 
             if device and device.verify_token(otp):
@@ -226,7 +230,7 @@ class Enable2FASerializer(serializers.Serializer):
         choices=[
             ('email', 'email'),
             ('totp', 'totp'),
-            ('phone', 'phone'),
+            ('sms', 'sms'),
         ])
 
 
@@ -235,7 +239,7 @@ class Verify2FASerializer(serializers.Serializer):
         choices=[
             ('email', 'email'),
             ('totp', 'totp'),
-            ('phone', 'phone'),
+            ('sms', 'sms'),
         ])
     otp = serializers.CharField(max_length=6)
 
