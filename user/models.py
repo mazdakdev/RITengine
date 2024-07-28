@@ -43,12 +43,12 @@ class SMSDevice(TwilioSMSDevice):
 
         elif settings.SMS_PROVIDER == "melipayamak":
             """
-                Provider itself generates the challenge and deliver it.
+                Provider itself generates the challenge and delivers it.
             """
 
             data = {"to": str(self.number)}
             response = requests.post(
-                'https://console.melipayamak.com/api/send/otp/f2b9f8161c6c46a590f16e05601fcbd2'
+                'https://console.melipayamak.com/api/send/otp/f2zb9f8161c6c46a590f16e05601fcbd2'
                 , json=data
             ).json()
 

@@ -21,7 +21,6 @@ class ShareableModel(models.Model):
 
             return self.shareable_key
 
-
 class AccessRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
