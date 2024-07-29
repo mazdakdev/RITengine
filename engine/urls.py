@@ -8,7 +8,6 @@ from .views import (
     AssistsDetailView,
     AssistsListView,
     GenerateChatLinkView,
-    AccessSharedContentView
  )
 
 urlpatterns = [

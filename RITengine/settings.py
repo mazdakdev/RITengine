@@ -32,7 +32,13 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "*"
 ]
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+]
+CORS_ALLOW_ALL_ORIGINS = True
 
+CORS_ALLOW_CREDENTIALS = True
 # Application definition
 
 INSTALLED_APPS = [
@@ -89,8 +95,6 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
-
 ROOT_URLCONF = "RITengine.urls"
 
 TEMPLATES = [
@@ -108,11 +112,6 @@ TEMPLATES = [
         },
     },
 ]
-
-WSGI_APPLICATION = "RITengine.wsgi.application"
-ASGI_APPLICATION = "RITengine.asgi.application"
-
-
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -166,6 +165,10 @@ SIMPLE_JWT = {
     'JTI_CLAIM': 'jti',
 }
 
+WSGI_APPLICATION = "RITengine.wsgi.application"
+ASGI_APPLICATION = "RITengine.asgi.application"
+
+
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = True
@@ -189,7 +192,11 @@ REST_FRAMEWORK = {
         'dj_rest_auth.jwt_auth.JWTCookieAuthentication'
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'EXCEPTION_HANDLER': 'RITengine.exceptions.custom_exception_handler'
+    'EXCEPTION_HANDLER': 'RITengine.exceptions.custom_exception_handler',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+    'PAGE_SIZE_QUERY_PARAM': 'page_size',
+    'MAX_PAGE_SIZE': 100,
 }
 
 AUTH_USER_MODEL = 'user.CustomUser'
@@ -234,11 +241,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 OPENAI_API_KEY = "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"
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000'
-]
 
-CORS_ALLOW_CREDENTIALS = True
 FRONTEND_URL  = "http://127.0.0.1:3000"
 SMS_PROVIDER = "melipayamak"
+
+#TODO: cache
