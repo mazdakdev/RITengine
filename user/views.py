@@ -1,28 +1,26 @@
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView, RegisterView
-from django.core import cache
 from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiParameter, OpenApiTypes
-from dj_rest_auth.views import LoginView, UserDetailsView
+from dj_rest_auth.views import UserDetailsView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import serializers
 from rest_framework.views import APIView
-from  dj_rest_auth.registration.serializers import RegisterSerializer
+from dj_rest_auth.registration.serializers import RegisterSerializer
 from django.contrib.auth import get_user_model
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_email.models import EmailDevice
 from .models import SMSDevice
 from rest_framework.permissions import IsAuthenticated
 import pyotp
-from . import  utils
-from .utils import generate_otp, get_jwt_token
+from . import utils
 from .permissions import IsNotOAuthUser
 from .serializers import (
     Verify2FASerializer, Enable2FASerializer, Request2FASerializer,
     PasswordChangeSerializer, PasswordResetSerializer,
-    CustomLoginSerializer,
-    OTPSerializer,
+    LoginSerializer,
+    CompleteRegisterSerializer,
     UserSerializer, CompleteLoginSerializer, CustomRegisterSerializer,
 )
 
@@ -46,12 +44,12 @@ class GitHubLoginView(SocialLoginView):
         self.request.user.is_oauth_based = True
         self.request.user.save()
 
-
 @extend_schema(
     request=RegisterSerializer,
 )
 class CustomRegisterView(RegisterView):
     serializer_class = CustomRegisterSerializer
+
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -64,13 +62,11 @@ class CustomRegisterView(RegisterView):
         }, status=status.HTTP_200_OK)
 
 @extend_schema(
-    request=CustomLoginSerializer,
+    request=LoginSerializer,
 )
-class CustomLoginView(LoginView):
-    serializer_class = CustomLoginSerializer
-
+class CustomLoginView(APIView):
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
 
@@ -85,8 +81,7 @@ class CustomLoginView(LoginView):
                 status=status.HTTP_202_ACCEPTED
             )
 
-
-        access, refresh, access_exp, refresh_exp = get_jwt_token(user)
+        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
         user_serializer = UserSerializer(user)
 
         return Response({
@@ -102,15 +97,13 @@ class CustomLoginView(LoginView):
         }, status=status.HTTP_200_OK)
 
 
-class CompleteLoginView(LoginView):
-    serializer_class = CompleteLoginSerializer
-
+class CompleteLoginView(APIView):
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = CompleteLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         user = serializer.validated_data['user']
-        access, refresh, access_exp, refresh_exp = get_jwt_token(user)
+        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
         user_serializer = UserSerializer(user)
 
         return Response({
@@ -160,72 +153,68 @@ class CustomUserDetailsView(UserDetailsView):
         return super().partial_update(request, *args, **kwargs)
 
 @extend_schema(
-    request=OTPSerializer,
+    request=CompleteRegisterSerializer,
 )
 class CompleteRegistrationView(APIView):
     def post(self, request):
-        serializer = OTPSerializer(data=request.data)
-        if serializer.is_valid():
-            otp_code = serializer.validated_data['otp']
-            email = serializer.validated_data['email']
-            try:
-                user = User.objects.get(email=email)
+        serializer = CompleteRegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-                if not user.is_email_verified:
-                    if user.otp_secret:
-                        totp = pyotp.TOTP(user.otp_secret, interval=300)
+        otp_code = serializer.validated_data['otp']
+        email = serializer.validated_data['email']
+        try:
+            user = User.objects.get(email=email)
 
-                        if totp.verify(otp_code):
-                            user.is_email_verified = True
-                            user.save()
-                            access, refresh, access_exp, refresh_exp = get_jwt_token(user)
-                            access_token = refresh.access_token
-                            user_serializer = UserSerializer(user)
+            if not user.is_email_verified:
+                if user.otp_secret:
+                    totp = pyotp.TOTP(user.otp_secret, interval=300)
 
-                            return Response({
-                                'status': "success",
-                                'data': {
-                                    'access': str(access),
-                                    'refresh': str(refresh),
-                                    'access_expiration': access_exp,
-                                    'refresh_expiration': refresh_exp,
-                                    'user': user_serializer.data,
+                    if totp.verify(otp_code):
+                        user.is_email_verified = True
+                        user.save()
+                        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+                        user_serializer = UserSerializer(user)
 
-                                }
-                            }, status=status.HTTP_200_OK)
+                        return Response({
+                            'status': "success",
+                            'data': {
+                                'access': str(access),
+                                'refresh': str(refresh),
+                                'access_expiration': access_exp,
+                                'refresh_expiration': refresh_exp,
+                                'user': user_serializer.data,
 
-                        else:
-                            return Response({
-                                'status': 'error',
-                                'details': 'Invalid OTP.',
-                                'error_code': 'error-invalid-value',
-                            }, status=status.HTTP_400_BAD_REQUEST)
+                            }
+                        }, status=status.HTTP_200_OK)
+
                     else:
                         return Response({
                             'status': 'error',
-                            'details': 'User OTP Secret not found.',
-                            'error_code': 'error-otp-secret-404'
-                        }, status=status.HTTP_400_BAD_REQUEST)
+                            'details': 'Invalid or Expired otp/two-fa code provided.',
+                            'error_code': 'invalid_otp_or_two_fa',
+                        }, status=status.HTTP_401_UNAUTHORIZED)
+                else:
+                    return Response({
+                        'status': 'error',
+                        'details': "something went wrong, please try again.",
+                        'error_code': 'otp_secret_not_found'
+                    }, status=status.HTTP_400_BAD_REQUEST)
 
-                return Response({
-                    'status': 'error',
-                    'details': "User's email has already been verified.",
-                    'error_code': 'error-user-already-verified'
-                })
+            return Response({
+                'status': 'error',
+                'details': "User's email has already been verified.",
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-            except User.DoesNotExist:
-                return Response({
-                    'status': '',
-                    'details': 'Invalid email.',
-                    'error_code': 'error-user-not-found'
+        except User.DoesNotExist:
+            return Response({
+                'status': 'error',
+                'details': 'Invalid Credentials.',
+                'error_code': 'invalid_credentials'
 
-                }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({
-            'status': 'error',
-            'details': serializer.errors,
-            'error_code': 'error-serializer-validation'
-        }, status=status.HTTP_400_BAD_REQUEST)
+#----
+#TODO refactor the below
 
 @extend_schema(
     request=PasswordResetSerializer,

@@ -1,4 +1,4 @@
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.views import exception_handler
 from rest_framework import status
 
@@ -19,9 +19,13 @@ def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
 
     if response is not None:
+        response.data['status'] = "error"
+
         # Attach the error code from the exception to the response
         if isinstance(exc, CustomAPIException):
             response.data['error_code'] = exc.default_code
-            response.data['status'] = "error"
+
+        if isinstance(exc, ValidationError):
+            response.data['error_code'] = "serializer_validation_errors"
 
     return response

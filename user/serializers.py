@@ -14,9 +14,17 @@ import pyotp
 
 User = get_user_model()
 
+class CustomRegisterSerializer(RegisterSerializer):
+    def validate_email(self, email):
+        email = get_adapter().clean_email(email)
 
+        if email and User.objects.filter(email=email):
+            raise serializers.ValidationError(
+                'A user is already registered with this e-mail address.',
+            )
+        return email
 
-class CustomLoginSerializer(serializers.Serializer):
+class LoginSerializer(serializers.Serializer):
     identifier = serializers.CharField()
     password = serializers.CharField(style={'input_type': 'password'})
 
@@ -43,17 +51,6 @@ class CustomLoginSerializer(serializers.Serializer):
         return attrs
 
 
-class CustomRegisterSerializer(RegisterSerializer):
-    def validate_email(self, email):
-        email = get_adapter().clean_email(email)
-
-        if email and User.objects.filter(email=email):
-            raise serializers.ValidationError(
-                'A user is already registered with this e-mail address.',
-            )
-        return email
-
-    #TODO email complete and user
 
 class CompleteLoginSerializer(serializers.Serializer):
     identifier = serializers.CharField()
@@ -100,7 +97,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = "__all__"  #TODO
 
 
-class OTPSerializer(serializers.Serializer):
+class CompleteRegisterSerializer(serializers.Serializer):
     otp = serializers.IntegerField()
     email = serializers.EmailField()
 
