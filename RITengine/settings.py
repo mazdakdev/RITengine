@@ -170,6 +170,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_UNIQUE_EMAIL = True
 TWILIO_ACCOUNT_SID = 'your_twilio_account_sid'
 TWILIO_AUTH_TOKEN = 'your_twilio_auth_token'
 TWILIO_PHONE_NUMBER = 'your_twilio_phone_number'

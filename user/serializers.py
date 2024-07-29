@@ -2,45 +2,18 @@ from allauth.account.adapter import get_adapter
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
-from django_otp.plugins.otp_totp.models import TOTPDevice
-from django_otp.plugins.otp_email.models import EmailDevice
-from .models import SMSDevice
-from django.utils import timezone
-from rest_framework import serializers
-import pyotp
+from django.core.cache import cache
+from RITengine.exceptions import CustomAPIException
 from .exceptions import (
-    TwoFactorRequired,
-    EmailNotVerified,
-    InvalidCredentials
-
+    EmailNotVerified, InvalidCredentials,
+    InvalidTwoFaOrOtp, TwoFaRequired
 )
+from .utils import get_user_by_identifier, validate_two_fa, generate_2fa_challenge
+from rest_framework import serializers, status
+import pyotp
+
 User = get_user_model()
 
-
-class CustomRegisterSerializer(RegisterSerializer):
-    class Meta:
-        model = get_user_model()
-        fields = [
-            "username",
-            "email",
-            "password",
-        ]
-
-    def get_cleaned_data(self):
-        return {
-            "username": self.validated_data.get("username", ""),
-            "email": self.validated_data.get("email", ""),
-            "password1": self.validated_data.get("password1", ""),
-            "password2": self.validated_data.get("password2", ""),
-        }
-
-    def save(self, request):
-        adapter = get_adapter()
-        user = adapter.new_user(request)
-        self.cleaned_data = self.get_cleaned_data()
-        adapter.save_user(request, user, self)
-        # a signal will be called to send the otp.
-        return user
 
 
 class CustomLoginSerializer(serializers.Serializer):
@@ -51,17 +24,9 @@ class CustomLoginSerializer(serializers.Serializer):
         identifier = attrs.get("identifier")
         password = attrs.get("password")
 
+        user = get_user_by_identifier(identifier)
+        username = user.username
 
-        user = None
-        identifier_choices = ["username", "email", "phone_number"]
-
-        for attr in identifier_choices:
-            try:
-                user = User.objects.get(**{attr: identifier})
-                username = user.username
-                break
-            except User.DoesNotExist:
-                continue
 
         if user is None:
             raise InvalidCredentials()
@@ -74,10 +39,58 @@ class CustomLoginSerializer(serializers.Serializer):
         if not authenticated_user:
             raise InvalidCredentials()
 
-        if user.preferred_2fa:
-            raise TwoFactorRequired()
-
         attrs['user'] = authenticated_user
+        return attrs
+
+
+class CustomRegisterSerializer(RegisterSerializer):
+    def validate_email(self, email):
+        email = get_adapter().clean_email(email)
+
+        if email and User.objects.filter(email=email):
+            raise serializers.ValidationError(
+                'A user is already registered with this e-mail address.',
+            )
+        return email
+
+    #TODO email complete and user
+
+class CompleteLoginSerializer(serializers.Serializer):
+    identifier = serializers.CharField()
+    tmp_token = serializers.CharField()
+    otp = serializers.CharField(max_length=6, min_length=6)
+
+    def validate(self, attrs):
+        identifier = attrs.get("identifier")
+        tmp_token = attrs.get("tmp_token")
+        otp = attrs.get("otp")
+
+        user = get_user_by_identifier(identifier)
+
+        if not user.is_email_verified:
+            raise EmailNotVerified()
+
+        if not user.preferred_2fa:
+            raise CustomAPIException(
+                detail="There is no two-factor setup for this user.",
+                code="two_fa_not_set_up",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+        user_id = cache.get(f"2fa_{tmp_token}")
+
+        if user_id is None or user_id != user.id:
+            raise CustomAPIException(
+                detail="Invalid or Expired temporary token",
+                code="invalid_tmp_token",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not validate_two_fa(user, otp):
+            raise InvalidTwoFaOrOtp()
+
+        attrs['user'] = user
         return attrs
 
 
@@ -101,13 +114,10 @@ class PasswordResetSerializer(serializers.Serializer):
         identifier = attrs.get('identifier')
         otp = attrs.get('otp')
 
-        try:
-            user = User.objects.get(username=identifier)
-        except User.DoesNotExist:
-            try:
-                user = User.objects.get(email=identifier)
-            except User.DoesNotExist:
-                raise serializers.ValidationError("No user found with this identifier.")
+        user = get_user_by_identifier(identifier)
+
+        if not user.is_email_verified:
+            raise EmailNotVerified()
 
         if not user.preferred_2fa:
             totp = pyotp.TOTP(user.otp_secret, interval=300)
@@ -115,23 +125,14 @@ class PasswordResetSerializer(serializers.Serializer):
                 attrs['user'] = user
                 return attrs
             else:
-                raise serializers.ValidationError("Invalid or expired OTP.")
+                raise InvalidTwoFaOrOtp()
 
         else:
-            if user.preferred_2fa == "email":
-                device = EmailDevice.objects.filter(user=user).first()
+            if not validate_two_fa(user, otp):
+                raise InvalidTwoFaOrOtp()
 
-            elif user.preferred_2fa == "totp":
-                device = TOTPDevice.objects.filter(user=user).first()
-
-            elif user.preferred_2fa == "sms":
-                pass
-
-            if device and device.verify_token(otp):
-                attrs['user'] = user
-                return attrs
-            else:
-                raise serializers.ValidationError("Invalid 2FA token.")
+        attrs['user'] = user
+        return attrs
 
 
 class PasswordChangeSerializer(serializers.Serializer):
@@ -145,10 +146,14 @@ class PasswordChangeSerializer(serializers.Serializer):
         new_password2 = attrs.get('new_password2')
 
         if not otp:
-            raise serializers.ValidationError("OTP is required.")
+            raise TwoFaRequired()
 
         if new_password1 != new_password2:
-            raise serializers.ValidationError("New passwords do not match.")
+            raise CustomAPIException(
+                detail="New passwords do not match",
+                code="passwords_do_not_match",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         user = self.context['request'].user
 
@@ -157,48 +162,24 @@ class PasswordChangeSerializer(serializers.Serializer):
             if totp.verify(otp):
                 return attrs
             else:
-                raise serializers.ValidationError("Invalid or expired OTP.")
+                raise InvalidTwoFaOrOtp
 
         else:
-            if user.preferred_2fa == "email":
-                device = EmailDevice.objects.filter(user=user).first()
-
-            elif user.preferred_2fa == "totp":
-                device = TOTPDevice.objects.filter(user=user).first()
-
-            elif user.preferred_2fa == "sms":
-                pass
-
-            if device and device.verify_token(otp):
-                return attrs
-
-            else:
-                raise serializers.ValidationError("Invalid 2FA token.")
-
+            if not validate_two_fa(user, otp):
+                raise InvalidTwoFaOrOtp
+            return attrs
 
 class Request2FASerializer(serializers.Serializer):
     identifier = serializers.CharField()
 
     def validate(self, attrs):
         identifier = attrs.get("identifier")
+        user = get_user_by_identifier(identifier)
+        if user is None:
+            raise InvalidCredentials()
 
-        if not identifier:
-            raise serializers.ValidationError("Identifier must be set.")
-
-        else:
-
-            try:
-                user = User.objects.get(username=identifier)
-
-            except User.DoesNotExist:
-                try:
-                    user = User.objects.get(email=identifier)
-
-                except User.DoesNotExist:
-                    raise serializers.ValidationError("No user found with this identifier.")
-
-            attrs["user"] = user
-            return attrs
+        attrs["user"] = user
+        return attrs
 
 
 class Enable2FASerializer(serializers.Serializer):
@@ -218,5 +199,3 @@ class Verify2FASerializer(serializers.Serializer):
             ('sms', 'sms'),
         ])
     otp = serializers.CharField(max_length=6)
-
-#TODO: Reuse Duplicate Codes

@@ -48,12 +48,12 @@ class SMSDevice(TwilioSMSDevice):
 
             data = {"to": str(self.number)}
             response = requests.post(
-                'https://console.melipayamak.com/api/send/otp/f2zb9f8161c6c46a590f16e05601fcbd2'
+                'https://console.melipayamak.com/api/send/otp/f2b9f8161c6c46a590f16e05601fcbd2'
                 , json=data
             ).json()
 
             if response["status"] == "ارسال موفق بود": #TODO: 200
-                self.token = int(response['code'])
+                self.token = response['code']
                 self.valid_until = timezone.now() + timedelta(seconds=300)
                 self.save()
 
