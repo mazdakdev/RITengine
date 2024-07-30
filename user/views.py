@@ -85,15 +85,11 @@ class CustomLoginView(APIView):
         user_serializer = UserSerializer(user)
 
         return Response({
-            'status': "success",
-            'data': {
-                'access': str(access),
-                'refresh': str(refresh),
-                'access_expiration': access_exp,
-                'refresh_expiration': refresh_exp,
-                'user': user_serializer.data,
-
-            }
+            'access': str(access),
+            'refresh': str(refresh),
+            'access_expiration': access_exp,
+            'refresh_expiration': refresh_exp,
+            'user': user_serializer.data,            
         }, status=status.HTTP_200_OK)
 
 
