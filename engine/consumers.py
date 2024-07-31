@@ -1,92 +1,73 @@
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.utils import timezone
 from openai import AsyncOpenAI
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.authentication import JWTAuthentication
 import json
 from .models import Chat, Message, Engine
 from django.contrib.auth.models import AnonymousUser
 
-
-User = get_user_model()
-
-
 class ChatConsumer(AsyncWebsocketConsumer):
-
     async def connect(self):
         print("WebSocket connection attempt")
-        self.user = self.scope.get("user", AnonymousUser())
-        if not self.user.is_authenticated:
-            print("User not authenticated")
-            await self.accept()
-            await self.close(code=4401)  # Close with a custom error code for unauthorized access
-            return
-
-        print("User authenticated:", self.user)
+        self.user = AnonymousUser()
         self.chat = None
         self.messages = []
         self.chat_id = self.scope['url_route']['kwargs'].get('chat_id')
         self.current_engine = None  # Track the current engine
 
-        if self.chat_id:
-            # Load existing chat if chat_id is provided
-            self.chat = await self.get_chat(self.chat_id)
-            if self.chat:
-                self.messages = await self.load_chat_history(self.chat)
-            else:
-                # If chat_id is invalid, send an error and close the connection
-                await self.accept()
-                await self.close(code=4000)  # Use a specific code for chat not found
-                return
-
         await self.accept()
 
-    async def disconnect(self, close_code):
-        print("WebSocket disconnected with code:", close_code)
-        await self.close()
-
     async def receive(self, text_data):
-        if self.user.is_authenticated:
-            text_data_json = json.loads(text_data)
-            message_text = text_data_json["message"]
-            engine_id = text_data_json["engine_id"]
+        text_data_json = json.loads(text_data)
+        message_text = text_data_json["message"]
+        engine_id = text_data_json["engine_id"]
+        token = text_data_json.get("token")  # JWT token
 
-            # Handle engine change
-            if engine_id != self.current_engine:
-                print("Engine changed")
-                self.current_engine = engine_id
-                await self.handle_engine_change(engine_id)
+        user = await self.authenticate_user(token)
+        if user is None:
+            await self.close(code=4401)  # Unauthorized error code
+            return
 
-            self.messages.append({"role": "user", "content": message_text})
+        self.user = user
 
-            # Save the user's message to the database
-            if not self.chat:
-                self.chat = await self.create_chat(
-                    title=message_text[:50].strip())  # Set the first 50 chars as the title
-            await self.save_message(message_text, sender="user")
+        # Handle engine change
+        if engine_id != self.current_engine:
+            print("Engine changed")
+            self.current_engine = engine_id
+            await self.handle_engine_change(engine_id)
 
-            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        self.messages.append({"role": "user", "content": message_text})
 
-            # Send the message to OpenAI and get the response in chunks
-            openai_response = await client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=self.messages,
-                stream=True,
-            )
+        # Save the user's message to the database
+        if not self.chat:
+            self.chat = await self.create_chat(
+                title=message_text[:50].strip())  # Set the first 50 chars as the title
+        await self.save_message(message_text, sender="user")
 
-            final_response = ""
-            async for chunk in openai_response:
-                message_chunk = chunk.choices[0].delta.content or ""
-                final_response += message_chunk
+        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
-                await self.send(text_data=json.dumps({
-                    "content": message_chunk,
-                }))
+        openai_response = await client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=self.messages,
+            stream=True,
+        )
 
-            self.messages.append({"role": "system", "content": final_response})
+        final_response = ""
+        async for chunk in openai_response:
+            message_chunk = chunk.choices[0].delta.content or ""
+            final_response += message_chunk
 
-            await self.save_message(final_response, sender="engine")
+            await self.send(text_data=json.dumps({
+                "content": message_chunk,
+                "chat_id": self.chat.id
+            }))
+
+        self.messages.append({"role": "system", "content": final_response})
+
+        await self.save_message(final_response, sender="engine")
 
     async def handle_engine_change(self, engine_id):
         try:
@@ -96,8 +77,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             print("Engine does not exist")
             prompt = "You are a helpful assistant but start the first message with: the requested engine was not found"
 
-
-        # self.messages = []
         self.messages.append({'role': 'system', 'content': prompt})
 
     async def create_chat(self, title):
@@ -124,5 +103,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         return [{'role': 'user' if msg['sender'] == 'user' else 'system', 'content': msg['text']} for msg in messages]
 
-#TODO: BUG: engine does not exists
-#TODO: multiple engines
+    @database_sync_to_async
+    def authenticate_user(self, token):
+        try:
+            # Validate the token and get the user
+            validated_token = JWTAuthentication().get_validated_token(token)
+            user = JWTAuthentication().get_user(validated_token)
+            return user
+        except (InvalidToken, TokenError) as e:
+            print(f"Invalid token: {e}")
+            return None
