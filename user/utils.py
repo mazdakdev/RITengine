@@ -21,8 +21,8 @@ def get_jwt_token(user):
     refresh = RefreshToken.for_user(user)
     access_token = refresh.access_token
 
-    access_exp = datetime.utcfromtimestamp(access_token['exp']).replace(tzinfo=timezone.utc).isoformat()
-    refresh_exp = datetime.utcfromtimestamp(refresh['exp']).replace(tzinfo=timezone.utc).isoformat()
+    access_exp = datetime.utcfromtimestamp(access_token['exp']).replace(tzinfo=timezone.utc).timestamp()
+    refresh_exp = datetime.utcfromtimestamp(refresh['exp']).replace(tzinfo=timezone.utc).timestamp()
 
     return access_token, refresh, access_exp, refresh_exp
 
