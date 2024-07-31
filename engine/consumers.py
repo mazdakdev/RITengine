@@ -15,15 +15,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.user = AnonymousUser()
         self.chat = None
         self.messages = []
-        self.chat_id = self.scope['url_route']['kwargs'].get('chat_id')
+        self.slug = self.scope['url_route']['kwargs'].get('slug')
         self.current_engine = None  # Track the current engine
 
         await self.accept()
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        message_text = text_data_json["message"]
-        engine_id = text_data_json["engine_id"]
+        message_text = text_data_json.get("message")
+        engine_id = text_data_json.get("engine_id")
         token = text_data_json.get("token")  # JWT token
 
         user = await self.authenticate_user(token)
@@ -32,6 +32,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         self.user = user
+
+        if self.slug:
+            self.chat = await self.get_chat(self.slug)
+            if self.chat:
+                self.messages = await self.load_chat_history(self.chat)
+            else:
+
+                await self.send(text_data=json.dumps({
+                    "error": "Chat not found."
+                }))
+                await self.close(code=4404)  # not found
+                return
+        else:
+            # Start a new chat if no slug is provided
+            self.chat = await self.create_chat(title=message_text[:50].strip())
+            self.slug = self.chat.slug
 
         # Handle engine change
         if engine_id != self.current_engine:
@@ -42,9 +58,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.messages.append({"role": "user", "content": message_text})
 
         # Save the user's message to the database
-        if not self.chat:
-            self.chat = await self.create_chat(
-                title=message_text[:50].strip())  # Set the first 50 chars as the title
         await self.save_message(message_text, sender="user")
 
         client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
@@ -62,7 +75,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             await self.send(text_data=json.dumps({
                 "content": message_chunk,
-                "chat_id": self.chat.id
+                "slug": self.slug
             }))
 
         self.messages.append({"role": "system", "content": final_response})
@@ -80,7 +93,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.messages.append({'role': 'system', 'content': prompt})
 
     async def create_chat(self, title):
-        return await database_sync_to_async(Chat.objects.create)(user=self.user, title=title)
+        chat = await database_sync_to_async(Chat.objects.create)(user=self.user, title=title)
+        return chat
 
     async def save_message(self, text, sender):
         await database_sync_to_async(Message.objects.create)(
@@ -90,9 +104,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             timestamp=timezone.now()
         )
 
-    async def get_chat(self, chat_id):
+    async def get_chat(self, slug):
         try:
-            chat = await database_sync_to_async(Chat.objects.get)(id=chat_id, user=self.user)
+            chat = await database_sync_to_async(Chat.objects.get)(slug=slug, user=self.user)
             return chat
         except Chat.DoesNotExist:
             return None
@@ -106,7 +120,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def authenticate_user(self, token):
         try:
-            # Validate the token and get the user
             validated_token = JWTAuthentication().get_validated_token(token)
             user = JWTAuthentication().get_user(validated_token)
             return user

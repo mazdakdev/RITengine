@@ -46,12 +46,12 @@ class UserChatsListView(generics.ListAPIView):
 class UserChatsDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated,]
     serializer_class = ChatSerializer
-    lookup_field = 'id'
+    lookup_field = 'slug'
 
     def get_queryset(self):
         user = self.request.user
-        chat_id = self.kwargs['id']
-        return Chat.objects.filter(user=user, id=chat_id)
+        slug = self.kwargs['slug']
+        return Chat.objects.filter(user=user, slug=slug)
 
 class ChatsMessagesListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, ]
