@@ -205,9 +205,6 @@ class CompleteRegistrationView(APIView):
 
             }, status=status.HTTP_400_BAD_REQUEST)
 
-#----
-#TODO refactor the below
-
 @extend_schema(
     request=PasswordResetSerializer,
 )
@@ -241,7 +238,6 @@ class PasswordResetView(APIView):
 class PasswordChangeView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     def post(self, request, *args, **kwargs):
-
         serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         new_password = serializer.validated_data['new_password1']
@@ -269,32 +265,15 @@ class Request2FAView(APIView):
             user.save()
             return Response({
                 'status': 'success',
-                "details": "an otp has been sent successfully to the user."
+                "details": "an otp has been sent successfully."
             })
 
-        if user.preferred_2fa == "email":
-            device = EmailDevice.objects.filter(user=user).first()
-            device.generate_challenge()
-            return Response({
-                'status': 'success',
-                "details": "an E-mail has been sent successfully to the user."
-            })
 
-        elif user.preferred_2fa == "sms":
-            device = SMSDevice.objects.filter(user=user).first()
-            device.generate_challenge()
-            return Response({
-                'status': 'success',
-                "details": "an sms has been sent successfully to the user."
-            })
-
-        elif user.preferred_2fa == "totp":
-            return Response({
-                'status': 'error',
-                "details": "No need to request 2FA for this user (CHECK THE AUTHENTICATOR APP).",
-                'error_code': "error_2fa_request_totp"
-            })
-
+        utils.generate_2fa_challenge(user)
+        return Response({
+            'status': 'success',
+            "details": "a 2fa code has been sent successfully."
+        })
 
 
 @extend_schema(
@@ -382,7 +361,7 @@ class Verify2FASetupView(APIView):
         if method == 'email':
             device = EmailDevice.objects.filter(user=user, confirmed=False).first()
         elif method == 'sms':
-           device = SMSDevice.objects.filter(number=user.phone_number, confirmed=False).first()
+            device = SMSDevice.objects.filter(number=user.phone_number, confirmed=False).first()
         elif method == 'totp':
             device = TOTPDevice.objects.filter(user=user, confirmed=False).first()
 
@@ -416,3 +395,4 @@ class Verify2FASetupView(APIView):
 #TODO: Twilio
 #TODO: backup codes
 #TODO: change 2fa method
+#TODO: ratelimit
