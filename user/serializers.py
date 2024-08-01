@@ -33,11 +33,12 @@ class LoginSerializer(serializers.Serializer):
         password = attrs.get("password")
 
         user = get_user_by_identifier(identifier)
-        username = user.username
 
 
         if user is None:
             raise InvalidCredentials()
+
+        username = user.username
 
         if not user.is_email_verified:
             raise EmailNotVerified()

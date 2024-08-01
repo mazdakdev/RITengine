@@ -263,7 +263,7 @@ class Request2FAView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         if not user.preferred_2fa:
-            otp, secret = generate_otp()
+            otp, secret = utils.generate_otp()
             user.send_mail("otp", otp.now())
             user.otp_secret = secret
             user.save()
