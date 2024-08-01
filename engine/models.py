@@ -34,7 +34,6 @@ class Message(models.Model):
         ('user', 'User'),
         ('engine', 'RIT-engine'),
     ) #IDEA: different prompts
-
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
     text = models.TextField()
     sender = models.CharField(max_length=10, choices=SENDER_CHOICES, default='user')
@@ -44,10 +43,17 @@ class Message(models.Model):
     def __str__(self):
         return f"{self.get_sender_display()}: {self.text[:50]}"
 
+class EngineCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    prompt = models.TextField()
+
+    def __str__(self):
+        return self.name
+
 class Engine(models.Model):
     name = models.CharField(max_length=100)
     prompt = models.TextField()
-
+    category = models.ForeignKey(EngineCategory, related_name="engines", on_delete=models.CASCADE, null=True)
     def __str__(self):
         return self.name
 
