@@ -10,6 +10,7 @@ from .serializers import (
     ChatSerializer,
     MessageSerializer,
     AssistSerializer,
+    EngineCategorySerializer
 )
 
 from .models import (
@@ -17,19 +18,20 @@ from .models import (
     Engine,
     Message,
     Assist,
+    EngineCategory
 )
 
 
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 class EngineListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsAdminUser,]
+    permission_classes = [IsAuthenticated,]
     queryset = Engine.objects.all()
     serializer_class = EngineSerializer
     pagination_class = PageNumberPagination
 
 class EngineDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAdminUser, ]
+    permission_classes = [IsAuthenticated]
     queryset = Engine.objects.all()
     serializer_class = EngineSerializer
     lookup_field = 'id'
@@ -71,7 +73,7 @@ class GenerateChatLinkView(GenerateShareableLinkView):
     def get_object(self):
         return get_object_or_404(Chat, id=self.kwargs.get('id'))
 
-class AssistsListView(generics.ListCreateAPIView):
+class AssistsListCreateView(generics.ListCreateAPIView):
     serializer_class = AssistSerializer
     lookup_field = 'id'
     queryset = Assist.objects.all()
@@ -80,6 +82,19 @@ class AssistsListView(generics.ListCreateAPIView):
 class AssistsDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Assist.objects.all()
     serializer_class = AssistSerializer
+    lookup_field = 'id'
+    pagination_class = PageNumberPagination
+
+
+class EngineCategoryListCreateView(generics.ListCreateAPIView):
+    serializer_class = EngineCategorySerializer
+    lookup_field = 'id'
+    queryset = EngineCategory.objects.all()
+    pagination_class = PageNumberPagination
+
+class EngineCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = EngineCategory.objects.all()
+    serializer_class = EngineCategorySerializer
     lookup_field = 'id'
     pagination_class = PageNumberPagination
 

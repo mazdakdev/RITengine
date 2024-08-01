@@ -4,6 +4,7 @@ from .models import (
     Chat,
     Message,
     Assist,
+    EngineCategory
 )
 
 
@@ -14,7 +15,13 @@ class StreamGeneratorSerializer(serializers.Serializer):
 class EngineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Engine
-        fields = '__all__'
+        fields = ["name","prompt", "category"]
+
+
+class EngineCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EngineCategory
+        fields = "__all__"
 
 class ChatSerializer(serializers.ModelSerializer):
     class Meta:
@@ -35,3 +42,4 @@ class AssistSerializer(serializers.ModelSerializer):
 
 
 #TODO: Readonly fields
+#TODO: ALL APPS: explicit serializer fields
