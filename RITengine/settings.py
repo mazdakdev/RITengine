@@ -150,7 +150,7 @@ REST_AUTH = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), #TODO: just for test
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), #TODO: Production: just for test
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -245,4 +245,4 @@ OPENAI_API_KEY = "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"
 FRONTEND_URL  = "http://127.0.0.1:3000"
 SMS_PROVIDER = "melipayamak"
 
-#TODO: cache
+#TODO: Production: cache

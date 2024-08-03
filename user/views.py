@@ -131,7 +131,7 @@ class CustomUserDetailsView(UserDetailsView):
             return Response({
                 'status': 'error',
                 'details': 'Method "PUT" not allowed for OAuth-based users.',
-                'error_code': 'error-oauth-restricted'
+                'error_code': 'oauth_restricted'
             }, status=status.HTTP_403_FORBIDDEN)
         return super().update(request, *args, **kwargs)
 
@@ -140,7 +140,7 @@ class CustomUserDetailsView(UserDetailsView):
             return Response({
                 'status': 'error',
                 'details': 'Method "PATCH" not allowed for OAuth-based users.',
-                'error_code': 'error-oauth-restricted'
+                'error_code': 'oauth_restricted'
             }, status=status.HTTP_403_FORBIDDEN)
         return super().partial_update(request, *args, **kwargs)
 
@@ -392,7 +392,6 @@ class Verify2FASetupView(APIView):
 
 
 #TODO: other social auths
-#TODO: Twilio
 #TODO: backup codes
 #TODO: change 2fa method
 #TODO: ratelimit

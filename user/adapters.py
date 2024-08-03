@@ -1,7 +1,9 @@
+from uuid import uuid4
+
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-
+from django.utils.text import slugify
 
 User = get_user_model()
 
@@ -20,15 +22,13 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
 
         return user
 
-    #TODO: this approach must be changed
     def generate_unique_username(self, email):
-        base_username = email.split('@')[0]
+        base_username = slugify(email.split('@')[0])
         username = base_username
-        counter = 1
-        
-        # Ensure the username is unique
+
+        # Append a short UUID to ensure uniqueness
         while User.objects.filter(username=username).exists():
-            username = f"{base_username}_{counter}"
-            counter += 1
-        
+            unique_suffix = uuid4().hex[:6]
+            username = f"{base_username}_{unique_suffix}"
+
         return username

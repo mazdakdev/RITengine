@@ -32,7 +32,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         print(final_msg)
-        print(initial_prompt) #TODO: only DUBUG and above
+        print(initial_prompt) #TODO: Production:
         self.messages.append({"role": "system", "content": initial_prompt})
 
         if self.slug:
