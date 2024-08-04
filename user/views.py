@@ -20,7 +20,7 @@ from .serializers import (
     CompleteRegisterSerializer,
     UserSerializer, CompleteLoginSerializer, CustomRegisterSerializer,
 )
-
+from .throttles import TwoFAAnonRateThrottle
 
 User = get_user_model()
 
@@ -208,7 +208,8 @@ class PasswordChangeView(APIView):
 
 
 class Request2FAView(APIView):
-    permission_classes = [IsNotOAuthUser,]
+    permission_classes = [IsNotOAuthUser]
+    throttle_classes = [TwoFAAnonRateThrottle]
     def post(self, request):
         serializer = Request2FASerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -233,6 +234,7 @@ class Request2FAView(APIView):
 
 class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
+    throttle_classes = [TwoFAAnonRateThrottle]
 
     def post(self, request):
         user = request.user
@@ -325,5 +327,6 @@ class Verify2FASetupView(APIView):
 #TODO: other social auths {x}
 #TODO: backup codes {x}
 #TODO: change 2fa method
-#TODO: specific rate-limit
-
+#TODO: .env
+#TODO: dj admin
+#TODO: Deploy

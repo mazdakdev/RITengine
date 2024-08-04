@@ -12,33 +12,34 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
-from dotenv import load_dotenv
+import environ
+from .utils import parse_duration
 import os
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-load_dotenv()
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env("DEBUG")
 
-ALLOWED_HOSTS = [
-    "*"
-]
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000'
-]
-CORS_ALLOW_ALL_ORIGINS = True
+ALLOWED_HOSTS = env("ALLOWED_HOSTS", default=[])
 
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS", default=[])
+
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = True
 # Application definition
 
 INSTALLED_APPS = [
@@ -57,9 +58,9 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'dj_rest_auth.registration',
-    'allauth.socialaccount.providers.facebook',    
-    'allauth.socialaccount.providers.google',    
-    'allauth.socialaccount.providers.github',    
+    'allauth.socialaccount.providers.facebook',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.github',
     "corsheaders",
     'drf_spectacular',
     'phonenumber_field',
@@ -146,12 +147,12 @@ REST_AUTH = {
     'SESSION_LOGIN': True,
     'USE_JWT': True,
     'JWT_AUTH_COOKIE': 'auth',
-    'JWT_AUTH_HTTPONLY': False,
+    'JWT_AUTH_HTTPONLY': True,
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), #TODO: just for test
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': parse_duration(env('ACCESS_TOKEN_LIFETIME', default='5m')), #TODO: just for test
+    'REFRESH_TOKEN_LIFETIME': parse_duration(env('REFRESH_TOKEN_LIFETIME', default='1d')),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'ALGORITHM': 'HS256',
@@ -170,13 +171,19 @@ ASGI_APPLICATION = "RITengine.asgi.application"
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_HOST = env('EMAIL_HOST')
+# EMAIL_PORT = env('EMAIL_PORT', default=587)
+# EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+# EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+# EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_UNIQUE_EMAIL = True
-TWILIO_ACCOUNT_SID = 'your_twilio_account_sid'
-TWILIO_AUTH_TOKEN = 'your_twilio_auth_token'
-TWILIO_PHONE_NUMBER = 'your_twilio_phone_number'
+# TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
+# TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
+# TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER")
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'RITengine ENDPOINTs',
@@ -196,8 +203,8 @@ REST_FRAMEWORK = {
         'RITengine.throttles.CustomUserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '10/min',
-        'user': '100/min'
+        'anon': env("ANONYMOUS_RATELIMIT"),
+        'user': env("USERS_RATELIMIT")
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'RITengine.exceptions.custom_exception_handler',
@@ -246,11 +253,22 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+OPENAI_API_KEY = env("OPENAI_API_KEY")
+FRONTEND_URL = env("FRONTEND_URL")
+SMS_PROVIDER = env("SMS_PROVIDER")
 
-OPENAI_API_KEY = "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"
+if not DEBUG:
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_SSL_REDIRECT = True
+    X_FRAME_OPTIONS = 'DENY'
+
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 
-FRONTEND_URL  = "http://127.0.0.1:3000"
-SMS_PROVIDER = "melipayamak"
-
-#TODO: Production: cache
+#TODO: setup logger
+#TODO: redis and .env(db)
