@@ -1,13 +1,10 @@
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView, RegisterView
-from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiParameter, OpenApiTypes
 from dj_rest_auth.views import UserDetailsView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework import serializers
 from rest_framework.views import APIView
-from dj_rest_auth.registration.serializers import RegisterSerializer
 from django.contrib.auth import get_user_model
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_email.models import EmailDevice
@@ -27,12 +24,7 @@ from .serializers import (
 
 User = get_user_model()
 
-@extend_schema(
-    request=inline_serializer(name="GithubReqSerializer", fields={
-        'access_token': serializers.CharField()
-    }),
-    description="Github's Oauth",
-)
+
 class GitHubLoginView(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
     callback_url = "https://127.0.0.1:3000/oath/callback/github"
@@ -44,9 +36,6 @@ class GitHubLoginView(SocialLoginView):
         self.request.user.is_oauth_based = True
         self.request.user.save()
 
-@extend_schema(
-    request=RegisterSerializer,
-)
 class CustomRegisterView(RegisterView):
     serializer_class = CustomRegisterSerializer
 
@@ -61,9 +50,6 @@ class CustomRegisterView(RegisterView):
 
         }, status=status.HTTP_200_OK)
 
-@extend_schema(
-    request=LoginSerializer,
-)
 class CustomLoginView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
@@ -111,17 +97,6 @@ class CompleteLoginView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-@extend_schema(
-    parameters=[
-        OpenApiParameter(
-            name='Authorization',
-            type=OpenApiTypes.STR,
-            location=OpenApiParameter.HEADER,
-            description='Bearer token for authentication',
-            required=True,
-        ),
-        ],
-)
 class CustomUserDetailsView(UserDetailsView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
@@ -144,9 +119,6 @@ class CustomUserDetailsView(UserDetailsView):
             }, status=status.HTTP_403_FORBIDDEN)
         return super().partial_update(request, *args, **kwargs)
 
-@extend_schema(
-    request=CompleteRegisterSerializer,
-)
 class CompleteRegistrationView(APIView):
     def post(self, request):
         serializer = CompleteRegisterSerializer(data=request.data)
@@ -205,9 +177,6 @@ class CompleteRegistrationView(APIView):
 
             }, status=status.HTTP_400_BAD_REQUEST)
 
-@extend_schema(
-    request=PasswordResetSerializer,
-)
 class PasswordResetView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     def post(self, request):
@@ -223,18 +192,6 @@ class PasswordResetView(APIView):
             'details': 'Password has been reset.'
         }, status=status.HTTP_200_OK)
 
-@extend_schema(
-    request=PasswordChangeSerializer,
-    parameters=[
-        OpenApiParameter(
-            name='Authorization',
-            type=OpenApiTypes.STR,
-            location=OpenApiParameter.HEADER,
-            description='Bearer token for authentication',
-            required=True,
-        ),
-    ],
- )
 class PasswordChangeView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     def post(self, request, *args, **kwargs):
@@ -249,9 +206,7 @@ class PasswordChangeView(APIView):
             'details': 'Password has been changed.'
         }, status=status.HTTP_200_OK)
 
-@extend_schema(
-    request=Request2FASerializer,
- )
+
 class Request2FAView(APIView):
     permission_classes = [IsNotOAuthUser,]
     def post(self, request):
@@ -276,18 +231,6 @@ class Request2FAView(APIView):
         })
 
 
-@extend_schema(
-    request=Enable2FASerializer,
-    parameters=[
-        OpenApiParameter(
-            name='Authorization',
-            type=OpenApiTypes.STR,
-            location=OpenApiParameter.HEADER,
-            description='Bearer token for authentication',
-            required=True,
-        ),
-    ],
- )
 class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
 
@@ -336,18 +279,6 @@ class Enable2FAView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
-@extend_schema(
-    request=Verify2FASerializer,
-    parameters=[
-        OpenApiParameter(
-            name='Authorization',
-            type=OpenApiTypes.STR,
-            location=OpenApiParameter.HEADER,
-            description='Bearer token for authentication',
-            required=True,
-        ),
-    ],
- )
 class Verify2FASetupView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
 
@@ -394,4 +325,5 @@ class Verify2FASetupView(APIView):
 #TODO: other social auths {x}
 #TODO: backup codes {x}
 #TODO: change 2fa method
-#TODO: ratelimit {x}
+#TODO: specific rate-limit
+

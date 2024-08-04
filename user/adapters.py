@@ -17,8 +17,8 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         user.username = self.generate_unique_username(user.email)
 
         if data.get('name'):
-            user.fname = data.get('name').split()[0]
-            user.lname = data.get('name').split()[-1]
+            user.f_name = data.get('name').split()[0]
+            user.l_name = data.get('name').split()[-1]
 
         return user
 

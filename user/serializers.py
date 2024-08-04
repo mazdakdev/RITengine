@@ -51,8 +51,6 @@ class LoginSerializer(serializers.Serializer):
         attrs['user'] = authenticated_user
         return attrs
 
-
-
 class CompleteLoginSerializer(serializers.Serializer):
     identifier = serializers.CharField()
     tmp_token = serializers.CharField()
@@ -95,7 +93,12 @@ class CompleteLoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = "__all__"  #TODO
+        fields = ["username", "email", "f_name", "l_name"]
+
+        def __init__(self, *args, **kwargs):
+            super(UserSerializer, self).__init__(*args, **kwargs)
+            for field_name in self.fields:
+                self.fields[field_name].read_only = True
 
 
 class CompleteRegisterSerializer(serializers.Serializer):
