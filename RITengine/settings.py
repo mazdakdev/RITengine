@@ -192,11 +192,11 @@ REST_FRAMEWORK = {
         'dj_rest_auth.jwt_auth.JWTCookieAuthentication'
     ),
     'DEFAULT_THROTTLE_CLASSES':[
-        'rest_framework.throttling.AnonRateThrottle', 
-        'rest_framework.throttling.UserRateThrottle'
+        'RITengine.throttles.CustomAnonRateThrottle',
+        'RITengine.throttles.CustomUserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',  #TODO
+        'anon': '10/min',
         'user': '100/min'
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
