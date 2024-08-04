@@ -391,7 +391,7 @@ class Verify2FASetupView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
-#TODO: other social auths
-#TODO: backup codes
+#TODO: other social auths {x}
+#TODO: backup codes {x}
 #TODO: change 2fa method
-#TODO: ratelimit
+#TODO: ratelimit {x}
