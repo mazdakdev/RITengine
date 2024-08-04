@@ -1,11 +1,11 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from share.models import ShareableModel
-from django.utils.text import slugify
+import uuid
 
 class Chat(ShareableModel):
     title = models.CharField(max_length=100, blank=True, null=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -16,14 +16,7 @@ class Chat(ShareableModel):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title, allow_unicode=True)
-
-            unique_slug = self.slug
-            num = 1
-            while Chat.objects.filter(user=self.user, slug=unique_slug).exists():
-                unique_slug = f"{self.slug}-{num}"
-                num += 1
-            self.slug = unique_slug
+            self.slug = str(uuid.uuid4())
         super(Chat, self).save(*args, **kwargs)
 
     def __str__(self):

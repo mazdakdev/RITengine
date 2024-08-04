@@ -61,8 +61,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if message_chunk:
                 await self.send(text_data=json.dumps({
                     "content": message_chunk,
-                    "slug": self.slug
+                    "slug": self.slug,
+                    "is_ended": False
                 }))
+        await self.send(text_data=json.dumps({
+            "content": "",
+            "slug": self.slug,
+            "is_ended": True
+        }))
+
 
     @database_sync_to_async
     def create_chat(self, title):
