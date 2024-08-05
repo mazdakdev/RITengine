@@ -4,11 +4,17 @@ from .models import Bookmark
 
 class BookmarkSerializer(serializers.ModelSerializer):
     message_id = serializers.IntegerField(write_only=True)
+    message_text = serializers.SerializerMethodField()
 
     class Meta:
         model = Bookmark
-        fields = ['id', 'user', 'message_id']  # Include other fields as needed
-        read_only_fields = ['id', 'user']
+        fields = ['id', 'user', 'message_id', 'message_text']
+    def get_message_text(self, obj):
+        return obj.message.text
+
+    def __new__(cls, *args, **kwargs):
+        cls.Meta.read_only_fields = [field for field in cls.Meta.fields]
+        return super().__new__(cls, *args, **kwargs)
 
     def create(self, validated_data):
         message_id = validated_data.pop('message_id')

@@ -7,12 +7,10 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import json
 from .models import Chat, Message, Engine
-from django.contrib.auth.models import AnonymousUser
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         print("WebSocket connection attempt")
-        self.chat = None
         self.messages = []
         self.slug = self.scope['url_route']['kwargs'].get('slug')
         await self.accept()
@@ -29,23 +27,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
             final_msg, initial_prompt = await self.get_final_prompt(message_text, engines_list)
             if final_msg is None:
                 return
-
-            print(final_msg)
-            print(initial_prompt) #TODO: Production:
             self.messages.append({"role": "system", "content": initial_prompt})
 
             if self.slug:
                 self.chat = await self.get_chat(self.slug)
                 if not self.chat:
                     await self.send(text_data=json.dumps({"error": "Chat not found."}))
-                    await self.close(code=4404)  # Not Found
+                    await self.close(code=4404)
                     return
                 self.messages = await self.load_chat_history(self.chat)
+
             else:
                 self.chat = await self.create_chat(title=message_text[:50].strip())
                 self.slug = self.chat.slug
 
-            await self.save_message(message_text, sender="user")
+            message = await self.save_message(message_text, sender="user")
             self.messages.append({"role": "user", "content": final_msg})
 
             client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
@@ -63,11 +59,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     await self.send(text_data=json.dumps({
                         "content": message_chunk,
                         "slug": self.slug,
+                        "message_id": message.id,
                         "is_ended": False
                     }))
             await self.send(text_data=json.dumps({
                 "content": "",
                 "slug": self.slug,
+                "message_id": message.id,
                 "is_ended": True
             }))
 
@@ -83,12 +81,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_message(self, text, sender):
-        Message.objects.create(
+        message =Message.objects.create(
             chat=self.chat,
             text=text,
             sender=sender,
             timestamp=timezone.now()
         )
+        return message
 
     @database_sync_to_async
     def get_chat(self, slug):
