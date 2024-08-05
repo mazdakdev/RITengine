@@ -8,7 +8,10 @@ from rest_framework import status
 class LegalDocumentViewSet(ModelViewSet):
     queryset = LegalDocument.objects.all()
     serializer_class = LegalDocumentSerializer
+    #permission_classes = []
+    pagination_class = None
     lookup_field = 'doc_type'
+
 
     def handle_exception(self, exc):
         if isinstance(exc, NotFound):
