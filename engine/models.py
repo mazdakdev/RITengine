@@ -12,7 +12,6 @@ class Chat(ShareableModel):
 
     class Meta:
         ordering = ['created_at']
-        unique_together = ('user', 'slug')
 
     def save(self, *args, **kwargs):
         if not self.slug:

@@ -59,10 +59,10 @@ class ChatsMessagesListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, ]
     serializer_class = MessageSerializer
     pagination_class = PageNumberPagination
-    lookup_field = 'id'
+    lookup_field = 'slug'
     def get_queryset(self):
-        chat_id = self.kwargs['id']
-        chat = get_object_or_404(Chat, id=chat_id)
+        chat_slug = self.kwargs['slug']
+        chat = get_object_or_404(Chat, slug=chat_slug)
 
         if self.request.user != chat.user:
             return []
@@ -71,7 +71,7 @@ class ChatsMessagesListView(generics.ListAPIView):
 
 class GenerateChatLinkView(GenerateShareableLinkView):
     def get_object(self):
-        return get_object_or_404(Chat, id=self.kwargs.get('id'))
+        return get_object_or_404(Chat, slug=self.kwargs.get('slug'))
 
 class AssistsListCreateView(generics.ListCreateAPIView):
     serializer_class = AssistSerializer

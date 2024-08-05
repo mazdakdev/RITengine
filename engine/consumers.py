@@ -12,7 +12,6 @@ from django.contrib.auth.models import AnonymousUser
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         print("WebSocket connection attempt")
-        self.user = AnonymousUser()
         self.chat = None
         self.messages = []
         self.slug = self.scope['url_route']['kwargs'].get('slug')
@@ -24,51 +23,58 @@ class ChatConsumer(AsyncWebsocketConsumer):
         engines_list = data.get("engines_list")
         token = data.get("token")
 
-        user = await self.authenticate_user(token)
-        self.user = user
+        self.user = await self.authenticate_user(token)
 
-        final_msg, initial_prompt = await self.get_final_prompt(message_text, engines_list)
-        if final_msg is None:
-            return
-
-        print(final_msg)
-        print(initial_prompt) #TODO: Production:
-        self.messages.append({"role": "system", "content": initial_prompt})
-
-        if self.slug:
-            self.chat = await self.get_chat(self.slug)
-            if not self.chat:
-                await self.send(text_data=json.dumps({"error": "Chat not found."}))
-                await self.close(code=4404)  # Not Found
+        if self.user:
+            final_msg, initial_prompt = await self.get_final_prompt(message_text, engines_list)
+            if final_msg is None:
                 return
-            self.messages = await self.load_chat_history(self.chat)
+
+            print(final_msg)
+            print(initial_prompt) #TODO: Production:
+            self.messages.append({"role": "system", "content": initial_prompt})
+
+            if self.slug:
+                self.chat = await self.get_chat(self.slug)
+                if not self.chat:
+                    await self.send(text_data=json.dumps({"error": "Chat not found."}))
+                    await self.close(code=4404)  # Not Found
+                    return
+                self.messages = await self.load_chat_history(self.chat)
+            else:
+                self.chat = await self.create_chat(title=message_text[:50].strip())
+                self.slug = self.chat.slug
+
+            await self.save_message(message_text, sender="user")
+            self.messages.append({"role": "user", "content": final_msg})
+
+            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+            openai_response = await client.chat.completions.create(
+                messages=self.messages,
+                model="gpt-3.5-turbo", #TODO: .env
+                stream=True,
+            )
+
+            final_response = ""
+            async for chunk in openai_response:
+                message_chunk = chunk.choices[0].delta.content or ""
+                final_response += message_chunk
+                if message_chunk:
+                    await self.send(text_data=json.dumps({
+                        "content": message_chunk,
+                        "slug": self.slug,
+                        "is_ended": False
+                    }))
+            await self.send(text_data=json.dumps({
+                "content": "",
+                "slug": self.slug,
+                "is_ended": True
+            }))
+
+            self.messages.append({"role": "system", "content": final_response})
+            await self.save_message(final_response, sender="engine")
         else:
-            self.chat = await self.create_chat(title=message_text[:50].strip())
-            self.slug = self.chat.slug
-
-        await self.save_message(message_text, sender="user")
-        self.messages.append({"role": "user", "content": final_msg})
-
-        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        openai_response = await client.chat.completions.create(
-            messages=self.messages,
-            model="gpt-3.5-turbo",
-            stream=True,
-        )
-
-        async for chunk in openai_response:
-            message_chunk = chunk.choices[0].delta.content
-            if message_chunk:
-                await self.send(text_data=json.dumps({
-                    "content": message_chunk,
-                    "slug": self.slug,
-                    "is_ended": False
-                }))
-        await self.send(text_data=json.dumps({
-            "content": "",
-            "slug": self.slug,
-            "is_ended": True
-        }))
+            await self.close(code=4401, reason="JWT token is invalid or expired.")
 
 
     @database_sync_to_async
@@ -125,6 +131,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         try:
             validated_token = JWTAuthentication().get_validated_token(token)
             return JWTAuthentication().get_user(validated_token)
+
         except (InvalidToken, TokenError):
-            self.close(code=4401, reason="JWT token is invalid or expired.")
             return None
