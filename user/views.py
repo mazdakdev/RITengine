@@ -178,7 +178,7 @@ class CompleteRegistrationView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
 class PasswordResetView(APIView):
-    permission_classes = [IsAuthenticated, IsNotOAuthUser]
+    permission_classes = [IsNotOAuthUser]
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -324,9 +324,10 @@ class Verify2FASetupView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
-#TODO: other social auths {x}
-#TODO: backup codes {x}
+#TODO: other social auths
+#TODO: backup codes
 #TODO: change 2fa method
-#TODO: .env
-#TODO: dj admin
+#TODO: del 2fa
+#TODO: separate settings.py
+#TODO: totp security check
 #TODO: Deploy
