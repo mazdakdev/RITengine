@@ -100,6 +100,11 @@ class UserSerializer(serializers.ModelSerializer):
             for field_name in self.fields:
                 self.fields[field_name].read_only = True
 
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["username", "email", "f_name", "l_name", "phone_number"] #TODO: rest
+
 
 class CompleteRegisterSerializer(serializers.Serializer):
     otp = serializers.IntegerField()
