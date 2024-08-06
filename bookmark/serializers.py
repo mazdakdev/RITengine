@@ -3,7 +3,7 @@ from engine.models import Message
 from .models import Bookmark
 
 class BookmarkSerializer(serializers.ModelSerializer):
-    message_id = serializers.IntegerField(write_only=True)
+    message_id = serializers.SerializerMethodField()
     message_text = serializers.SerializerMethodField()
 
     class Meta:
@@ -11,6 +11,8 @@ class BookmarkSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'message_id', 'message_text']
     def get_message_text(self, obj):
         return obj.message.text
+    def get_message_id(self, obj):
+        return obj.message.id
     def __new__(cls, *args, **kwargs):
         cls.Meta.read_only_fields = [field for field in cls.Meta.fields]
         return super().__new__(cls, *args, **kwargs)

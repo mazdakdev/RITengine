@@ -54,8 +54,8 @@ class ProjectMessages(APIView):
         if serializer.is_valid():
             message_ids = serializer.validated_data['message_ids']
             messages = project.messages.filter(id__in=message_ids)
-            deleted_count = messages.delete()[0]
-            return Response({'deleted': deleted_count}, status=status.HTTP_200_OK)
+            messages.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class GenerateProjectLinkView(GenerateShareableLinkView):
