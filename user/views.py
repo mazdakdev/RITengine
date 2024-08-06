@@ -331,3 +331,5 @@ class Verify2FASetupView(APIView):
 #TODO: separate settings.py
 #TODO: totp security check
 #TODO: Deploy
+#TODO: check get_obj_404
+#TOOD: check not necessary custom raise exceptions

@@ -21,6 +21,7 @@ urlpatterns = [
     path('chats/<slug:slug>/', UserChatsDetailView.as_view(), name='chat_detail'),
     path('chats/<slug:slug>/generate-link/', GenerateChatLinkView.as_view(), name='chat_link'),
     path('chats/<slug:slug>/messages/', ChatsMessagesListView.as_view(), name='chat_detail'),
+    #Detail
     path('assists/', AssistsListCreateView.as_view(), name='assist_list'),
     path('assists/<int:id>/', AssistsDetailView.as_view(), name='assist_detail'),
 ]

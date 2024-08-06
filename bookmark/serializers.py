@@ -11,7 +11,6 @@ class BookmarkSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'message_id', 'message_text']
     def get_message_text(self, obj):
         return obj.message.text
-
     def __new__(cls, *args, **kwargs):
         cls.Meta.read_only_fields = [field for field in cls.Meta.fields]
         return super().__new__(cls, *args, **kwargs)
