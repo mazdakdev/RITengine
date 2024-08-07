@@ -1,35 +1,18 @@
 from rest_framework import generics, status
-from rest_framework.exceptions import NotFound
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
+from rest_framework.views import APIView
 from share.views import GenerateShareableLinkView
 from .models import Project, Message
-from .serializers import ProjectSerializer
+from .serializers import ProjectSerializer, MessageIDSerializer
 from engine.serializers import MessageSerializer
 
-class UserProjectListCreateView(generics.ListCreateAPIView):
+class ProjectListCreateView(generics.ListCreateAPIView):
     serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
-        return Project.objects.filter(user=self.request.user, id=self.kwargs['id'])
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-class ProjectMessagesListView(generics.ListAPIView):
-    serializer_class = MessageSerializer
-    permission_classes = [IsAuthenticated,]
-
-    def get_queryset(self):
-        project_id = self.kwargs['project_id']
-        projects = Project.objects.filter(user=self.request.user, id=project_id)
-
-        return Message.objects.filter(projects__in=projects)
-class ProjectCreateView(generics.CreateAPIView):
-    serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated,]
+        return Project.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -42,27 +25,38 @@ class ProjectRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return Project.objects.filter(user=self.request.user, id=self.kwargs['id'])
 
+class ProjectMessages(APIView):
+    permission_classes = [IsAuthenticated]
 
-# class AddMessageToProjectView(generics.GenericAPIView):
-#     permission_classes = [IsAuthenticated,]
-#
-#     def post(self, request, project_id, message_id):
-#         try:
-#             project = Project.objects.get(id=project_id, user=request.user)
-#         except Project.DoesNotExist:
-#             raise NotFound('Project not found or you do not have permission to access it.')
-#
-#         try:
-#             message = Message.objects.get(id=message_id)
-#         except Message.DoesNotExist:
-#             raise NotFound('Message not found.')
-#
-#         project.messages.add(message)
-#         return Response({
-#             "status": "success",
-#             'details': 'message added to project'
-#         }, status=status.HTTP_200_OK)
+    def get(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id, user=request.user)
+        messages = project.messages.all()
+        serializer = MessageSerializer(messages, many=True)
+        return Response(serializer.data)
 
+    def post(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id, user=request.user)
+        serializer = MessageIDSerializer(data=request.data)
+
+        if serializer.is_valid():
+            message_ids = serializer.validated_data['message_ids']
+            messages = Message.objects.filter(id__in=message_ids)
+            for message in messages:
+                project.messages.add(message)
+                project.save()
+            return Response(MessageSerializer(messages, many=True).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id, user=request.user)
+        serializer = MessageIDSerializer(data=request.data)
+
+        if serializer.is_valid():
+            message_ids = serializer.validated_data['message_ids']
+            messages = project.messages.filter(id__in=message_ids)
+            messages.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class GenerateProjectLinkView(GenerateShareableLinkView):
     def get_object(self):

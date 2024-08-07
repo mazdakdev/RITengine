@@ -19,6 +19,7 @@ from .serializers import (
     LoginSerializer,
     CompleteRegisterSerializer,
     UserSerializer, CompleteLoginSerializer, CustomRegisterSerializer,
+    UserDetailSerializer
 )
 from .throttles import TwoFAAnonRateThrottle
 
@@ -99,7 +100,7 @@ class CompleteLoginView(APIView):
 
 class CustomUserDetailsView(UserDetailsView):
     permission_classes = [IsAuthenticated]
-    serializer_class = UserSerializer
+    serializer_class = UserDetailSerializer
 
     def update(self, request, *args, **kwargs):
         if request.user.is_oauth_based:
@@ -323,11 +324,44 @@ class Verify2FASetupView(APIView):
 
             }, status=status.HTTP_400_BAD_REQUEST)
 
+class Disable2FAView(APIView):
+    permission_classes = [IsAuthenticated, IsNotOAuthUser]
+    throttle_classes = [TwoFAAnonRateThrottle]
+
+    def post(self, request):
+        user = request.user
+        if not user.preferred_2fa:
+           return Response(
+               {
+                   'status': 'error',
+                   'details': '2fa is not enabled',
+                   'error': 'error-2fa-not-enabled'
+               }, status=status.HTTP_400_BAD_REQUEST
+           )
+        if not utils.validate_two_fa(user, self.request.data['code']):
+            return Response(
+                {
+                    'status': 'error',
+                    'details': 'otp',
+                    'error': 'error'
+                }, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.preferred_2fa = None
+        user.save()
+        return Response(
+            status=status.HTTP_200_OK
+        )
+
+
+
 
 #TODO: other social auths
 #TODO: backup codes
 #TODO: change 2fa method
-#TODO: del 2fa
 #TODO: separate settings.py
 #TODO: totp security check
 #TODO: Deploy
+#TODO: check get_obj_404
+#TOOD: check not necessary custom raise exceptions & unify responses in this file
+#TODO: engine send message in ws instead of rest

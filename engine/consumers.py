@@ -41,7 +41,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 self.chat = await self.create_chat(title=message_text[:50].strip())
                 self.slug = self.chat.slug
 
-            message = await self.save_message(message_text, sender="user")
+            await self.save_message(message_text, sender="user")
             self.messages.append({"role": "user", "content": final_msg})
 
             client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
@@ -59,18 +59,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     await self.send(text_data=json.dumps({
                         "content": message_chunk,
                         "slug": self.slug,
-                        "message_id": message.id,
                         "is_ended": False
                     }))
+
+            engine_msg = await self.save_message(final_response, sender="engine")
             await self.send(text_data=json.dumps({
                 "content": "",
                 "slug": self.slug,
-                "message_id": message.id,
+                "message_id": engine_msg.id,
                 "is_ended": True
             }))
 
             self.messages.append({"role": "system", "content": final_response})
-            await self.save_message(final_response, sender="engine")
+
         else:
             await self.close(code=4401, reason="JWT token is invalid or expired.")
 
@@ -81,7 +82,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_message(self, text, sender):
-        message =Message.objects.create(
+        message = Message.objects.create(
             chat=self.chat,
             text=text,
             sender=sender,
