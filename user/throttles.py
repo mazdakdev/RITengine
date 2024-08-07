@@ -5,4 +5,4 @@ class TwoFAAnonRateThrottle(AnonRateThrottle):
     rate = "4/min"
 
 
-#TODO
+#TODO: add user throttle

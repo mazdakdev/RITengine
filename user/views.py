@@ -370,7 +370,7 @@ class Disable2FAView(APIView):
 #TODO: change 2fa method
 #TODO: other social auths
 #TODO: search
-#TODO: generate new sets backup codes
+#TODO: generate new sets backup codes & complete
 
 #TODO: separate settings.py
 #TODO: totp security check

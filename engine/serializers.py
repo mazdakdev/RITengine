@@ -15,10 +15,11 @@ class StreamGeneratorSerializer(serializers.Serializer):
 class EngineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Engine
-        fields = ["name","prompt", "category"]
+        fields = ["name", "prompt", "category"]
 
 
 class EngineCategorySerializer(serializers.ModelSerializer):
+    engines = EngineSerializer(many=True, read_only=True)
     class Meta:
         model = EngineCategory
         fields = "__all__"

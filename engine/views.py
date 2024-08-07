@@ -25,13 +25,11 @@ from .models import (
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 class EngineListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated,]
     queryset = Engine.objects.all()
     serializer_class = EngineSerializer
     pagination_class = PageNumberPagination
 
 class EngineDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
     queryset = Engine.objects.all()
     serializer_class = EngineSerializer
     lookup_field = 'id'
