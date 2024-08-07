@@ -8,7 +8,8 @@ from .exceptions import (
     EmailNotVerified, InvalidCredentials,
     InvalidTwoFaOrOtp, TwoFaRequired
 )
-from .utils import get_user_by_identifier, validate_two_fa, generate_2fa_challenge
+from .utils import get_user_by_identifier, validate_two_fa, validate_backup_code
+from .models import BackupCode
 from rest_framework import serializers, status
 import pyotp
 
@@ -54,7 +55,7 @@ class LoginSerializer(serializers.Serializer):
 class CompleteLoginSerializer(serializers.Serializer):
     identifier = serializers.CharField()
     tmp_token = serializers.CharField()
-    code = serializers.CharField(max_length=6, min_length=6)
+    code = serializers.CharField(min_length=6, max_length=10)
 
     def validate(self, attrs):
         identifier = attrs.get("identifier")
@@ -84,8 +85,10 @@ class CompleteLoginSerializer(serializers.Serializer):
             )
 
         if not validate_two_fa(user, code):
-            raise InvalidTwoFaOrOtp()
+            if not validate_backup_code(user, code):
+                raise InvalidTwoFaOrOtp()
 
+        #TODO: delete cache
         attrs['user'] = user
         return attrs
 
@@ -118,7 +121,7 @@ class PasswordResetSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         identifier = attrs.get('identifier')
-        code = attrs.get('otp')
+        code = attrs.get('code')
 
         user = get_user_by_identifier(identifier)
 
@@ -204,4 +207,9 @@ class Verify2FASerializer(serializers.Serializer):
             ('totp', 'totp'),
             ('sms', 'sms'),
         ])
-    otp = serializers.CharField(max_length=6)
+    code = serializers.CharField(max_length=6)
+
+class BackupCodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BackupCode
+        fields = ['code', 'is_used']

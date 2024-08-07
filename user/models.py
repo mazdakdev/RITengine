@@ -48,18 +48,18 @@ class SMSDevice(TwilioSMSDevice):
 
             data = {"to": str(self.number)}
             response = requests.post(
-                'https://console.melipayamak.com/api/send/otp/f2b9f8161c6c46a590f16e05601fcbd2'
+                'https://console.melipayamak.com/api/send/otp/f2b9f8161c6c46a590f16e05601fcbd2' #TODO: .env
                 , json=data
-            ).json()
+            )
 
-            if response["status"] == "ارسال موفق بود": #TODO: 200
-                self.token = response['code']
+            if response.status_code == 200:
+                self.token = response.json()['code']
                 self.valid_until = timezone.now() + timedelta(seconds=300)
                 self.save()
 
                 return self.token
             else:
-                logger.error('Error sending token by MeliPayamak: {0}'.format(str(response['status'])))
+                logger.error('Error sending token by MeliPayamak: {0}'.format(str(response.json()['status'])))
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username_regex = RegexValidator(
@@ -109,6 +109,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
             [self.email],
             fail_silently=False,
         )
+
+class BackupCode(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    code = models.CharField(max_length=10, unique=True)
+    is_used = models.BooleanField(default=False)
+
 
 #TODO: Production: email
 

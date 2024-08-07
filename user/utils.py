@@ -1,12 +1,16 @@
 from django_otp.plugins.otp_email.models import EmailDevice
 from django_otp.plugins.otp_totp.models import TOTPDevice
+from rest_framework.generics import get_object_or_404
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
+from .models import BackupCode
 from django.core.cache import cache
 from django.utils import timezone
 from datetime import datetime
 import pyotp
 import uuid
+import random
+import string
 
 from user.models import SMSDevice
 
@@ -54,7 +58,7 @@ def validate_two_fa(user, otp):
 
     return False
 
-def generate_2fa_challenge(user: User):
+def generate_2fa_challenge(user):
     method = user.preferred_2fa
 
     if method == "email":
@@ -71,3 +75,21 @@ def generate_tmp_token(user):
     cache.set(f'2fa_{tmp_token}', user.id, timeout=300)
 
     return tmp_token
+
+def generate_backup_codes(count=10, length=10):
+    codes = []
+    for _ in range(count):
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+        codes.append(code)
+    return codes
+
+
+
+def validate_backup_code(user, code):
+     try:
+        backup_code = get_object_or_404(BackupCode, user=user, code=code, is_used=False)
+        backup_code.is_used = True
+        backup_code.save()
+        return True
+     except BackupCode.DoesNotExist:
+        return False

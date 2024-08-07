@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_email.models import EmailDevice
-from .models import SMSDevice
+from .models import SMSDevice, BackupCode
 from rest_framework.permissions import IsAuthenticated
 import pyotp
 from . import utils
@@ -19,7 +19,7 @@ from .serializers import (
     LoginSerializer,
     CompleteRegisterSerializer,
     UserSerializer, CompleteLoginSerializer, CustomRegisterSerializer,
-    UserDetailSerializer
+    UserDetailSerializer, BackupCodeSerializer
 )
 from .throttles import TwoFAAnonRateThrottle
 
@@ -306,9 +306,15 @@ class Verify2FASetupView(APIView):
                 device.save()
                 user.preferred_2fa = method
                 user.save()
+                codes = utils.generate_backup_codes()
+                backup_codes = [BackupCode(user=user, code=code) for code in codes]
+                BackupCode.objects.bulk_create(backup_codes)
+                backup_code_serializer = BackupCodeSerializer(backup_codes, many=True)
+
                 return Response({
                     'status': 'success',
-                    'details': '2FA setup completed.'
+                    'details': '2FA setup completed.',
+                    "backup_codes": backup_code_serializer.data
                 }, status=status.HTTP_200_OK)
             else:
                 return Response({
@@ -349,6 +355,7 @@ class Disable2FAView(APIView):
 
         user.preferred_2fa = None
         user.save()
+        BackupCode.objects.filter(user=user).delete()
         return Response(
             {
                 "status": "success",
@@ -360,11 +367,11 @@ class Disable2FAView(APIView):
 
 
 
-#TODO: other social auths
-#TODO: backup codes
 #TODO: change 2fa method
+#TODO: other social auths
+#TODO: search
+#TODO: generate new sets backup codes
+
 #TODO: separate settings.py
 #TODO: totp security check
 #TODO: Deploy
-#TODO: check get_obj_404
-#TODO: engine send message in ws instead of rest
