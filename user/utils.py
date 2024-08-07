@@ -25,10 +25,8 @@ def get_jwt_token(user):
     refresh = RefreshToken.for_user(user)
     access_token = refresh.access_token
 
-    current_time = datetime.now(timezone.utc).timestamp()
-
-    access_exp = round(access_token['exp'] - current_time)
-    refresh_exp = round(refresh['exp'] - current_time)
+    access_exp = int(30)
+    refresh_exp = int(1000)
 
     return access_token, refresh, access_exp, refresh_exp
     
