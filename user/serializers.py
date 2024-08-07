@@ -54,12 +54,12 @@ class LoginSerializer(serializers.Serializer):
 class CompleteLoginSerializer(serializers.Serializer):
     identifier = serializers.CharField()
     tmp_token = serializers.CharField()
-    otp = serializers.CharField(max_length=6, min_length=6)
+    code = serializers.CharField(max_length=6, min_length=6)
 
     def validate(self, attrs):
         identifier = attrs.get("identifier")
         tmp_token = attrs.get("tmp_token")
-        otp = attrs.get("otp")
+        code = attrs.get("code")
 
         user = get_user_by_identifier(identifier)
 
@@ -83,7 +83,7 @@ class CompleteLoginSerializer(serializers.Serializer):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        if not validate_two_fa(user, otp):
+        if not validate_two_fa(user, code):
             raise InvalidTwoFaOrOtp()
 
         attrs['user'] = user
@@ -113,12 +113,12 @@ class CompleteRegisterSerializer(serializers.Serializer):
 
 class PasswordResetSerializer(serializers.Serializer):
     identifier = serializers.CharField()
-    otp = serializers.CharField(max_length=6)
+    code = serializers.CharField(max_length=6)
     new_password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
         identifier = attrs.get('identifier')
-        otp = attrs.get('otp')
+        code = attrs.get('otp')
 
         user = get_user_by_identifier(identifier)
 
@@ -127,14 +127,14 @@ class PasswordResetSerializer(serializers.Serializer):
 
         if not user.preferred_2fa:
             totp = pyotp.TOTP(user.otp_secret, interval=300)
-            if totp.verify(otp):
+            if totp.verify(code):
                 attrs['user'] = user
                 return attrs
             else:
                 raise InvalidTwoFaOrOtp()
 
         else:
-            if not validate_two_fa(user, otp):
+            if not validate_two_fa(user, code):
                 raise InvalidTwoFaOrOtp()
 
         attrs['user'] = user
@@ -142,16 +142,16 @@ class PasswordResetSerializer(serializers.Serializer):
 
 
 class PasswordChangeSerializer(serializers.Serializer):
-    otp = serializers.CharField(max_length=6)
+    code = serializers.CharField(max_length=6)
     new_password1 = serializers.CharField(write_only=True)
     new_password2 = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        otp = attrs.get('otp')
+        code = attrs.get('code')
         new_password1 = attrs.get('new_password1')
         new_password2 = attrs.get('new_password2')
 
-        if not otp:
+        if not code:
             raise TwoFaRequired()
 
         if new_password1 != new_password2:
@@ -165,13 +165,13 @@ class PasswordChangeSerializer(serializers.Serializer):
 
         if not user.preferred_2fa:
             totp = pyotp.TOTP(user.otp_secret, interval=300) #TODO: security check
-            if totp.verify(otp):
+            if totp.verify(code):
                 return attrs
             else:
                 raise InvalidTwoFaOrOtp
 
         else:
-            if not validate_two_fa(user, otp):
+            if not validate_two_fa(user, code):
                 raise InvalidTwoFaOrOtp
             return attrs
 

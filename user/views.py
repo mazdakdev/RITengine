@@ -51,6 +51,64 @@ class CustomRegisterView(RegisterView):
 
         }, status=status.HTTP_200_OK)
 
+class CompleteRegistrationView(APIView):
+    def post(self, request):
+        serializer = CompleteRegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        otp_code = serializer.validated_data['otp']
+        email = serializer.validated_data['email']
+        try:
+            user = User.objects.get(email=email)
+
+            if not user.is_email_verified:
+                if user.otp_secret:
+                    totp = pyotp.TOTP(user.otp_secret, interval=300)
+
+                    if totp.verify(otp_code):
+                        user.is_email_verified = True
+                        user.save()
+                        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+                        user_serializer = UserSerializer(user)
+
+                        return Response({
+                            # 'status': "success",
+                            # 'data': {
+                            'access': str(access),
+                            'refresh': str(refresh),
+                            'access_expiration': access_exp,
+                            'refresh_expiration': refresh_exp,
+                            'user': user_serializer.data,
+
+                            # }
+                        }, status=status.HTTP_200_OK)
+
+                    else:
+                        return Response({
+                            'status': 'error',
+                            'details': 'Invalid or Expired otp/two-fa code provided.',
+                            'error_code': 'invalid_otp_or_two_fa',
+                        }, status=status.HTTP_401_UNAUTHORIZED)
+                else:
+                    return Response({
+                        'status': 'error',
+                        'details': "something went wrong, please try again.",
+                        'error_code': 'otp_secret_not_found'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({
+                'status': 'error',
+                'details': "User's email has already been verified.",
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        except User.DoesNotExist:
+            return Response({
+                'status': 'error',
+                'details': 'Invalid Credentials.',
+                'error_code': 'invalid_credentials'
+
+            }, status=status.HTTP_400_BAD_REQUEST)
+
 class CustomLoginView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
@@ -120,63 +178,6 @@ class CustomUserDetailsView(UserDetailsView):
             }, status=status.HTTP_403_FORBIDDEN)
         return super().partial_update(request, *args, **kwargs)
 
-class CompleteRegistrationView(APIView):
-    def post(self, request):
-        serializer = CompleteRegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        otp_code = serializer.validated_data['otp']
-        email = serializer.validated_data['email']
-        try:
-            user = User.objects.get(email=email)
-
-            if not user.is_email_verified:
-                if user.otp_secret:
-                    totp = pyotp.TOTP(user.otp_secret, interval=300)
-
-                    if totp.verify(otp_code):
-                        user.is_email_verified = True
-                        user.save()
-                        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
-                        user_serializer = UserSerializer(user)
-
-                        return Response({
-                            # 'status': "success",
-                            # 'data': {
-                            'access': str(access),
-                            'refresh': str(refresh),
-                            'access_expiration': access_exp,
-                            'refresh_expiration': refresh_exp,
-                            'user': user_serializer.data,
-
-                            # }
-                        }, status=status.HTTP_200_OK)
-
-                    else:
-                        return Response({
-                            'status': 'error',
-                            'details': 'Invalid or Expired otp/two-fa code provided.',
-                            'error_code': 'invalid_otp_or_two_fa',
-                        }, status=status.HTTP_401_UNAUTHORIZED)
-                else:
-                    return Response({
-                        'status': 'error',
-                        'details': "something went wrong, please try again.",
-                        'error_code': 'otp_secret_not_found'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-
-            return Response({
-                'status': 'error',
-                'details': "User's email has already been verified.",
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        except User.DoesNotExist:
-            return Response({
-                'status': 'error',
-                'details': 'Invalid Credentials.',
-                'error_code': 'invalid_credentials'
-
-            }, status=status.HTTP_400_BAD_REQUEST)
 
 class PasswordResetView(APIView):
     permission_classes = [IsNotOAuthUser]
@@ -252,7 +253,7 @@ class Enable2FAView(APIView):
 
                 return Response({
                     'status': 'success',
-                    'details': 'an E-mail has been sent to the User.',
+                    'details': 'an E-mail has been sent.',
                 }, status=status.HTTP_200_OK)
 
             elif method == 'sms':
@@ -261,7 +262,7 @@ class Enable2FAView(APIView):
 
                 return Response({
                     'status': 'success',
-                    'details': 'an SMS has been sent to the User.',
+                    'details': 'an SMS has been sent..',
                 }, status=status.HTTP_200_OK)
 
 
@@ -269,7 +270,7 @@ class Enable2FAView(APIView):
                 device = TOTPDevice.objects.create(user=user, confirmed=False)
                 return Response({
                     'status': 'success',
-                    'data':{
+                    'data': {
                         "provisioning_uri": device.config_url
                     }
 
@@ -277,7 +278,7 @@ class Enable2FAView(APIView):
 
         return Response({
             'status': 'error',
-            'details': 'User has already 2fa enabled.',
+            'details': '2FA is already enabled.',
             'error': 'error-2fa-already-enabled'
         }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -289,7 +290,7 @@ class Verify2FASetupView(APIView):
         serializer = Verify2FASerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         method = serializer.validated_data['method']
-        otp_code = serializer.validated_data['otp']
+        otp_code = serializer.validated_data['code']
         user = request.user
 
         if method == 'email':
@@ -311,16 +312,16 @@ class Verify2FASetupView(APIView):
                 }, status=status.HTTP_200_OK)
             else:
                 return Response({
-                    'status': 'error',
-                    'details': 'Invalid OTP code.',
-                    'error_code': 'error-invalid-otp'
+                'status': 'error',
+                'details': 'Invalid or Expired otp/two-fa code provided.',
+                'error_code': 'invalid_otp_or_two_fa',
+            }, status=status.HTTP_401_UNAUTHORIZED)
 
-                }, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({
                 'status': 'error',
                 'details': 'Device not found.',
-                'error_code': 'error-2fa-device-404'
+                'error_code': 'error-2fa-device'
 
             }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -334,22 +335,25 @@ class Disable2FAView(APIView):
            return Response(
                {
                    'status': 'error',
-                   'details': '2fa is not enabled',
-                   'error': 'error-2fa-not-enabled'
+                   'details': 'There is no two-factor setup for this user.',
+                   'error': 'two_fa_not_set_up'
                }, status=status.HTTP_400_BAD_REQUEST
            )
+
         if not utils.validate_two_fa(user, self.request.data['code']):
-            return Response(
-                {
-                    'status': 'error',
-                    'details': 'otp',
-                    'error': 'error'
-                }, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({
+                'status': 'error',
+                'details': 'Invalid or Expired otp/two-fa code provided.',
+                'error_code': 'invalid_otp_or_two_fa',
+            }, status=status.HTTP_401_UNAUTHORIZED)
 
         user.preferred_2fa = None
         user.save()
         return Response(
+            {
+                "status": "success",
+                "details": "2FA has been disabled."
+            },
             status=status.HTTP_200_OK
         )
 
@@ -363,5 +367,4 @@ class Disable2FAView(APIView):
 #TODO: totp security check
 #TODO: Deploy
 #TODO: check get_obj_404
-#TOOD: check not necessary custom raise exceptions & unify responses in this file
 #TODO: engine send message in ws instead of rest
