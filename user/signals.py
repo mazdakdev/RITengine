@@ -9,6 +9,6 @@ User = get_user_model()
 def send_otp_on_registration(sender, instance, created, **kwargs):
     if created:
         otp, secret = generate_otp()
-        instance.send_mail("otp", otp.now())
+        instance.send_email("otp", otp.now())
         instance.otp_secret = secret
         instance.save()

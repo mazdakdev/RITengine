@@ -1,15 +1,15 @@
+import requests
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.core.mail import send_mail
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_email.models import EmailDevice
 from otp_twilio.models import TwilioSMSDevice
 from django.core.validators import RegexValidator
-from django.core.mail import send_mail
 from django.db import models
 from datetime import timedelta
-import requests
 import logging
 
 logger = logging.getLogger(__name__)
@@ -48,18 +48,19 @@ class SMSDevice(TwilioSMSDevice):
 
             data = {"to": str(self.number)}
             response = requests.post(
-                'https://console.melipayamak.com/api/send/otp/f2b9f8161c6c46a590f16e05601fcbd2' #TODO: .env
+                'https://console.melipayamak.com/api/send/otp/f2b9f8161c6c46a590f16e05601fcbd2'  # TODO: .env
                 , json=data
             )
 
             if response.status_code == 200:
-                self.token = response.json()['code']
+                self.token = response.json()["code"]
                 self.valid_until = timezone.now() + timedelta(seconds=300)
                 self.save()
 
-                return self.token
             else:
                 logger.error('Error sending token by MeliPayamak: {0}'.format(str(response.json()['status'])))
+
+            return self.token
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username_regex = RegexValidator(
@@ -73,8 +74,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     inv_code = models.CharField(max_length=17, blank=True, null=True)
     birthday = models.DateField(null=True, blank=True)
     role = models.CharField(max_length=50, blank=True, null=True)
-    image = models.ImageField(blank=True, null=True)
+    image = models.ImageField(blank=True, null=True) #TODO: Folder
     phone_number = PhoneNumberField(blank=True)
+    username_change_count = models.IntegerField(default=0)
 
     is_email_verified = models.BooleanField(default=False)
     is_oauth_based = models.BooleanField(default=False)
@@ -101,11 +103,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.username
 
-    def send_mail(self, subject, message):
+    def send_email(self, subject, message, from_email="from@example.com"):
         send_mail(
             subject,
             message,
-            'from@example.com',
+            from_email,
             [self.email],
             fail_silently=False,
         )

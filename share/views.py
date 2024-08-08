@@ -79,7 +79,7 @@ class AccessSharedContentView(generics.GenericAPIView):
         subject = "New Access Request"
         approval_link = f"{settings.FRONTEND_URL}/approve-access/{access_request.approval_uuid}/"
         message = f"A user has requested access to your content. Approve the request using the following link: {approval_link}"
-        owner.send_mail(subject, message)
+        owner.send_email(subject, message)
 
     def create_access_request(self, user, obj):
         content_type = ContentType.objects.get_for_model(obj)

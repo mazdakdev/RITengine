@@ -1,7 +1,7 @@
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView, RegisterView
-from dj_rest_auth.views import UserDetailsView
+from django.core.mail import send_mail
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
@@ -10,6 +10,7 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_email.models import EmailDevice
 from django.utils import timezone
 from .models import SMSDevice, BackupCode
+from django.core.cache import cache
 from rest_framework.permissions import IsAuthenticated
 import pyotp
 from . import utils
@@ -17,12 +18,13 @@ from .permissions import IsNotOAuthUser
 from .serializers import (
     Verify2FASerializer, Enable2FASerializer, Request2FASerializer,
     PasswordChangeSerializer, PasswordResetSerializer,
-    LoginSerializer,
-    CompleteRegisterSerializer,
+    LoginSerializer, CompleteRegisterSerializer,
     UserSerializer, CompleteLoginSerializer, CustomRegisterSerializer,
     UserDetailsSerializer, BackupCodeSerializer
+
 )
 from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
+from rest_framework import generics
 
 User = get_user_model()
 
@@ -117,7 +119,7 @@ class CustomLoginView(APIView):
         user = serializer.validated_data['user']
 
         if user.preferred_2fa:
-            tmp_token = utils.generate_tmp_token(user)
+            tmp_token = utils.generate_tmp_token(user, "2fa")
             utils.generate_2fa_challenge(user)
 
             return Response({
@@ -161,18 +163,18 @@ class CompleteLoginView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class CustomUserDetailsView(UserDetailsView):
+class UserDetailsView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserDetailsSerializer
 
-    def update(self, request, *args, **kwargs):
-        if request.user.is_oauth_based:
-            return Response({
-                'status': 'error',
-                'details': 'Method "PUT" not allowed for OAuth-based users.',
-                'error_code': 'oauth_restricted'
-            }, status=status.HTTP_403_FORBIDDEN)
-        return super().update(request, *args, **kwargs)
+    def get_object(self):
+        return self.request.user
+
+    # def update(self, request, *args, **kwargs):
+    #     return Response({
+    #         'status': 'error',
+    #         'details': 'Method \"PUT\" not allowed.',
+    #     }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def partial_update(self, request, *args, **kwargs):
         if request.user.is_oauth_based:
@@ -181,7 +183,95 @@ class CustomUserDetailsView(UserDetailsView):
                 'details': 'Method "PATCH" not allowed for OAuth-based users.',
                 'error_code': 'oauth_restricted'
             }, status=status.HTTP_403_FORBIDDEN)
-        return super().partial_update(request, *args, **kwargs)
+
+        required_fields = ['f_name', 'l_name', 'birthday']
+
+        current_data = self.get_object()
+
+        serializer = self.get_serializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        # Validate if required fields are present
+        for field in required_fields:
+            if field in serializer.validated_data:
+                continue
+
+            if getattr(current_data, field) is None:
+                # Required field is missing
+                return Response({
+                    'status': 'error',
+                    'details': f'The field {field} is required to be updated first.',
+                    'error_code': 'required_field_missing'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            user = self.get_object()
+
+            serializer = self.get_serializer(user, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+
+            return Response(serializer.data)
+
+
+    # def handle_field_updates(self, request, partial):
+    #     user = self.get_object()
+    #     data = request.data.copy()
+    #
+    #     if 'email' in data:
+    #         new_email = data['email']
+    #         user.is_email_verified = False
+    #
+    #         otp, secret = utils.generate_otp()
+    #
+    #         send_mail(
+    #             subject="otp",
+    #             message=str(otp.now()),
+    #             from_email="from@example.com",
+    #             recipient_list=[new_email],
+    #             fail_silently=False,
+    #         )
+    #         user.otp_secret = secret
+    #         user.save()
+    #
+    #         tmp_token = utils.generate_tmp_token(user, "email_change")
+    #
+    #         return Response({
+    #             "status": "verification_required",
+    #             "tmp_token": tmp_token
+    #         },
+    #             status=status.HTTP_202_ACCEPTED
+    #         )
+    #
+    #     if 'phone_number' in data:
+    #         new_phone_number = data['phone_number']
+    #         otp = utils.send_otp_to_phone(new_phone_number)
+    #         cache.set(f'phone_otp_{user.id}', otp, timeout=300)
+    #         tmp_token = utils.generate_tmp_token(user, "phone_change")
+    #
+    #         return Response({
+    #             "status": "verification_required",
+    #             "tmp_token": tmp_token
+    #         },
+    #             status=status.HTTP_202_ACCEPTED
+    #         )
+    #
+    #     # if 'username' in data:
+    #     #     if user.username_change_count >= 3:
+    #     #         return Response({
+    #     #             'status': 'error',
+    #     #             'details': 'Username can only be changed 3 times.',
+    #     #             'error_code': 'username_change_limit'
+    #     #         }, status=status.HTTP_403_FORBIDDEN)
+    #     #
+    #     #     user.username_change_count += 1
+    #     #     user.save()
+    #
+    #
+    #     serializer = self.get_serializer(user, data=data, partial=partial)
+    #     serializer.is_valid(raise_exception=True)
+    #     self.perform_update(serializer)
+    #
+    #     return Response(serializer.data)
 
 
 class PasswordResetView(APIView):
@@ -222,7 +312,7 @@ class Request2FAView(APIView):
         user = serializer.validated_data['user']
         if not user.preferred_2fa:
             otp, secret = utils.generate_otp()
-            user.send_mail("otp", otp.now())
+            user.send_email("otp", otp.now())
             user.otp_secret = secret
             user.save()
             return Response({
@@ -368,6 +458,20 @@ class Disable2FAView(APIView):
             status=status.HTTP_200_OK
         )
 
+class VerifyNewPhone(APIView):
+    permission_classes = [IsAuthenticated,]
+
+    def post(self, request, *args, **kwargs):
+        serializer = VerifyNewPhoneSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        user.is_phone_verifeid = True
+        user
+
+class VerifyNewEmail(APIView):
+    pass
+
 
 #TODO: change 2fa method
 #TODO: other social auths
@@ -377,3 +481,4 @@ class Disable2FAView(APIView):
 #TODO: separate settings.py
 #TODO: totp security check
 #TODO: Deploy
+#TODO: totp times check

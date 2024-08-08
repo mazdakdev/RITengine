@@ -74,7 +74,6 @@ class CompleteLoginSerializer(serializers.Serializer):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-
         user_id = cache.get(f"2fa_{tmp_token}")
 
         if user_id is None or user_id != user.id:
@@ -85,9 +84,9 @@ class CompleteLoginSerializer(serializers.Serializer):
             )
 
         if not validate_two_fa(user, code):
-            raise InvalidTwoFaOrOtp()
             if not validate_backup_code(user, code):
                 raise InvalidTwoFaOrOtp()
+            raise InvalidTwoFaOrOtp()
 
         cache.delete(f"2fa_{tmp_token}")
 
@@ -106,13 +105,24 @@ class UserSerializer(serializers.ModelSerializer):
                 self.fields[field_name].read_only = True
 
 class UserDetailsSerializer(serializers.ModelSerializer):
+    inv_code = serializers.CharField(min_length=16, max_length=17)
+
     class Meta:
         model = User
         fields = [
                 "username", "email", "f_name", 
                 "l_name", "phone_number", "inv_code",
                 "birthday", "image", "last_login"
-            ]
+        ]
+        extra_kwargs = {
+            'f_name': {'required': True},
+            'l_name': {'required': True},
+            'birthday': {'required': True},
+
+        }
+        read_only_fields = ["username", "email", "phone_number", "last_login"]
+
+
 
 class CompleteRegisterSerializer(serializers.Serializer):
     otp = serializers.IntegerField()
@@ -218,3 +228,72 @@ class BackupCodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = BackupCode
         fields = ['code', 'is_used']
+
+
+# class VerifyNewEmailSerializer(serializers.Serializer):
+#     tmp_token = serializers.CharField()
+#     code = serializers.CharField(min_length=6, max_length=6)
+#
+#     def validate(self, attrs):
+#         tmp_token = attrs.get("tmp_token")
+#         code = attrs.get("code")
+#
+#
+#         user_id = cache.get(f"email_change_{tmp_token}")
+#         if user_id is None:
+#             raise CustomAPIException(
+#                 detail="Invalid or Expired temporary token",
+#                 code="invalid_tmp_token",
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#             )
+#
+#         try:
+#             user = User.objects.get(id=user_id)
+#
+#         except User.DoesNotExists():
+#             raise CustomAPIException(
+#                 detail="Invalid or Expired temporary token",
+#                 code="invalid_tmp_token",
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#             )
+#
+#         totp = pyotp.TOTP(user.otp_secret, interval=300)
+#
+#         if not totp.verify(code):
+#             raise InvalidTwoFaOrOtp()
+#
+#
+#         cache.delete(f"email_change_{tmp_token}")
+#
+#         attrs['user'] = user
+#         return attrs
+#
+
+# class VerifyNewPhoneSerializer(serializers.Serializer):
+#     tmp_token = serializers.CharField()
+#     code = serializers.CharField(min_length=6, max_length=6)
+#
+#     def validate(self, attrs):
+#         tmp_token = attrs.get("tmp_token")
+#         code = attrs.get("code")
+#         user = self.context.get('user')
+#
+#         cached_user_id = cache.get(f"phone_change_{tmp_token}")
+#
+#         if cached_user_id is None or cached_user_id != user.id:
+#             raise CustomAPIException(
+#                 detail="Invalid or Expired temporary token",
+#                 code="invalid_tmp_token",
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#             )
+#
+#         otp_in_cache = cache.get(f"phone_otp_{user.id}")
+#
+#         if not otp_in_cache == code:
+#             raise InvalidTwoFaOrOtp()
+#
+#         cache.delete(f"phone_change_{tmp_token}")
+#         cache.delete(f"phone_otp_{user.id}")
+#
+#         attrs['user'] = user
+#         return attrs
