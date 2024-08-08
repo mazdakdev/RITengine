@@ -89,7 +89,8 @@ class CompleteLoginSerializer(serializers.Serializer):
             if not validate_backup_code(user, code):
                 raise InvalidTwoFaOrOtp()
 
-        #TODO: delete cache
+        cache.delete(f"2fa_{tmp_token}")
+
         attrs['user'] = user
         return attrs
 
