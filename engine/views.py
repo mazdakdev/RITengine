@@ -26,6 +26,7 @@ from .models import (
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 class EngineListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAdminUser]
     queryset = Engine.objects.all()
     serializer_class = EngineSerializer
     pagination_class = PageNumberPagination
@@ -90,12 +91,14 @@ class AssistsDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class EngineCategoryListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAdminUser,]
     serializer_class = EngineCategorySerializer
     lookup_field = 'id'
     queryset = EngineCategory.objects.all()
     pagination_class = PageNumberPagination
 
 class EngineCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAdminUser,]
     queryset = EngineCategory.objects.all()
     serializer_class = EngineCategorySerializer
     lookup_field = 'id'
