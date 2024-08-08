@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from bookmark.models import Bookmark
 from .models import (
     Engine,
     Chat,
@@ -31,9 +32,15 @@ class ChatSerializer(serializers.ModelSerializer):
 
 
 class MessageSerializer(serializers.ModelSerializer):
+    is_bookmarked = serializers.SerializerMethodField()
     class Meta:
         model = Message
         fields = '__all__'
+
+    def get_is_bookmarked(self, obj):
+        user = self.context['request'].user
+        # if bookmark exists returns True
+        return Bookmark.objects.filter(message=obj, user=user).exists()
 
 
 class AssistSerializer(serializers.ModelSerializer):
