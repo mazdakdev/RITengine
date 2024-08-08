@@ -19,9 +19,9 @@ from .serializers import (
     LoginSerializer,
     CompleteRegisterSerializer,
     UserSerializer, CompleteLoginSerializer, CustomRegisterSerializer,
-    UserDetailSerializer, BackupCodeSerializer
+    UserDetailsSerializer, BackupCodeSerializer
 )
-from .throttles import TwoFAAnonRateThrottle
+from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
 
 User = get_user_model()
 
@@ -158,7 +158,7 @@ class CompleteLoginView(APIView):
 
 class CustomUserDetailsView(UserDetailsView):
     permission_classes = [IsAuthenticated]
-    serializer_class = UserDetailSerializer
+    serializer_class = UserDetailsSerializer
 
     def update(self, request, *args, **kwargs):
         if request.user.is_oauth_based:
@@ -210,8 +210,7 @@ class PasswordChangeView(APIView):
 
 
 class Request2FAView(APIView):
-    permission_classes = [IsNotOAuthUser]
-    throttle_classes = [TwoFAAnonRateThrottle]
+    throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
     def post(self, request):
         serializer = Request2FASerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -236,7 +235,7 @@ class Request2FAView(APIView):
 
 class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
-    throttle_classes = [TwoFAAnonRateThrottle]
+    throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
 
     def post(self, request):
         user = request.user
@@ -333,7 +332,7 @@ class Verify2FASetupView(APIView):
 
 class Disable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
-    throttle_classes = [TwoFAAnonRateThrottle]
+    throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
 
     def post(self, request):
         user = request.user

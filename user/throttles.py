@@ -1,8 +1,8 @@
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 import os
 
 class TwoFAAnonRateThrottle(AnonRateThrottle):
-    rate = "4/min"
+    rate = "5/min"
 
-
-#TODO: add user throttle
+class TwoFAUserRateThrottle(UserRateThrottle):
+    rate = "5/min"
