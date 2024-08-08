@@ -85,6 +85,7 @@ class CompleteLoginSerializer(serializers.Serializer):
             )
 
         if not validate_two_fa(user, code):
+            raise InvalidTwoFaOrOtp()
             if not validate_backup_code(user, code):
                 raise InvalidTwoFaOrOtp()
 
@@ -111,7 +112,7 @@ class UserDetailsSerializer(serializers.ModelSerializer):
                 "l_name", "phone_number", "inv_code",
                 "birthday", "image", "last_login"
             ]
-            
+
 class CompleteRegisterSerializer(serializers.Serializer):
     otp = serializers.IntegerField()
     email = serializers.EmailField()

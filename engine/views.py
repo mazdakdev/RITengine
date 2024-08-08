@@ -5,6 +5,7 @@ from openai import AsyncOpenAI
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from share.views import GenerateShareableLinkView
+from rest_framework.response import Response
 from .serializers import (
     EngineSerializer,
     ChatSerializer,
@@ -37,11 +38,15 @@ class EngineDetailView(generics.RetrieveUpdateDestroyAPIView):
 class UserChatsListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated,]
     serializer_class = ChatSerializer
-    pagination_class = PageNumberPagination
 
     def get_queryset(self):
         user = self.request.user
         return Chat.objects.filter(user=user)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset)
+        return Response(serializer.data)
 
 class UserChatsDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated,]

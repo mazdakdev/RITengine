@@ -7,6 +7,7 @@ from .models import (
     Assist,
     EngineCategory
 )
+from collections import defaultdict
 
 
 class StreamGeneratorSerializer(serializers.Serializer):
@@ -28,7 +29,30 @@ class EngineCategorySerializer(serializers.ModelSerializer):
 class ChatSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chat
-        fields = '__all__'
+        fields = [
+            "id", "title", "slug", "shareable_key", 
+            "viewers", "created_at", "updated_at"]
+        read_only_fields = ["created_at", "id", "shareable_key", "viewers"]
+
+    def to_representation(self, queryset):
+        grouped_chats = defaultdict(list)
+
+        if isinstance(queryset, Chat):
+            # if Chat instance is a single obj --> procced normally
+            return super().to_representation(queryset) 
+        
+        for chat in queryset:
+            date_key = chat.created_at.date().isoformat()
+            grouped_chats[date_key].append({
+                'id': chat.id,
+                'title': chat.title,
+                'slug': chat.slug,
+                'created_at': chat.created_at,
+                'updated_at': chat.updated_at,
+            })
+
+        return grouped_chats
+
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -48,6 +72,3 @@ class AssistSerializer(serializers.ModelSerializer):
         model = Assist
         fields = '__all__'
 
-
-#TODO: Readonly fields
-#TODO: ALL APPS: explicit serializer fields
