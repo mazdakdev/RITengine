@@ -111,7 +111,7 @@ class UserDetailsSerializer(serializers.ModelSerializer):
                 "l_name", "phone_number", "inv_code",
                 "birthday", "image", "last_login"
             ]
-
+            
 class CompleteRegisterSerializer(serializers.Serializer):
     otp = serializers.IntegerField()
     email = serializers.EmailField()

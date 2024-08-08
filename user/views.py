@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_email.models import EmailDevice
+from django.utils import timezone
 from .models import SMSDevice, BackupCode
 from rest_framework.permissions import IsAuthenticated
 import pyotp
@@ -126,6 +127,8 @@ class CustomLoginView(APIView):
                 status=status.HTTP_202_ACCEPTED
             )
 
+        user.last_login = timezone.now()
+        user.save()
         access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
         user_serializer = UserSerializer(user)
 
@@ -144,6 +147,8 @@ class CompleteLoginView(APIView):
         serializer.is_valid(raise_exception=True)
 
         user = serializer.validated_data['user']
+        user.last_login = timezone.now()
+        user.save()
         access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
         user_serializer = UserSerializer(user)
 
