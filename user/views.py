@@ -365,8 +365,6 @@ class Disable2FAView(APIView):
         )
 
 
-
-
 #TODO: change 2fa method
 #TODO: other social auths
 #TODO: search

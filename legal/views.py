@@ -8,7 +8,6 @@ from rest_framework import status
 class LegalDocumentViewSet(ModelViewSet):
     queryset = LegalDocument.objects.all()
     serializer_class = LegalDocumentSerializer
-    #permission_classes = []
     pagination_class = None
     lookup_field = 'doc_type'
 
@@ -18,7 +17,7 @@ class LegalDocumentViewSet(ModelViewSet):
             return Response({
                 'status': 'error',
                 'details': 'Legal Document Not Found',
-                'error_code': 'error-document-404'
+                'error_code': 'document_not_found'
             }, status=status.HTTP_404_NOT_FOUND)
 
         return super().handle_exception(exc)

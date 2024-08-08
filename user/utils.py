@@ -81,8 +81,6 @@ def generate_backup_codes(count=10, length=10):
         codes.append(code)
     return codes
 
-
-
 def validate_backup_code(user, code):
      try:
         backup_code = get_object_or_404(BackupCode, user=user, code=code, is_used=False)

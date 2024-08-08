@@ -5,6 +5,8 @@ class LegalDocument(models.Model):
         ('privacy_policy', 'Privacy Policy'),
         ('user_guide', 'User Guide'),
         ('terms_of_use', 'Terms of Use'),
+        ('faq', "Ferequently Asked Questions"),
+        ('license', "License"),
     ]
 
     doc_type = models.CharField(max_length=20, choices=DOC_TYPES, unique=True)
