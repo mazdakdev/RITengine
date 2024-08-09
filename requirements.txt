@@ -17,6 +17,7 @@ constantly==23.10.4
 cryptography==42.0.8
 daphne==4.1.2
 distro==1.8.0
+dj-database-url==2.2.0
 dj-rest-auth==6.0.0
 Django==4.2.13
 django-allauth==0.63.3
@@ -34,6 +35,7 @@ exceptiongroup==1.2.1
 Faker==21.0.0
 frozenlist==1.4.1
 h11==0.14.0
+hiredis==3.0.0
 httpcore==1.0.2
 httpx==0.25.2
 hyperlink==21.0.0
@@ -48,6 +50,7 @@ openai==1.5.0
 packaging==24.1
 phonenumbers==8.13.40
 pillow==10.4.0
+psycopg2==2.9.9
 pyasn1==0.6.0
 pyasn1_modules==0.4.0
 pycparser==2.22
