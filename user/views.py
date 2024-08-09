@@ -174,12 +174,6 @@ class UserDetailsView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
-    # def update(self, request, *args, **kwargs):
-    #     return Response({
-    #         'status': 'error',
-    #         'details': 'Method \"PUT\" not allowed.',
-    #     }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
     def partial_update(self, request, *args, **kwargs):
         if request.user.is_oauth_based:
             return Response({
@@ -190,17 +184,13 @@ class UserDetailsView(generics.RetrieveUpdateAPIView):
 
         required_fields = ['f_name', 'l_name', 'birthday']
 
+        
         current_data = self.get_object()
-
         serializer = self.get_serializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        # Validate if required fields are present
         for field in required_fields:
-            if field in serializer.validated_data:
-                continue
-
-            if getattr(current_data, field) is None:
+            if field not in serializer.validated_data and getattr(current_data, field) is None:
                 # Required field is missing
                 return Response({
                     'status': 'error',
@@ -208,76 +198,14 @@ class UserDetailsView(generics.RetrieveUpdateAPIView):
                     'error_code': 'required_field_missing'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            user = self.get_object()
 
-            serializer = self.get_serializer(user, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            self.perform_update(serializer)
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
 
-            return Response(serializer.data)
-
-
-    # def handle_field_updates(self, request, partial):
-    #     user = self.get_object()
-    #     data = request.data.copy()
-    #
-    #     if 'email' in data:
-    #         new_email = data['email']
-    #         user.is_email_verified = False
-    #
-    #         otp, secret = utils.generate_otp()
-    #
-    #         send_mail(
-    #             subject="otp",
-    #             message=str(otp.now()),
-    #             from_email="from@example.com",
-    #             recipient_list=[new_email],
-    #             fail_silently=False,
-    #         )
-    #         user.otp_secret = secret
-    #         user.save()
-    #
-    #         tmp_token = utils.generate_tmp_token(user, "email_change")
-    #
-    #         return Response({
-    #             "status": "verification_required",
-    #             "tmp_token": tmp_token
-    #         },
-    #             status=status.HTTP_202_ACCEPTED
-    #         )
-    #
-    #     if 'phone_number' in data:
-    #         new_phone_number = data['phone_number']
-    #         otp = utils.send_otp_to_phone(new_phone_number)
-    #         cache.set(f'phone_otp_{user.id}', otp, timeout=300)
-    #         tmp_token = utils.generate_tmp_token(user, "phone_change")
-    #
-    #         return Response({
-    #             "status": "verification_required",
-    #             "tmp_token": tmp_token
-    #         },
-    #             status=status.HTTP_202_ACCEPTED
-    #         )
-    #
-    #     # if 'username' in data:
-    #     #     if user.username_change_count >= 3:
-    #     #         return Response({
-    #     #             'status': 'error',
-    #     #             'details': 'Username can only be changed 3 times.',
-    #     #             'error_code': 'username_change_limit'
-    #     #         }, status=status.HTTP_403_FORBIDDEN)
-    #     #
-    #     #     user.username_change_count += 1
-    #     #     user.save()
-    #
-    #
-    #     serializer = self.get_serializer(user, data=data, partial=partial)
-    #     serializer.is_valid(raise_exception=True)
-    #     self.perform_update(serializer)
-    #
-    #     return Response(serializer.data)
-
-
+        return Response(serializer.data)
+ 
 class PasswordResetView(APIView):
     permission_classes = [IsNotOAuthUser]
     def post(self, request):
