@@ -35,3 +35,13 @@ class LegalDocumentViewSet(ModelViewSet):
 class FaqDocumentView(generics.ListCreateAPIView):
     queryset = FaqDocument.objects.all()
     serializer_class = FaqDocumentSerializer
+
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return Response({
+                'status': 'error',
+                'details': 'You do not have permission to perform this action.'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        return super().post(request, *args, **kwargs)
