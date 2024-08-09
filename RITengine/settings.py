@@ -119,19 +119,33 @@ TEMPLATES = [
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 
+# DATABASES = {
+#     'default': dj_database_url.config(default=env('DATABASE_URL'))
+# }
+
+
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django.core.cache.backends.redis.RedisCache",
+#         "LOCATION": "redis://:ZAqAVRTt19JYAR5sHQxusbL3@redis:6379/0",
+#     }
+# }
+
+
 DATABASES = {
-    'default': dj_database_url.config(default=env('DATABASE_URL'))
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
 
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://:ZAqAVRTt19JYAR5sHQxusbL3@redis:6379/0",
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
     }
 }
-
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators

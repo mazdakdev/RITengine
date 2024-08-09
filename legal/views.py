@@ -1,10 +1,11 @@
 from rest_framework.viewsets import ModelViewSet
-from .models import LegalDocument
-from .serializers import LegalDocumentSerializer
+from .models import LegalDocument, FaqDocument
+from .serializers import LegalDocumentSerializer, FaqDocumentSerializer
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from rest_framework import status
 from rest_framework.permissions import IsAdminUser, AllowAny
+from rest_framework import generics
 
 
 class LegalDocumentViewSet(ModelViewSet):
@@ -29,3 +30,8 @@ class LegalDocumentViewSet(ModelViewSet):
             return [AllowAny()]
         else:
             return [IsAdminUser()]
+
+
+class FaqDocumentView(generics.ListCreateAPIView):
+    queryset = FaqDocument.objects.all()
+    serializer_class = FaqDocumentSerializer

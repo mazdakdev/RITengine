@@ -5,7 +5,6 @@ class LegalDocument(models.Model):
         ('privacy_policy', 'Privacy Policy'),
         ('user_guide', 'User Guide'),
         ('terms_of_use', 'Terms of Use'),
-        ('faq', "Frequently Asked Questions"),
         ('license', "License"),
     ]
 
@@ -16,3 +15,9 @@ class LegalDocument(models.Model):
 
     def __str__(self):
         return self.get_doc_type_display()
+
+class FaqDocument(models.Model):
+    question = models.CharField(max_length=150)
+    answer = models.TextField()
+    create_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
