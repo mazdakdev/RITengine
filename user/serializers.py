@@ -3,6 +3,8 @@ from dj_rest_auth.registration.serializers import RegisterSerializer
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from rest_framework.exceptions import ValidationError, APIException
+
 from RITengine.exceptions import CustomAPIException
 from .exceptions import (
     EmailNotVerified, InvalidCredentials,
@@ -232,6 +234,20 @@ class BackupCodeSerializer(serializers.ModelSerializer):
         fields = ['code', 'is_used']
 
 
+class UsernameChangeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username']
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+
+        if user.username_change_count >= 3:
+            raise APIException("You can't change your username more than 3 times.")
+
+        return super().validate(attrs)
+
+ 
 # class VerifyNewEmailSerializer(serializers.Serializer):
 #     tmp_token = serializers.CharField()
 #     code = serializers.CharField(min_length=6, max_length=6)

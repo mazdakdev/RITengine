@@ -19,6 +19,7 @@ urlpatterns = [
     path('2fa/disable/', Disable2FAView.as_view(), name="two_fa_enable"),
     path('2fa/verify/', Verify2FASetupView.as_view(), name="two_fa_verify"),
     path('2fa/request/', Request2FAView.as_view(), name="two_fa_request"),
+    path("me/change-username/", UsernameChangeView.as_view(), name="username_change"),
     # path('me/verify/phone/', VerifyNewPhone.as_view(), name="verify_new_phone"),
     # path('me/verify/email/', VerifyNewEmail.as_view(), name="verify_new_email"),
 ]

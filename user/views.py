@@ -18,9 +18,9 @@ from .permissions import IsNotOAuthUser
 from .serializers import (
     Verify2FASerializer, Enable2FASerializer, Request2FASerializer,
     PasswordChangeSerializer, PasswordResetSerializer,
-    LoginSerializer, CompleteRegisterSerializer,
+    LoginSerializer, CompleteRegisterSerializer, UsernameChangeSerializer,
     UserSerializer, CompleteLoginSerializer, CustomRegisterSerializer,
-    UserDetailsSerializer, BackupCodeSerializer
+    UserDetailsSerializer, BackupCodeSerializer,
 
 )
 from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
@@ -454,6 +454,26 @@ class Disable2FAView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+class UsernameChangeView(generics.UpdateAPIView):
+    permission_class = [IsAuthenticated, IsNotOAuthUser]
+    serializer_class = UsernameChangeSerializer
+
+    def get_object(self):
+        return self.request.user
+
+    def perform_update(self, serializer):
+        user = self.get_object()
+        new_username = serializer.validated_data.get("username")
+        user.username = new_username
+        user.username_change_count += 1
+        user.save()
+
+        return user
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        return response
 
 # class VerifyNewPhone(APIView):
 #     permission_classes = [IsAuthenticated,]

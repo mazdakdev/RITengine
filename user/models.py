@@ -67,7 +67,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         regex=r'^(?!\d)[^\@]*$',
         message="username must not start with numeric values nor contains @"
     )
-    username = models.CharField(unique=True, max_length=15, validators=[username_regex])
+    username = models.CharField(
+            unique=True,
+            max_length=15, 
+            validators=[username_regex],
+            error_messages={
+                'unique': "This username is already taken. Please choose a different one.",
+            }
+         )
     email = models.EmailField(unique=True)
     f_name = models.CharField(max_length=50, blank=True, null=True)
     l_name = models.CharField(max_length=50, blank=True, null=True)
