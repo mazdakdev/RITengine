@@ -64,19 +64,12 @@ class CompleteRegistrationView(APIView):
         email = serializer.validated_data['email']
         try:
             user = User.objects.get(email=email)
+            otp_secret = cache.get(f"otp_secret_{user.id}")
 
             if not user.is_email_verified:
-                    try:
-                        otp_secret = cache.get(f"otp_secret_{user.id}")
-                        totp = pyotp.TOTP(otp_secret, interval=300)
-                    except:
-                        return Response({
-                            'status': 'error',
-                            'details': "something went wrong, please try again.",
-                            'error_code': 'otp_secret_not_found'
-                        }, status=status.HTTP_400_BAD_REQUEST)
-
-
+                if otp_secret is not None:
+                    totp = pyotp.TOTP(otp_secret, interval=300)
+        
                     if totp.verify(otp_code):
                         user.is_email_verified = True
                         user.save()

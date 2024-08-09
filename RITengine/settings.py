@@ -13,7 +13,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import environ
-from .utils import parse_duration
+from RITengine.utils import parse_duration
+import dj_database_url
 import os
 
 
@@ -21,7 +22,7 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+environ.Env.read_env(os.path.join(BASE_DIR, 'deploy.env'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -117,12 +118,19 @@ TEMPLATES = [
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+
 DATABASES = {
+    'default': dj_database_url.config(default=env('DATABASE_URL'))
+}
+
+
+CACHES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://:ZAqAVRTt19JYAR5sHQxusbL3@redis:6379/0",
     }
 }
+
 
 
 # Password validation
@@ -253,7 +261,8 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-OPENAI_API_KEY = env("OPENAI_API_KEY")
+# OPENAI_API_KEY = env("OPENAI_API_KEY")
+OPENAI_API_KEY = "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"
 FRONTEND_URL = env("FRONTEND_URL")
 SMS_PROVIDER = env("SMS_PROVIDER")
 
