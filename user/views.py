@@ -475,8 +475,11 @@ class UsernameChangeView(generics.UpdateAPIView):
         return user
 
     def update(self, request, *args, **kwargs):
-        response = super().update(request, *args, **kwargs)
-        return response
+            response = super().update(request, *args, **kwargs)
+            user = self.get_object()
+            remaining_changes = 3 - user.username_change_count #TODO: dynamic
+            response.data['remaining_changes'] = remaining_changes
+            return response
 
 class EmailChangeView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
