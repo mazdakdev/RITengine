@@ -69,7 +69,7 @@ def generate_2fa_challenge(user):
 
 def generate_tmp_token(user, scope):
     tmp_token = uuid.uuid4().hex
-    cache.set(f'{scope}_{tmp_token}', user.id, timeout=300)
+    cache.set(f'{scope}_tmp_token_{user.id}', tmp_token, timeout=300)
 
     return tmp_token
 

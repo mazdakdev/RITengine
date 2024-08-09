@@ -76,9 +76,9 @@ class CompleteLoginSerializer(serializers.Serializer):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        user_id = cache.get(f"2fa_{tmp_token}")
+        tmp_token = cache.get(f"2fa_tmp_token_{user.id}")
 
-        if user_id is None or user_id != user.id:
+        if tmp_token is None:
             raise CustomAPIException(
                 detail="Invalid or Expired temporary token",
                 code="invalid_tmp_token",
@@ -90,7 +90,7 @@ class CompleteLoginSerializer(serializers.Serializer):
                 raise InvalidTwoFaOrOtp()
             raise InvalidTwoFaOrOtp()
 
-        cache.delete(f"2fa_{tmp_token}")
+        cache.delete(f"2fa_{user.id}")
 
         attrs['user'] = user
         return attrs
@@ -247,6 +247,12 @@ class UsernameChangeSerializer(serializers.ModelSerializer):
 
         return super().validate(attrs)
 
+class EmailChangeSerializer(serializers.Serializer):
+    new_email = serializers.EmailField()
+
+class CompleteEmailChangeSerializer(serializers.Serializer):
+    tmp_token = serializers.CharField()
+    code = serializers.CharField(min_length=6, max_length=10)
  
 # class VerifyNewEmailSerializer(serializers.Serializer):
 #     tmp_token = serializers.CharField()

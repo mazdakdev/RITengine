@@ -20,7 +20,8 @@ from .serializers import (
     PasswordChangeSerializer, PasswordResetSerializer,
     LoginSerializer, CompleteRegisterSerializer, UsernameChangeSerializer,
     UserSerializer, CompleteLoginSerializer, CustomRegisterSerializer,
-    UserDetailsSerializer, BackupCodeSerializer,
+    UserDetailsSerializer, BackupCodeSerializer, EmailChangeSerializer,
+    CompleteEmailChangeSerializer
 
 )
 from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
@@ -63,11 +64,18 @@ class CompleteRegistrationView(APIView):
         email = serializer.validated_data['email']
         try:
             user = User.objects.get(email=email)
-            otp_secret = cache.get(f"otp_secret_{user.id}")
 
             if not user.is_email_verified:
-                if otp_secret is not None:
-                    totp = pyotp.TOTP(otp_secret, interval=300)
+                    try:
+                        otp_secret = cache.get(f"otp_secret_{user.id}")
+                        totp = pyotp.TOTP(otp_secret, interval=300)
+                    except:
+                        return Response({
+                            'status': 'error',
+                            'details': "something went wrong, please try again.",
+                            'error_code': 'otp_secret_not_found'
+                        }, status=status.HTTP_400_BAD_REQUEST)
+
 
                     if totp.verify(otp_code):
                         user.is_email_verified = True
@@ -93,17 +101,12 @@ class CompleteRegistrationView(APIView):
                             'details': 'Invalid or Expired otp/two-fa code provided.',
                             'error_code': 'invalid_otp_or_two_fa',
                         }, status=status.HTTP_401_UNAUTHORIZED)
-                else:
-                    return Response({
-                        'status': 'error',
-                        'details': "something went wrong, please try again.",
-                        'error_code': 'otp_secret_not_found'
-                    }, status=status.HTTP_400_BAD_REQUEST)
 
             return Response({
                 'status': 'error',
                 'details': "User's email has already been verified.",
             }, status=status.HTTP_400_BAD_REQUEST)
+
 
         except User.DoesNotExist:
             return Response({
@@ -475,6 +478,87 @@ class UsernameChangeView(generics.UpdateAPIView):
         response = super().update(request, *args, **kwargs)
         return response
 
+class EmailChangeView(APIView):
+    permission_classes = [IsAuthenticated, IsNotOAuthUser]
+
+    def post(self, request, *args, **kwargs):
+        serializer = EmailChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        new_email = serializer.validated_data.get('new_email')
+        user = request.user
+
+        otp, secret = utils.generate_otp()
+        user.send_email("otp", otp.now())
+
+        tmp_token = utils.generate_tmp_token(user, "email_change")
+        cache.set(f"email_change_otp_{user.id}", secret, timeout=300)
+        cache.set(f"email_change_email_{user.id}", new_email, timeout=300)
+
+        return Response({
+            "status": "verification_required",
+            "tmp_token": tmp_token
+        }, status=status.HTTP_202_ACCEPTED)
+
+class CompleteEmailChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = CompleteEmailChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        tmp_token = serializer.validated_data.get('tmp_token')
+        code = serializer.validated_data.get('code')
+        user = request.user
+
+
+        cached_tmp_token = cache.get(f"email_change_tmp_token_{user.id}")
+        if cached_tmp_token != tmp_token:
+            return Response({
+                'status': 'error',
+                'details': 'Invalid or expired temporary token.',
+                'error_code': 'invalid_tmp_token'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    
+        try:
+            otp_secret = cache.get(f"email_change_otp_{user.id}")
+            totp = pyotp.TOTP(otp_secret, interval=300)
+        except:
+            return Response({
+                'status': 'error',
+                'details': 'Something went Wrong.',
+                'error_code': 'invalid_otp_secret'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not totp.verify(code):
+           return Response({
+                    'status': 'error',
+                    'details': 'Invalid or Expired otp/two-fa code provided.',
+                    'error_code': 'invalid_otp_or_two_fa',
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+        new_email = cache.get(f"email_change_email_{user.id}")
+        if not new_email:
+            return Response({
+                    'status': 'error',
+                    'details': 'New Email not found. try again from the inital step.',
+                    'error_code': 'email_not_found_in_cache',
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+        user.email = new_email
+        user.save()
+
+        cache.delete(f"email_change_otp_{user.id}")
+        cache.delete(f"email_change_tmp_token_{user.id}")
+        cache.delete(f"email_change_email_{user.id}")
+
+        return Response({
+            'status': 'success',
+            'details': 'Email updated successfully.'
+        }, status=status.HTTP_200_OK)
+
+        
 # class VerifyNewPhone(APIView):
 #     permission_classes = [IsAuthenticated,]
 #
@@ -496,6 +580,6 @@ class UsernameChangeView(generics.UpdateAPIView):
 #TODO: generate new sets backup codes & completet
 
 #TODO: separate settings.py
-#TODO: totp security check
 #TODO: Deploy
-#TODO: totp times check
+
+#TODO: CLEAN CODE: abstract cache manager
