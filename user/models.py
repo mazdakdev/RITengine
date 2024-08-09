@@ -80,7 +80,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     is_email_verified = models.BooleanField(default=False)
     is_oauth_based = models.BooleanField(default=False)
-    otp_secret = models.CharField(max_length=32, blank=True, null=True)
     sms_device = models.OneToOneField(SMSDevice, null=True, blank=True, on_delete=models.SET_NULL)
     email_device = models.OneToOneField(EmailDevice, null=True, blank=True, on_delete=models.SET_NULL)
     totp_device = models.OneToOneField(TOTPDevice, null=True, blank=True, on_delete=models.SET_NULL)

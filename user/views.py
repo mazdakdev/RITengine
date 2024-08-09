@@ -63,10 +63,11 @@ class CompleteRegistrationView(APIView):
         email = serializer.validated_data['email']
         try:
             user = User.objects.get(email=email)
+            otp_secret = cache.get(f"otp_secret_{user.id}")
 
             if not user.is_email_verified:
-                if user.otp_secret:
-                    totp = pyotp.TOTP(user.otp_secret, interval=300)
+                if otp_secret is not None:
+                    totp = pyotp.TOTP(otp_secret, interval=300)
 
                     if totp.verify(otp_code):
                         user.is_email_verified = True
@@ -313,8 +314,8 @@ class Request2FAView(APIView):
         if not user.preferred_2fa:
             otp, secret = utils.generate_otp()
             user.send_email("otp", otp.now())
-            user.otp_secret = secret
-            user.save()
+            cache.set(f"otp_secret_{user.id}", secret, timeout=300)
+
             return Response({
                 'status': 'success',
                 "details": "an otp has been sent successfully."
@@ -358,15 +359,11 @@ class Enable2FAView(APIView):
                     'status': 'success',
                     'details': 'an SMS has been sent..',
                 }, status=status.HTTP_200_OK)
-
-
             elif method == 'totp':
-                device = TOTPDevice.objects.create(user=user, confirmed=False)
+                device = TOTPDevice.objects.create(user=user, step=60, confirmed=False)
                 return Response({
                     'status': 'success',
-                    'data': {
-                        "provisioning_uri": device.config_url
-                    }
+                    "provisioning_uri": device.config,
 
                 }, status=status.HTTP_200_OK)
 
@@ -458,19 +455,19 @@ class Disable2FAView(APIView):
             status=status.HTTP_200_OK
         )
 
-class VerifyNewPhone(APIView):
-    permission_classes = [IsAuthenticated,]
-
-    def post(self, request, *args, **kwargs):
-        serializer = VerifyNewPhoneSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        user = request.user
-        user.is_phone_verifeid = True
-        user
-
-class VerifyNewEmail(APIView):
-    pass
+# class VerifyNewPhone(APIView):
+#     permission_classes = [IsAuthenticated,]
+#
+#     def post(self, request, *args, **kwargs):
+#         serializer = VerifyNewPhoneSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#
+#         user = request.user
+#         user.is_phone_verifeid = True
+#         user
+#
+# class VerifyNewEmail(APIView):
+#     pass
 
 
 #TODO: change 2fa method

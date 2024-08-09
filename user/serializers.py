@@ -144,7 +144,8 @@ class PasswordResetSerializer(serializers.Serializer):
             raise EmailNotVerified()
 
         if not user.preferred_2fa:
-            totp = pyotp.TOTP(user.otp_secret, interval=300)
+            otp_secret = cache.get(f"otp_secret_{user.id}")
+            totp = pyotp.TOTP(otp_secret, interval=300)
             if totp.verify(code):
                 attrs['user'] = user
                 return attrs
@@ -182,7 +183,8 @@ class PasswordChangeSerializer(serializers.Serializer):
         user = self.context['request'].user
 
         if not user.preferred_2fa:
-            totp = pyotp.TOTP(user.otp_secret, interval=300) #TODO: security check
+            otp_secret = cache.get(f"otp_secret{user.id}")
+            totp = pyotp.TOTP(otp_secret, interval=300) #TODO: security check
             if totp.verify(code):
                 return attrs
             else:
