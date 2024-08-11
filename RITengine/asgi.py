@@ -1,7 +1,9 @@
 import os
 import django
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "RITengine.settings")
+environment = os.getenv('DJANGO_ENV', 'dev')  # Default to 'dev' if not set
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"RITengine.settings.{environment}")
+
 django.setup()
 
 from channels.routing import ProtocolTypeRouter, URLRouter

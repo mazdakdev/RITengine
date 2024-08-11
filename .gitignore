@@ -8,7 +8,6 @@
 # Icon must end with two \r
 Icon
 
-
 # Thumbnails
 ._*
 
@@ -84,8 +83,16 @@ target/
 *.pyc
 __pycache__/
 local_settings.py
-.env
 db.sqlite3
 
-*.vscode
-*.idea
+
+### .env ###
+.env.dev
+.env.prod
+
+### IDEs ###
+/.vscode
+/.idea
+
+### Archives ###
+*.zip

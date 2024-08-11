@@ -44,10 +44,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.save_message(message_text, sender="user")
             self.messages.append({"role": "user", "content": final_msg})
 
-            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+            client = AsyncOpenAI()
             openai_response = await client.chat.completions.create(
                 messages=self.messages,
-                model="gpt-3.5-turbo", #TODO: .env
+                model=settings.OPENAI_MODEL, #TODO: .env
                 stream=True,
             )
 

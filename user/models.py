@@ -10,6 +10,7 @@ from otp_twilio.models import TwilioSMSDevice
 from django.core.validators import RegexValidator
 from django.db import models
 from datetime import timedelta
+from django.conf import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,7 @@ class SMSDevice(TwilioSMSDevice):
 
             data = {"to": str(self.number)}
             response = requests.post(
-                'https://console.melipayamak.com/api/send/otp/f2b9f8161c6c46a590f16e05601fcbd2'  # TODO: .env
+                'https://console.melipayamak.com/api/send/otp/' + settings.MELI_PAYAMAK_KEY
                 , json=data
             )
 

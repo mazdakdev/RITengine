@@ -22,7 +22,6 @@ dj-rest-auth==6.0.0
 Django==4.2.13
 django-allauth==0.63.3
 django-cors-headers==4.4.0
-django-environ==0.11.2
 django-otp==1.5.1
 django-otp-twilio==1.0.5
 django-phonenumber-field==8.0.0

@@ -16,6 +16,7 @@ COPY . /app/
 
 
 COPY entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+RUN chmod +x /entrypoint.sh
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "RITengine.asgi:application"]
