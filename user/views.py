@@ -435,7 +435,6 @@ class CompleteEmailChangeView(APIView):
         code = serializer.validated_data.get('code')
         user = request.user
 
-
         cached_tmp_token = cache.get(f"email_change_tmp_token_{user.id}")
         if cached_tmp_token != tmp_token:
             return Response({

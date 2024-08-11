@@ -6,6 +6,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from .models import BackupCode
 from django.core.cache import cache
+from django.utils import timezone
+from datetime import datetime
 import pyotp
 import uuid
 import random
@@ -20,14 +22,20 @@ def generate_otp():
     otp = pyotp.TOTP(secret, interval=300)
     return otp, secret
     
+
 def get_jwt_token(user):
     refresh = RefreshToken.for_user(user)
     access_token = refresh.access_token
+    current_time = datetime.now(timezone.utc).timestamp()
 
-    access_exp = int(30)
-    refresh_exp = int(1000)
+    access_exp = access_token['exp']
+    refresh_exp = refresh['exp']
 
-    return access_token, refresh, access_exp, refresh_exp
+    access_exp_remaining = max(0, round(access_exp - current_time))
+    refresh_exp_remaining = max(0, round(refresh_exp - current_time))
+
+    return access_token, refresh, access_exp_remaining, refresh_exp_remaining
+
     
 def get_user_by_identifier(identifier: str):
     user = None
