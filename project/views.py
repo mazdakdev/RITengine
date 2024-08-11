@@ -31,7 +31,7 @@ class ProjectMessages(APIView):
     def get(self, request, project_id):
         project = get_object_or_404(Project, id=project_id, user=request.user)
         messages = project.messages.all()
-        serializer = MessageSerializer(messages, many=True)
+        serializer = MessageSerializer(messages, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, project_id):
@@ -44,7 +44,7 @@ class ProjectMessages(APIView):
             for message in messages:
                 project.messages.add(message)
                 project.save()
-            return Response(MessageSerializer(messages, many=True).data, status=status.HTTP_201_CREATED)
+            return Response(MessageSerializer(messages, many=True, context={'request': request}).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, project_id):
