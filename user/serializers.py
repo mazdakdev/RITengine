@@ -174,7 +174,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 
         if not user.preferred_2fa:
             otp_secret = cache.get(f"otp_secret{user.id}")
-            totp = pyotp.TOTP(otp_secret, interval=300) #TODO: security check
+            totp = pyotp.TOTP(otp_secret, interval=300)
             if totp.verify(code):
                 return attrs
             else:

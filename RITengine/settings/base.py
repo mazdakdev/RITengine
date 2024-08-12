@@ -4,7 +4,7 @@ from RITengine.utils import parse_duration
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -118,7 +118,7 @@ REST_AUTH = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': parse_duration(os.getenv('ACCESS_TOKEN_LIFETIME', default='5m')), #TODO: just for test
+    'ACCESS_TOKEN_LIFETIME': parse_duration(os.getenv('ACCESS_TOKEN_LIFETIME', default='5m')),
     'REFRESH_TOKEN_LIFETIME': parse_duration(os.getenv('REFRESH_TOKEN_LIFETIME', default='1d')),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -203,7 +203,7 @@ SOCIALACCOUNT_ADAPTER = 'user.adapters.CustomSocialAccountAdapter'
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
-MEDIA_ROOT = "mediafiles"
+MEDIA_ROOT = BASE_DIR / "mediafiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -221,6 +221,7 @@ SMS_PROVIDER = os.getenv("SMS_PROVIDER")
 MELI_PAYAMAK_KEY = os.getenv("MELI_PAYAMAK_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL")
+MAXIMUM_ALLOWED_USERNAME_CHANGE=3
 
 # TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
 # TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")

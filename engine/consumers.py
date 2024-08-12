@@ -47,7 +47,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             client = AsyncOpenAI()
             openai_response = await client.chat.completions.create(
                 messages=self.messages,
-                model=settings.OPENAI_MODEL, #TODO: .env
+                model=settings.OPENAI_MODEL,
                 stream=True,
             )
 

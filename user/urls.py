@@ -1,7 +1,14 @@
 from django.urls import path, include
-from .views import * #TODO:
 from dj_rest_auth.jwt_auth import get_refresh_view
 from rest_framework_simplejwt.views import TokenVerifyView
+from .views import (
+    CustomRegisterView, CompleteRegistrationView, CustomLoginView,
+    CompleteLoginView, GitHubLoginView, UserDetailsView,
+    PasswordChangeView, PasswordResetView, Enable2FAView,
+    Disable2FAView, Verify2FASetupView, Request2FAView,
+    UsernameChangeView, EmailChangeView, CompleteEmailChangeView,
+    PhoneChangeView, CompletePhoneChangeView
+)
 
 urlpatterns = [
     path('register/', CustomRegisterView.as_view(), name='rest_register'),

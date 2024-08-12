@@ -73,7 +73,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     inv_code = models.CharField(max_length=17, blank=True, null=True)
     birthday = models.DateField(null=True, blank=True)
     role = models.CharField(max_length=50, blank=True, null=True)
-    image = models.ImageField(blank=True, null=True) #TODO: Folder
+    image = models.ImageField(blank=True, null=True, upload_to='users/')
     phone_number = PhoneNumberField(blank=True)
     username_change_count = models.IntegerField(default=0)
 

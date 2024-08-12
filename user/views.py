@@ -16,11 +16,10 @@ from rest_framework.permissions import IsAuthenticated
 import pyotp
 from . import utils
 from .services import SMSService
-from .providers import SMSProvider, get_sms_provider
+from .providers import get_sms_provider
 from .permissions import IsNotOAuthUser
 from RITengine.exceptions import CustomAPIException
 from . import exceptions
-
 from .serializers import (
     Verify2FASerializer, Enable2FASerializer, Request2FASerializer,
     PasswordChangeSerializer, PasswordResetSerializer,
@@ -376,7 +375,7 @@ class UsernameChangeView(generics.UpdateAPIView):
     def update(self, request, *args, **kwargs):
             response = super().update(request, *args, **kwargs)
             user = self.get_object()
-            remaining_changes = 3 - user.username_change_count #TODO: dynamic
+            remaining_changes = settings.MAXIMUM_ALLOWED_USERNAME_CHANGE - user.username_change_count
             response.data['remaining_changes'] = remaining_changes
             return response
 
@@ -516,5 +515,4 @@ class CompletePhoneChangeView(APIView):
 
 #TODO: change 2fa method
 #TODO: other social auths
-#TODO: search
 #TODO: generate new sets backup codes & complete
