@@ -247,3 +247,9 @@ class CompleteEmailorPhoneChangeSerializer(serializers.Serializer):
  
 class PhoneChangeSerializer(serializers.Serializer):
     new_phone = PhoneNumberField()
+
+class CompleteDisable2FASerializer(serializers.Serializer):
+    code = serializers.CharField()
+
+
+#TODO: adjust code max and min

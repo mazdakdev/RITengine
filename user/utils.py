@@ -52,26 +52,17 @@ def get_user_by_identifier(identifier: str):
     return user
 
 def validate_two_fa(user, otp):
-    if user.preferred_2fa == "email":
-        device = EmailDevice.objects.filter(user=user).first()
-    elif user.preferred_2fa == "totp":
-        device = TOTPDevice.objects.filter(user=user).first()
-    elif user.preferred_2fa == "sms":
-        device = SMSDevice.objects.filter(user=user).first()
+    device = getattr(user, f"{user.preferred_2fa}_device", None)
 
     if device and device.verify_token(otp):
         return True
-
     return False
 
 def generate_2fa_challenge(user):
     method = user.preferred_2fa
 
-    if method == "email":
-        device = EmailDevice.objects.filter(user=user).first()
-
-    elif method == "sms":
-        device = SMSDevice.objects.filter(user=user).first()
+    if method != "totp":
+        device = getattr(user, f"{method}_device", None)
 
     device.generate_challenge()
 

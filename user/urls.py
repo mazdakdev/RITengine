@@ -5,9 +5,9 @@ from .views import (
     CustomRegisterView, CompleteRegistrationView, CustomLoginView,
     CompleteLoginView, GitHubLoginView, UserDetailsView,
     PasswordChangeView, PasswordResetView, Enable2FAView,
-    Disable2FAView, Verify2FASetupView, Request2FAView,
-    UsernameChangeView, EmailChangeView, CompleteEmailChangeView,
-    PhoneChangeView, CompletePhoneChangeView
+    Verify2FASetupView, Request2FAView, UsernameChangeView,
+    EmailChangeView, CompleteEmailChangeView, PhoneChangeView, 
+    CompletePhoneChangeView, Disable2FAView, CompleteDisable2FAView
 )
 
 urlpatterns = [
@@ -23,8 +23,9 @@ urlpatterns = [
     path("password/reset/", PasswordResetView.as_view(), name='rest_password_reset'),
     path('accounts/', include('allauth.urls')),
     path('2fa/enable/', Enable2FAView.as_view(), name="two_fa_enable"),
-    path('2fa/disable/', Disable2FAView.as_view(), name="two_fa_enable"),
-    path('2fa/verify/', Verify2FASetupView.as_view(), name="two_fa_verify"),
+    path('2fa/disable/', Disable2FAView.as_view(), name="two_fa_disable"),
+    path('2fa/disable/complete/', CompleteDisable2FAView.as_view(), name="two_fa_disable_complete"),
+    path('2fa/enable/complete/', Verify2FASetupView.as_view(), name="two_fa_verify"),
     path('2fa/request/', Request2FAView.as_view(), name="two_fa_request"),
     path("me/change-username/", UsernameChangeView.as_view(), name="username_change"),
     path("me/change-email/", EmailChangeView.as_view(), name="email_change"),
