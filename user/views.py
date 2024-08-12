@@ -247,7 +247,7 @@ class Request2FAView(APIView):
             'status': 'success',
             "details": "a 2fa code has been sent successfully."
         })
-        
+
 class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
