@@ -8,7 +8,7 @@ from RITengine.throttles import CustomThrottled
 class CustomAPIException(APIException):
     status_code = status.HTTP_400_BAD_REQUEST
     default_detail = 'An unknown error occurred.'
-    default_code = 'unknown_error'
+    default_code = None
 
     def __init__(self, detail=None, status_code=None, code=None, **kwargs):
         if status_code is not None:
@@ -26,7 +26,8 @@ def custom_exception_handler(exc, context):
 
         # Attach the error code from the exception to the response
         if isinstance(exc, CustomAPIException):
-            response.data['error_code'] = exc.default_code
+            if exc.default_code:
+                response.data['error_code'] = exc.default_code
 
         if isinstance(exc, ValidationError):
             response.data['error_code'] = "serializer_validation_errors"

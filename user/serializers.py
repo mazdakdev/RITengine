@@ -4,13 +4,10 @@ from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from rest_framework.exceptions import ValidationError, APIException
-
 from RITengine.exceptions import CustomAPIException
-from .exceptions import (
-    EmailNotVerified, InvalidCredentials,
-    InvalidTwoFaOrOtp, TwoFaRequired
-)
+from . import exceptions
 from .utils import get_user_by_identifier, validate_two_fa, validate_backup_code
+from phonenumber_field.serializerfields import PhoneNumberField
 from .models import BackupCode
 from rest_framework import serializers, status
 import pyotp
@@ -39,17 +36,17 @@ class LoginSerializer(serializers.Serializer):
 
 
         if user is None:
-            raise InvalidCredentials()
+            raise exceptions.InvalidCredentials()
 
         username = user.username
 
         if not user.is_email_verified:
-            raise EmailNotVerified()
+            raise exceptions.EmailNotVerified()
 
         authenticated_user = authenticate(request=self.context.get("request"), username=username, password=password)
 
         if not authenticated_user:
-            raise InvalidCredentials()
+            raise exceptions.InvalidCredentials()
 
         attrs['user'] = authenticated_user
         return attrs
@@ -67,39 +64,30 @@ class CompleteLoginSerializer(serializers.Serializer):
         user = get_user_by_identifier(identifier)
 
         if not user.is_email_verified:
-            raise EmailNotVerified()
+            raise exceptions.EmailNotVerified()
 
         if not user.preferred_2fa:
-            raise CustomAPIException(
-                detail="There is no two-factor setup for this user.",
-                code="two_fa_not_set_up",
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
+            raise exceptions.No2FASetUp()
 
         tmp_token = cache.get(f"2fa_tmp_token_{user.id}")
 
         if tmp_token is None:
-            raise CustomAPIException(
-                detail="Invalid or Expired temporary token",
-                code="invalid_tmp_token",
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
+            raise exceptions.InvalidTwoFaOrOtp()
 
         if not validate_two_fa(user, code):
             if not validate_backup_code(user, code):
-                raise InvalidTwoFaOrOtp()
-            raise InvalidTwoFaOrOtp()
+                raise exceptions.InvalidTwoFaOrOtp()
+            raise exceptions.InvalidTwoFaOrOtp()
 
         cache.delete(f"2fa_{user.id}")
 
         attrs['user'] = user
         return attrs
 
-
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["username", "email", "f_name", "l_name"]
+        fields = ["username", "email", "f_name", "l_name", "image"]
 
         def __init__(self, *args, **kwargs):
             super(UserSerializer, self).__init__(*args, **kwargs)
@@ -143,7 +131,7 @@ class PasswordResetSerializer(serializers.Serializer):
         user = get_user_by_identifier(identifier)
 
         if not user.is_email_verified:
-            raise EmailNotVerified()
+            raise exceptions.EmailNotVerified()
 
         if not user.preferred_2fa:
             otp_secret = cache.get(f"otp_secret_{user.id}")
@@ -152,11 +140,11 @@ class PasswordResetSerializer(serializers.Serializer):
                 attrs['user'] = user
                 return attrs
             else:
-                raise InvalidTwoFaOrOtp()
+                raise exceptions.InvalidTwoFaOrOtp()
 
         else:
             if not validate_two_fa(user, code):
-                raise InvalidTwoFaOrOtp()
+                raise exceptions.InvalidTwoFaOrOtp()
 
         attrs['user'] = user
         return attrs
@@ -173,7 +161,7 @@ class PasswordChangeSerializer(serializers.Serializer):
         new_password2 = attrs.get('new_password2')
 
         if not code:
-            raise TwoFaRequired()
+            raise exceptions.TwoFaRequired()
 
         if new_password1 != new_password2:
             raise CustomAPIException(
@@ -190,11 +178,11 @@ class PasswordChangeSerializer(serializers.Serializer):
             if totp.verify(code):
                 return attrs
             else:
-                raise InvalidTwoFaOrOtp
+                raise exceptions.InvalidTwoFaOrOtp
 
         else:
             if not validate_two_fa(user, code):
-                raise InvalidTwoFaOrOtp
+                raise exceptions.InvalidTwoFaOrOtp
             return attrs
 
 class Request2FASerializer(serializers.Serializer):
@@ -204,7 +192,7 @@ class Request2FASerializer(serializers.Serializer):
         identifier = attrs.get("identifier")
         user = get_user_by_identifier(identifier)
         if user is None:
-            raise InvalidCredentials()
+            raise exceptions.InvalidCredentials()
 
         attrs["user"] = user
         return attrs
@@ -243,14 +231,19 @@ class UsernameChangeSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
 
         if user.username_change_count >= 3:
-            raise APIException("You can't change your username more than 3 times.")
+            raise CustomAPIException(
+                    "You can't change your username more than 3 times.", 
+                    status_code=400
+                )
 
         return super().validate(attrs)
 
 class EmailChangeSerializer(serializers.Serializer):
     new_email = serializers.EmailField()
 
-class CompleteEmailChangeSerializer(serializers.Serializer):
+class CompleteEmailorPhoneChangeSerializer(serializers.Serializer):
     tmp_token = serializers.CharField()
     code = serializers.CharField(min_length=6, max_length=10)
  
+class PhoneChangeSerializer(serializers.Serializer):
+    new_phone = PhoneNumberField()

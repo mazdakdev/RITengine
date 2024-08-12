@@ -8,6 +8,7 @@ from .models import BackupCode
 from django.core.cache import cache
 from django.utils import timezone
 from datetime import datetime
+from .providers import MeliPayamakProvider
 import pyotp
 import uuid
 import random
@@ -74,7 +75,6 @@ def generate_2fa_challenge(user):
 
     device.generate_challenge()
 
-
 def generate_tmp_token(user, scope):
     tmp_token = uuid.uuid4().hex
     cache.set(f'{scope}_tmp_token_{user.id}', tmp_token, timeout=300)
@@ -88,6 +88,7 @@ def generate_backup_codes(count=10, length=10):
         codes.append(code)
     return codes
 
+
 def validate_backup_code(user, code):
      try:
         backup_code = get_object_or_404(BackupCode, user=user, code=code, is_used=False)
@@ -96,4 +97,3 @@ def validate_backup_code(user, code):
         return True
      except BackupCode.DoesNotExist:
         return False
-

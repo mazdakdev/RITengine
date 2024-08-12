@@ -22,6 +22,6 @@ urlpatterns = [
     path("me/change-username/", UsernameChangeView.as_view(), name="username_change"),
     path("me/change-email/", EmailChangeView.as_view(), name="email_change"),
     path("me/change-email/complete/", CompleteEmailChangeView.as_view(), name="email_change_complete"),
-    # path('me/verify/phone/', VerifyNewPhone.as_view(), name="verify_new_phone"),
-    # path('me/verify/email/', VerifyNewEmail.as_view(), name="verify_new_email"),
+    path('me/change-phone/', PhoneChangeView.as_view(), name="phone_change"),
+    path('me/change-phone/complete/', CompletePhoneChangeView.as_view(), name="phone_change_complete"),
 ]

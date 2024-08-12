@@ -11,9 +11,8 @@ from django.core.validators import RegexValidator
 from django.db import models
 from datetime import timedelta
 from django.conf import settings
-import logging
-
-logger = logging.getLogger(__name__)
+from .providers import MeliPayamakProvider, get_sms_provider
+from .services import SMSService
 
 class UserManager(BaseUserManager):
     def create_user(self, username, email, password=None, **extra_fields):
@@ -47,21 +46,13 @@ class SMSDevice(TwilioSMSDevice):
                 Provider itself generates the challenge and delivers it.
             """
 
-            data = {"to": str(self.number)}
-            response = requests.post(
-                'https://console.melipayamak.com/api/send/otp/' + settings.MELI_PAYAMAK_KEY
-                , json=data
-            )
+            service = OTPService(MeliPayamakProvider)
 
-            if response.status_code == 200:
-                self.token = response.json()["code"]
-                self.valid_until = timezone.now() + timedelta(seconds=300)
-                self.save()
+            code = service.send_otp(phone_number=self.number)
 
-            else:
-                logger.error('Error sending token by MeliPayamak: {0}'.format(str(response.json()['status'])))
-
-            return self.token
+            self.token = str(code)
+            self.valid_until = timezone.now() + timedelta(seconds=300)
+            self.save()
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username_regex = RegexValidator(
@@ -118,12 +109,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
             [self.email],
             fail_silently=False,
         )
+    
+    def send_sms(self, message):
+        sms_service = OTPService(get_otp_provider(settings.SMS_PROVIDER))
+        sms_service.send_message(self.phone_number, message)
+
 
 class BackupCode(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     code = models.CharField(max_length=10, unique=True)
     is_used = models.BooleanField(default=False)
-
-
-#TODO: Production: email
 

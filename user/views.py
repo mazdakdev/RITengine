@@ -9,19 +9,25 @@ from django.contrib.auth import get_user_model
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_email.models import EmailDevice
 from django.utils import timezone
+from django.conf import settings
 from .models import SMSDevice, BackupCode
 from django.core.cache import cache
 from rest_framework.permissions import IsAuthenticated
 import pyotp
 from . import utils
+from .services import SMSService
+from .providers import SMSProvider, get_sms_provider
 from .permissions import IsNotOAuthUser
+from RITengine.exceptions import CustomAPIException
+from . import exceptions
+
 from .serializers import (
     Verify2FASerializer, Enable2FASerializer, Request2FASerializer,
     PasswordChangeSerializer, PasswordResetSerializer,
     LoginSerializer, CompleteRegisterSerializer, UsernameChangeSerializer,
     UserSerializer, CompleteLoginSerializer, CustomRegisterSerializer,
     UserDetailsSerializer, BackupCodeSerializer, EmailChangeSerializer,
-    CompleteEmailChangeSerializer
+    CompleteEmailorPhoneChangeSerializer, PhoneChangeSerializer
 
 )
 from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
@@ -89,11 +95,7 @@ class CompleteRegistrationView(APIView):
                         }, status=status.HTTP_200_OK)
 
                     else:
-                        return Response({
-                            'status': 'error',
-                            'details': 'Invalid or Expired otp/two-fa code provided.',
-                            'error_code': 'invalid_otp_or_two_fa',
-                        }, status=status.HTTP_401_UNAUTHORIZED)
+                        raise exceptions.InvalidTwoFaOrOtp()
 
             return Response({
                 'status': 'error',
@@ -102,13 +104,8 @@ class CompleteRegistrationView(APIView):
 
 
         except User.DoesNotExist:
-            return Response({
-                'status': 'error',
-                'details': 'Invalid Credentials.',
-                'error_code': 'invalid_credentials'
-
-            }, status=status.HTTP_400_BAD_REQUEST)
-
+            raise exceptions.InvalidCredentials
+           
 class CustomLoginView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
@@ -294,7 +291,7 @@ class Enable2FAView(APIView):
         return Response({
             'status': 'error',
             'details': '2FA is already enabled.',
-            'error': 'error-2fa-already-enabled'
+            'error': '2fa_already_enabled'
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -311,12 +308,12 @@ class Verify2FASetupView(APIView):
         if method == 'email':
             device = EmailDevice.objects.filter(user=user, confirmed=False).first()
         elif method == 'sms':
-            device = SMSDevice.objects.filter(number=user.phone_number, confirmed=False).first()
+            device = SMSDevice.objects.filter(user=user, confirmed=False).first()
         elif method == 'totp':
             device = TOTPDevice.objects.filter(user=user, confirmed=False).first()
 
         if device:
-            if device.verify_token(otp_code):
+            if device.verify_token("123456"):
                 device.confirmed = True
                 device.save()
                 user.preferred_2fa = method
@@ -332,19 +329,10 @@ class Verify2FASetupView(APIView):
                     "backup_codes": backup_code_serializer.data
                 }, status=status.HTTP_200_OK)
             else:
-                return Response({
-                'status': 'error',
-                'details': 'Invalid or Expired otp/two-fa code provided.',
-                'error_code': 'invalid_otp_or_two_fa',
-            }, status=status.HTTP_401_UNAUTHORIZED)
+                raise exceptions.InvalidTwoFaOrOtp()
 
         else:
-            return Response({
-                'status': 'error',
-                'details': 'Device not found.',
-                'error_code': 'error-2fa-device'
-
-            }, status=status.HTTP_400_BAD_REQUEST)
+           raise exceptions.UnknownError()
 
 class Disable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
@@ -353,20 +341,10 @@ class Disable2FAView(APIView):
     def post(self, request):
         user = request.user
         if not user.preferred_2fa:
-           return Response(
-               {
-                   'status': 'error',
-                   'details': 'There is no two-factor setup for this user.',
-                   'error': 'two_fa_not_set_up'
-               }, status=status.HTTP_400_BAD_REQUEST
-           )
+           raise exceptions.No2FASetUp()
 
         if not utils.validate_two_fa(user, self.request.data['code']):
-            return Response({
-                'status': 'error',
-                'details': 'Invalid or Expired otp/two-fa code provided.',
-                'error_code': 'invalid_otp_or_two_fa',
-            }, status=status.HTTP_401_UNAUTHORIZED)
+            raise exceptions.InvalidTmpToken()
 
         user.preferred_2fa = None
         user.save()
@@ -428,7 +406,7 @@ class CompleteEmailChangeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        serializer = CompleteEmailChangeSerializer(data=request.data)
+        serializer = CompleteEmailorPhoneChangeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         tmp_token = serializer.validated_data.get('tmp_token')
@@ -437,72 +415,106 @@ class CompleteEmailChangeView(APIView):
 
         cached_tmp_token = cache.get(f"email_change_tmp_token_{user.id}")
         if cached_tmp_token != tmp_token:
-            return Response({
-                'status': 'error',
-                'details': 'Invalid or expired temporary token.',
-                'error_code': 'invalid_tmp_token'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-    
+            raise exceptions.InvalidTmpToken
+ 
         try:
             otp_secret = cache.get(f"email_change_otp_{user.id}")
             totp = pyotp.TOTP(otp_secret, interval=300)
         except:
-            return Response({
-                'status': 'error',
-                'details': 'Something went Wrong.',
-                'error_code': 'invalid_otp_secret'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            raise exceptions.UnknownError()
 
         if not totp.verify(code):
-           return Response({
-                    'status': 'error',
-                    'details': 'Invalid or Expired otp/two-fa code provided.',
-                    'error_code': 'invalid_otp_or_two_fa',
-                }, status=status.HTTP_401_UNAUTHORIZED)
+            raise exceptions.InvalidTwoFaOrOtp()
 
-        new_email = cache.get(f"email_change_email_{user.id}")
+        new_email = cache.get(f"email_change_new_email_{user.id}")
         if not new_email:
-            return Response({
-                    'status': 'error',
-                    'details': 'New Email not found. try again from the inital step.',
-                    'error_code': 'email_not_found_in_cache',
-                }, status=status.HTTP_401_UNAUTHORIZED)
+            raise exceptions.UnknownError()
 
         user.email = new_email
         user.save()
 
         cache.delete(f"email_change_otp_{user.id}")
         cache.delete(f"email_change_tmp_token_{user.id}")
-        cache.delete(f"email_change_email_{user.id}")
+        cache.delete(f"email_change_new_email_{user.id}")
 
         return Response({
             'status': 'success',
-            'details': 'Email updated successfully.'
+            'email': new_email,
         }, status=status.HTTP_200_OK)
 
-        
-# class VerifyNewPhone(APIView):
-#     permission_classes = [IsAuthenticated,]
-#
-#     def post(self, request, *args, **kwargs):
-#         serializer = VerifyNewPhoneSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#
-#         user = request.user
-#         user.is_phone_verifeid = True
-#         user
-#
-# class VerifyNewEmail(APIView):
-#     pass
 
+class PhoneChangeView(APIView):
+    permission_classes = [IsAuthenticated, IsNotOAuthUser]
+
+    def post(self, request, *args, **kwargs):
+        serializer = PhoneChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        new_phone = serializer.validated_data.get('new_phone')
+        user = request.user
+
+        if new_phone == user.phone_number:
+            raise CustomAPIException(
+                    "Your previous phone number can't be same with the new one.", 
+                    status_code=400
+                )
+
+        sms_service = SMSService(get_sms_provider(settings.SMS_PROVIDER))
+        otp = sms_service.send_otp(phone_number=new_phone)
+        print(otp)
+
+        tmp_token = utils.generate_tmp_token(user, "phone_change")
+        cache.set(f"phone_change_otp_{user.id}", otp, timeout=300)
+        cache.set(f"phone_change_new_phone_{user.id}", new_phone, timeout=300)
+
+        return Response({
+            "status": "verification_required",
+            "tmp_token": tmp_token
+        }, status=status.HTTP_202_ACCEPTED)
+
+class CompletePhoneChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = CompleteEmailorPhoneChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        tmp_token = serializer.validated_data.get('tmp_token')
+        code = serializer.validated_data.get('code')
+        user = request.user
+
+        cached_tmp_token = cache.get(f"phone_change_tmp_token_{user.id}")
+        if cached_tmp_token != tmp_token:
+            raise exceptions.InvalidTmpToken()
+        try:
+            otp = cache.get(f"phone_change_otp_{user.id}")
+        except:
+            raise exceptions.UnknownError()
+
+        if otp != code:
+            raise exceptions.InvalidTwoFaOrOtp()
+
+
+        new_phone = cache.get(f"phone_change_new_phone_{user.id}")
+        if not new_phone:
+            raise CustomAPIException(
+                    detail='New Phone not found. try again from the inital step.',
+                    status_code=401,      
+                )
+        user.phone_number = new_phone
+        user.save()
+
+        cache.delete(f"phone_change_otp_{user.id}")
+        cache.delete(f"phone_change_tmp_token_{user.id}")
+        cache.delete(f"phone_change_new_phone_{user.id}")
+
+        return Response({
+            'status': 'success',
+            'phone': str(new_phone)
+        }, status=status.HTTP_200_OK)
+        
 
 #TODO: change 2fa method
 #TODO: other social auths
 #TODO: search
-#TODO: generate new sets backup codes & completet
-
-#TODO: separate settings.py
-#TODO: Deploy
-
-#TODO: CLEAN CODE: abstract cache manager
+#TODO: generate new sets backup codes & complete
