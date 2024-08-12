@@ -7,10 +7,14 @@ from share.views import GenerateShareableLinkView
 from .models import Project, Message
 from .serializers import ProjectSerializer, MessageIDSerializer
 from engine.serializers import MessageSerializer
-
+from django_filters import rest_framework as filters
+from .filters import ProjectFilter
 class ProjectListCreateView(generics.ListCreateAPIView):
     serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated]
+    filterset_class = ProjectFilter
+
+
     def get_queryset(self):
         return Project.objects.filter(user=self.request.user)
 

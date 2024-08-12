@@ -114,7 +114,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         sms_service = OTPService(get_otp_provider(settings.SMS_PROVIDER))
         sms_service.send_message(self.phone_number, message)
 
-
 class BackupCode(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     code = models.CharField(max_length=10, unique=True)

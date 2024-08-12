@@ -6,6 +6,9 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from share.views import GenerateShareableLinkView
 from rest_framework.response import Response
+from .filters import ChatFilter, MessageFilter
+from collections import defaultdict
+
 from .serializers import (
     EngineSerializer,
     ChatSerializer,
@@ -39,15 +42,25 @@ class EngineDetailView(generics.RetrieveUpdateDestroyAPIView):
 class UserChatsListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated,]
     serializer_class = ChatSerializer
+    pagination_class = None
+    filterset_class = ChatFilter
 
     def get_queryset(self):
         user = self.request.user
         return Chat.objects.filter(user=user)
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset)
-        return Response(serializer.data)
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        grouped_data = self.group_by_date(serializer.data)
+        return Response(grouped_data)
+
+    def group_by_date(self, data):
+        grouped_chats = defaultdict(list)
+        for item in data:
+            date_key = item['created_at'].split("T")[0]
+            grouped_chats[date_key].append(item)
+        return grouped_chats
 
 class UserChatsDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated,]
@@ -63,7 +76,9 @@ class ChatsMessagesListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, ]
     serializer_class = MessageSerializer
     pagination_class = PageNumberPagination
+    filterset_class = MessageFilter
     lookup_field = 'slug'
+
     def get_queryset(self):
         chat_slug = self.kwargs['slug']
         chat = get_object_or_404(Chat, slug=chat_slug)

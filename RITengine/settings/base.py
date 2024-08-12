@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django_twilio',
     'otp_twilio',
     'channels',
+    'django_filters',
 ]
 
 INSTALLED_APPS += [
@@ -157,6 +158,9 @@ REST_FRAMEWORK = {
         'anon': os.getenv("ANONYMOUS_RATELIMIT"),
         'user': os.getenv("USERS_RATELIMIT")
     },
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'RITengine.exceptions.custom_exception_handler',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',

@@ -21,6 +21,7 @@ class Chat(ShareableModel):
     def __str__(self):
         return self.title
 
+
 class Message(models.Model):
     SENDER_CHOICES = (
         ('user', 'User'),
