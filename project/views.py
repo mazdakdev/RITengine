@@ -58,7 +58,8 @@ class ProjectMessages(APIView):
         if serializer.is_valid():
             message_ids = serializer.validated_data['message_ids']
             messages = project.messages.filter(id__in=message_ids)
-            messages.delete()
+            project.messages.remove(*messages)
+            
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -1,18 +1,21 @@
 from rest_framework import serializers
 from engine.models import Message
 from .models import Bookmark
+from engine.serializers import MessageSerializer
 
 class BookmarkSerializer(serializers.ModelSerializer):
-    message_id = serializers.IntegerField()
-    message_text = serializers.SerializerMethodField()
+    message_id = serializers.IntegerField(write_only=True)
+    message = MessageSerializer(read_only=True)
 
     class Meta:
         model = Bookmark
-        fields = ['id', 'user', 'message_id', 'viewers', 'shareable_key', 'message_text', 'created_at']
+        fields = [
+                'id', 'user', 'message_id', 
+                'message','viewers', 'shareable_key', 
+                'created_at'
+            ]
         read_only_fields = fields
 
-    def get_message_text(self, obj):
-        return obj.message.text
 
     def create(self, validated_data):
         message_id = validated_data.pop('message_id')

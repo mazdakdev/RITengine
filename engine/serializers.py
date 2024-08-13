@@ -17,7 +17,7 @@ class StreamGeneratorSerializer(serializers.Serializer):
 class EngineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Engine
-        fields = ["name", "prompt", "category"]
+        fields = ["id", "name", "prompt", "category"]
 
 
 class EngineCategorySerializer(serializers.ModelSerializer):
@@ -37,6 +37,8 @@ class ChatSerializer(serializers.ModelSerializer):
 
 class MessageSerializer(serializers.ModelSerializer):
     is_bookmarked = serializers.SerializerMethodField()
+    projects_in = serializers.SerializerMethodField()
+    
     class Meta:
         model = Message
         fields = '__all__'
@@ -45,6 +47,15 @@ class MessageSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         # if bookmark exists returns True
         return Bookmark.objects.filter(message=obj, user=user).exists()
+
+    def get_projects_in(self, obj):
+        user = self.context['request'].user
+
+        # Use the reverse relation to get all projects associated with this message
+        project_ids = obj.projects.filter(user=user).values_list('id', flat=True)
+
+        # Return the list of project IDs
+        return list(project_ids)
 
 
 class AssistSerializer(serializers.ModelSerializer):

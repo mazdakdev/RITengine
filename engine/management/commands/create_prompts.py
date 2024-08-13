@@ -9,9 +9,8 @@ class Command(BaseCommand):
     help = 'Import engine categories and engines from a JSON file'
 
     def handle(self, *args, **options):
-       
         app_path = apps.get_app_config('engine').path
-        full_path = os.path.join(app_path, 'prompts.json')
+        full_path = os.path.join(app_path, 'management/commands/prompts.json')
 
         if not os.path.isfile(full_path):
             self.stderr.write(self.style.ERROR(f"File {full_path} does not exist."))
