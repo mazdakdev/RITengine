@@ -103,14 +103,19 @@ class ManageProjectsInMessageView(APIView):
         user = request.user
         message = get_object_or_404(Message, id=message_id, chat__user=user)
         project_ids = request.data.get('project_ids', [])
-        
-        for project_id in project_ids:
-            project = get_object_or_404(Project, id=project_id, user=user)
-            message.projects.remove(project)
-
-        message.save()
         serializer = MessageSerializer(message, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        if project_ids == []:
+            message.projects.clear()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif project_ids is not None:
+            for project_id in project_ids:
+                project = get_object_or_404(Project, id=project_id, user=user)
+                message.projects.remove(project)
+
+            message.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
 class ManageMessagesInProjectView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request, id):
@@ -123,18 +128,23 @@ class ManageMessagesInProjectView(APIView):
             project.messages.add(message)
 
         project.save()
-        serializer = ProjectSerializer(project, context={'request': request})
+        serializer = ProjectSerializer(project, context={'request':request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, id):
         user = request.user
         project = get_object_or_404(Project, id=id, user=user)
+        serializer = ProjectSerializer(project, context={'request': request})
         message_ids = request.data.get('message_ids', [])
-        
-        for message_id in message_ids:
-            message = get_object_or_404(Message, id=message_id, chat__user=user)
-            project.messages.remove(message)
+
+        if message_ids == []:
+            project.messages.clear()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif message_ids is not None:
+            for message_id in message_ids:
+                message = get_object_or_404(Message, id=message_id, chat__user=user)
+                project.messages.remove(message)
 
         project.save()
-        serializer = ProjectSerializer(project, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
