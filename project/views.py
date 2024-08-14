@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from share.views import GenerateShareableLinkView
 from .models import Project, Message
-from .serializers import ProjectSerializer, MessageIDSerializer
+from .serializers import ProjectSerializer, MessageIDSerializer, MessageProjectAssociationSerializer
 from engine.serializers import MessageSerializer
 from django_filters import rest_framework as filters
 from .filters import ProjectFilter
@@ -66,3 +66,20 @@ class ProjectMessages(APIView):
 class GenerateProjectLinkView(GenerateShareableLinkView):
     def get_object(self):
         return get_object_or_404(Project, id=self.kwargs.get('id'))
+
+class MessageProjectAssociationView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = MessageProjectAssociationSerializer(data=request.data)
+        if serializer.is_valid():
+            message_id = serializer.validated_data['message_id']
+            project_ids = serializer.validated_data['project_ids']
+
+        
+            message = Message.objects.get(id=message_id)
+
+
+            projects = Project.objects.filter(id__in=project_ids)
+            message.projects.add(*projects)
+
+            return Response({'status': 'projects added to message'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

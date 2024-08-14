@@ -16,7 +16,6 @@ class BookmarkSerializer(serializers.ModelSerializer):
             ]
         read_only_fields = fields
 
-
     def create(self, validated_data):
         message_id = validated_data.pop('message_id')
         message = Message.objects.get(id=message_id)
