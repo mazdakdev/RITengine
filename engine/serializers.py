@@ -44,19 +44,25 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_is_bookmarked(self, obj):
+        """
+        Checks if the message is bookmarked by the current user.
+
+        Returns:
+            bool: True if a bookmark exists for this message and user, False otherwise.
+        """
         user = self.context['request'].user
-        # if bookmark exists returns True
         return Bookmark.objects.filter(message=obj, user=user).exists()
 
     def get_projects_in(self, obj):
+        """
+        Retrieves all associated project IDs for the given message.
+
+        Returns:
+            list: A list of project IDs associated with the message that belong to the current user.
+        """
         user = self.context['request'].user
-
-        # Use the reverse relation to get all projects associated with this message
         project_ids = obj.projects.filter(user=user).values_list('id', flat=True)
-
-        # Return the list of project IDs
         return list(project_ids)
-
 
 class AssistSerializer(serializers.ModelSerializer):
     class Meta:
