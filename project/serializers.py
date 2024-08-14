@@ -3,10 +3,22 @@ from engine.models import Message
 from .models import Project
 
 class ProjectSerializer(serializers.ModelSerializer):
+    messages_in = serializers.SerializerMethodField()
     class Meta:
         model = Project
-        fields = ["id", "title", "description", "image"]
+        fields = ["id", "title", "description", "image", "messages_in"]
         read_only_fields = ['user']
+
+    def get_messages_in(self, obj):
+        """
+        Retrieves all associated message IDs for the given project.
+
+        Returns:
+            list: A list of message IDs associated with the project that belong to the current user.
+        """
+        user = self.context['request'].user
+        message_ids = obj.messages.filter(chat__user=user).values_list('id', flat=True)
+        return list(message_ids)
 
 class MessageIDSerializer(serializers.Serializer):
     message_ids = serializers.ListField(

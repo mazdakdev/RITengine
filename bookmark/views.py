@@ -53,10 +53,11 @@ class BookmarkMessageView(APIView):
     Returns the message object with the updated 'is_bookmarked' status (True/False).
     """
     permission_classes = [IsAuthenticated, ]
-    
+
     def post(self, request, message_id):
-        message = get_object_or_404(Message, id=message_id)
         user = request.user
+        message = get_object_or_404(Message, id=message_id, chat__user=user )
+        
         if Bookmark.objects.filter(message=message).exists():
             raise CustomAPIException(
                 detail='Message is already bookmarked',
@@ -69,7 +70,7 @@ class BookmarkMessageView(APIView):
 
     def delete(self, request, message_id):
         user = request.user
-        message = get_object_or_404(Message, id=message_id)
+        message = get_object_or_404(Message, id=message_id, chat__user=user)
         bookmark = get_object_or_404(Bookmark, message=message, user=user)
         bookmark.delete()
         serializer = MessageSerializer(message, context={'request': request})

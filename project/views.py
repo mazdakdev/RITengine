@@ -14,7 +14,6 @@ class ProjectListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     filterset_class = ProjectFilter
 
-
     def get_queryset(self):
         return Project.objects.filter(user=self.request.user)
 
@@ -68,6 +67,7 @@ class GenerateProjectLinkView(GenerateShareableLinkView):
         return get_object_or_404(Project, id=self.kwargs.get('id'))
 
 class MessageProjectAssociationView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request, *args, **kwargs):
         serializer = MessageProjectAssociationSerializer(data=request.data)
         if serializer.is_valid():
@@ -83,3 +83,58 @@ class MessageProjectAssociationView(APIView):
 
             return Response({'status': 'projects added to message'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ManageProjectsInMessageView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request, message_id):
+        user = request.user
+        message = get_object_or_404(Message, id=message_id, chat__user=user)
+        project_ids = request.data.get('project_ids', [])
+        
+        for project_id in project_ids:
+            project = get_object_or_404(Project, id=project_id, user=user)
+            message.projects.add(project)
+
+        message.save()
+        serializer = MessageSerializer(message, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, message_id):
+        user = request.user
+        message = get_object_or_404(Message, id=message_id, chat__user=user)
+        project_ids = request.data.get('project_ids', [])
+        
+        for project_id in project_ids:
+            project = get_object_or_404(Project, id=project_id, user=user)
+            message.projects.remove(project)
+
+        message.save()
+        serializer = MessageSerializer(message, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+class ManageMessagesInProjectView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request, id):
+        user = request.user
+        project = get_object_or_404(Project, id=id, user=user)
+        message_ids = request.data.get('message_ids', [])
+        
+        for message_id in message_ids:
+            message = get_object_or_404(Message, id=message_id, chat__user=user)
+            project.messages.add(message)
+
+        project.save()
+        serializer = ProjectSerializer(project, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, id):
+        user = request.user
+        project = get_object_or_404(Project, id=id, user=user)
+        message_ids = request.data.get('message_ids', [])
+        
+        for message_id in message_ids:
+            message = get_object_or_404(Message, id=message_id, chat__user=user)
+            project.messages.remove(message)
+
+        project.save()
+        serializer = ProjectSerializer(project, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
