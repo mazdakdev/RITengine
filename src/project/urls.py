@@ -2,7 +2,6 @@ from django.urls import path
 from .views import (
     ProjectListCreateView,
     ProjectRetrieveUpdateDestroyView,
-    ProjectMessages,
     GenerateProjectLinkView,
     MessageProjectAssociationView,
     ManageMessagesInProjectView
