@@ -1,7 +1,7 @@
 from .base import *
 from dotenv import load_dotenv
 
-load_dotenv(".env.dev")
+load_dotenv(BASE_DIR.parent / ".env.dev")
 
 DEBUG = True
 

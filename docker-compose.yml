@@ -2,7 +2,7 @@ services:
   web:
     build: .
     volumes:
-      - .:/app
+      - ./src:/app
       - static_volume:/app/staticfiles
     expose:
       - 8000
