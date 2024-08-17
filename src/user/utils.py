@@ -22,7 +22,6 @@ def generate_otp():
     secret = pyotp.random_base32()
     otp = pyotp.TOTP(secret, interval=300)
     return otp, secret
-    
 
 def get_jwt_token(user):
     refresh = RefreshToken.for_user(user)
@@ -79,12 +78,11 @@ def generate_backup_codes(count=10, length=10):
         codes.append(code)
     return codes
 
-
 def validate_backup_code(user, code):
-     try:
+    try:
         backup_code = get_object_or_404(BackupCode, user=user, code=code, is_used=False)
         backup_code.is_used = True
         backup_code.save()
         return True
-     except BackupCode.DoesNotExist:
+    except BackupCode.DoesNotExist:
         return False

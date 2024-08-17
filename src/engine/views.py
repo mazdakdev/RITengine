@@ -3,7 +3,7 @@ from rest_framework import generics
 from django.conf import settings
 from openai import AsyncOpenAI
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from share.views import GenerateShareableLinkView
 from rest_framework.response import Response
 from .filters import ChatFilter, MessageFilter
@@ -25,19 +25,27 @@ from .models import (
     EngineCategory
 )
 
-
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 class EngineListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsAdminUser]
     queryset = Engine.objects.all()
     serializer_class = EngineSerializer
     pagination_class = PageNumberPagination
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAdminUser()]
+        return [AllowAny()]
 
 class EngineDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Engine.objects.all()
     serializer_class = EngineSerializer
     lookup_field = 'id'
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
 
 class UserChatsListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated,]
@@ -106,16 +114,24 @@ class AssistsDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class EngineCategoryListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsAdminUser,]
     serializer_class = EngineCategorySerializer
     lookup_field = 'id'
     queryset = EngineCategory.objects.all()
     pagination_class = PageNumberPagination
 
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAdminUser()]
+        return [AllowAny()]
+
 class EngineCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAdminUser,]
     queryset = EngineCategory.objects.all()
     serializer_class = EngineCategorySerializer
     lookup_field = 'id'
     pagination_class = PageNumberPagination
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
 

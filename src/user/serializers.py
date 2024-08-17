@@ -34,7 +34,6 @@ class LoginSerializer(serializers.Serializer):
 
         user = get_user_by_identifier(identifier)
 
-
         if user is None:
             raise exceptions.InvalidCredentials()
 
@@ -70,6 +69,7 @@ class CompleteLoginSerializer(serializers.Serializer):
             raise exceptions.No2FASetUp()
 
         tmp_token = cache.get(f"2fa_tmp_token_{user.id}")
+        #TODO: seems like tmp_token validation got removed.
 
         if tmp_token is None:
             raise exceptions.InvalidTwoFaOrOtp()

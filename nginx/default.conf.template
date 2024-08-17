@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name ${FRONTEND_URL};
+    server_name ${BACKEND_URL};
 
     # Redirect HTTP to HTTPS
     location / {
@@ -10,7 +10,7 @@ server {
 
 server {
     listen 443 ssl;
-    server_name ${FRONTEND_URL};
+    server_name ${BACKEND_URL};
 
     ssl_certificate /etc/nginx/ssl/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/privkey.pem;
@@ -42,20 +42,19 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
 
         # CORS headers
-        add_header 'Access-Control-Allow-Origin' '${FRONTEND_URL}';
-        add_header 'Access-Control-Allow-Credentials' 'true';
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
-        add_header 'Access-Control-Allow-Headers' 'Origin, Authorization, Content-Type, Accept';
-        add_header 'Access-Control-Allow-Credentials' 'true';
+        add_header 'Access-Control-Allow-Origin' 'https://${FRONTEND_URL}';
+        add_header 'Access-Control-Allow-Credentials' 'true' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'Origin, Authorization, Content-Type, Accept' always;
 
         if ($request_method = OPTIONS) {
-            add_header 'Access-Control-Allow-Origin' '${FRONTEND_URL}';
-            add_header 'Access-Control-Allow-Credentials' 'true';
-            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
-            add_header 'Access-Control-Allow-Headers' 'Origin, Authorization, Content-Type, Accept';
-            add_header 'Access-Control-Max-Age' 1728000;
-            add_header 'Content-Type' 'text/plain; charset=utf-8';
-            add_header 'Content-Length' 0;
+            add_header 'Access-Control-Allow-Origin' 'https://${FRONTEND_URL}' always;
+            add_header 'Access-Control-Allow-Credentials' 'true' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Origin, Authorization, Content-Type, Accept' always;
+            add_header 'Access-Control-Max-Age' 1728000 always;
+            add_header 'Content-Type' 'text/plain; charset=utf-8' always;
+            add_header 'Content-Length' 0 always;
             return 204;
         }
     }

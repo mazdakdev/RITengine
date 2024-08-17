@@ -46,7 +46,7 @@ class SMSDevice(TwilioSMSDevice):
                 Provider itself generates the challenge and delivers it.
             """
 
-            service = OTPService(MeliPayamakProvider)
+            service = SMSService(MeliPayamakProvider)
 
             code = service.send_otp(phone_number=self.number)
 
@@ -110,12 +110,13 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
             fail_silently=False,
         )
     
-    def send_sms(self, message):
-        sms_service = OTPService(get_otp_provider(settings.SMS_PROVIDER))
-        sms_service.send_message(self.phone_number, message)
+    # def send_sms(self, message):
+    #     sms_service = SMSService(get_sms_provider(settings.SMS_PROVIDER))
+    #     sms_service.send_message(self.phone_number, message)
 
 class BackupCode(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     code = models.CharField(max_length=10, unique=True)
     is_used = models.BooleanField(default=False)
 
+# TODO: seperate manager

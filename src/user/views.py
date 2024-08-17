@@ -1,7 +1,6 @@
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView, RegisterView
-from django.core.mail import send_mail
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
@@ -19,6 +18,7 @@ from .services import SMSService
 from .providers import get_sms_provider
 from .permissions import IsNotOAuthUser
 from RITengine.exceptions import CustomAPIException
+from rest_framework.exceptions import ValidationError
 from . import exceptions
 from .serializers import (
         Verify2FASerializer, Enable2FASerializer, Request2FASerializer,
@@ -300,12 +300,7 @@ class Verify2FASetupView(APIView):
         otp_code = serializer.validated_data['code']
         user = request.user
 
-        if method == 'email':
-            device = user.email_device
-        elif method == 'sms':
-            device = user.sms_device
-        elif method == 'totp':
-            device = user.totp_device
+        device = getattr(user, f"{method}_device", None)
 
         if device:
             if device.verify_token(otp_code):
@@ -327,7 +322,7 @@ class Verify2FASetupView(APIView):
                 raise exceptions.InvalidTwoFaOrOtp()
 
         else:
-           raise exceptions.UnknownError()
+            raise exceptions.UnknownError()
 
 class Disable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
@@ -336,7 +331,7 @@ class Disable2FAView(APIView):
     def post(self, request):
         user = request.user
         if not user.preferred_2fa:
-           raise exceptions.No2FASetUp()
+            raise exceptions.No2FASetUp()
 
         if user.preferred_2fa == 'totp': # no need to generate challenge
             return Response({
@@ -352,6 +347,7 @@ class Disable2FAView(APIView):
             }, status=status.HTTP_202_ACCEPTED)
 
         raise exceptions.UnknownError
+
 class CompleteDisable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
@@ -359,7 +355,7 @@ class CompleteDisable2FAView(APIView):
     def post(self, request):
         user = request.user
         if not user.preferred_2fa:
-           raise exceptions.No2FASetUp()
+            raise exceptions.No2FASetUp()
 
         serializer = CompleteDisable2FASerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -403,11 +399,11 @@ class UsernameChangeView(generics.UpdateAPIView):
         return user
 
     def update(self, request, *args, **kwargs):
-            response = super().update(request, *args, **kwargs)
-            user = self.get_object()
-            remaining_changes = settings.MAXIMUM_ALLOWED_USERNAME_CHANGE - user.username_change_count
-            response.data['remaining_changes'] = remaining_changes
-            return response
+        response = super().update(request, *args, **kwargs)
+        user = self.get_object()
+        remaining_changes = settings.MAXIMUM_ALLOWED_USERNAME_CHANGE - user.username_change_count
+        response.data['remaining_changes'] = remaining_changes
+        return response
 
 class EmailChangeView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
@@ -517,17 +513,16 @@ class CompletePhoneChangeView(APIView):
             raise exceptions.InvalidTmpToken()
         try:
             otp = cache.get(f"phone_change_otp_{user.id}")
-        except:
+        except Exception:
             raise exceptions.UnknownError()
 
         if otp != code:
             raise exceptions.InvalidTwoFaOrOtp()
 
-
         new_phone = cache.get(f"phone_change_new_phone_{user.id}")
         if not new_phone:
             raise CustomAPIException(
-                    detail='New Phone not found. try again from the inital step.',
+                    detail='New Phone not found. try again from the initial step.',
                     status_code=401,      
                 )
         user.phone_number = new_phone
@@ -543,7 +538,8 @@ class CompletePhoneChangeView(APIView):
         }, status=status.HTTP_200_OK)
         
 
-#TODO: Refactor password resets
-#TODO: change 2fa method
-#TODO: other social auths
-#TODO: generate new sets backup codes & complete
+# TODO: Refactor password resets
+# TODO: change 2fa method
+# TODO: other social auths
+# TODO: generate new sets backup codes & complete
+# TODO: Validations check

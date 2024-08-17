@@ -9,7 +9,6 @@ from .models import (
 )
 from collections import defaultdict
 
-
 class StreamGeneratorSerializer(serializers.Serializer):
     engine_id = serializers.IntegerField()
     message = serializers.CharField(default="Send a greetings message for me and ask me to ask you a question to continue a conversation")
@@ -58,7 +57,7 @@ class MessageSerializer(serializers.ModelSerializer):
         Retrieves all associated project IDs for the given message.
 
         Returns:
-            list: A list of project IDs associated with the message that belong to the current user.
+            list: A list of project IDs associated with the message that belongs to the current user.
         """
         user = self.context['request'].user
         project_ids = obj.projects.filter(user=user).values_list('id', flat=True)

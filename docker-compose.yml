@@ -1,6 +1,6 @@
 services:
   web:
-    build: .
+    build: ./src
     volumes:
       - ./src:/app
       - static_volume:/app/staticfiles

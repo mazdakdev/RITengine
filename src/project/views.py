@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from share.views import GenerateShareableLinkView
 from .models import Project, Message
-from .serializers import ProjectSerializer, MessageIDSerializer, MessageProjectAssociationSerializer
+from .serializers import ProjectSerializer, MessageProjectAssociationSerializer
 from engine.serializers import MessageSerializer
 from django_filters import rest_framework as filters
 from .filters import ProjectFilter
