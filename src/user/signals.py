@@ -9,6 +9,15 @@ User = get_user_model()
 @receiver(post_save, sender=User)
 def send_otp_on_registration(sender, instance, created, **kwargs):
     if created:
-        otp, secret = generate_otp()
-        instance.send_email("otp", otp.now())
-        cache.set(f"otp_secret_{instance.id}", secret, timeout=300)
+        if not instance.is_staff:
+            otp, secret = generate_otp()
+
+            instance.send_email(
+                subject=f"RITengine: {otp.now()}",
+                template_name="emails/verification.html",
+                context={"code": otp.now()}
+            )
+            cache.set(f"otp_secret_{instance.id}", secret, timeout=300)
+        else:
+            instance.is_email_verified = True
+            instance.save()

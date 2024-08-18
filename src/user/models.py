@@ -5,11 +5,12 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from .managers import UserManager
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMessage
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_email.models import EmailDevice
+from django.template.loader import render_to_string
 from otp_twilio.models import TwilioSMSDevice
 from django.core.validators import RegexValidator
 from django.db import models
@@ -97,14 +98,27 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.username
 
-    def send_email(self, subject, message, from_email="from@example.com"):
-        send_mail(
+    def send_email(self, subject, template_name, context, from_email=settings.EMAIL_FROM):
+        """
+        Send an email using an HTML template.
+
+        :param subject: Subject of the email
+        :param template_name: Path to the HTML template
+        :param context: Context data to render the template with
+        :param from_email: Sender email address
+        """
+
+        html_message = render_to_string(template_name, context)
+
+        email = EmailMessage(
             subject,
-            message,
+            html_message,
             from_email,
-            [self.email],
-            fail_silently=False,
+            [self.email]
         )
+
+        email.content_subtype = "html"
+        email.send(fail_silently=False)
 
     # def send_sms(self, message):
     #     sms_service = SMSService(get_sms_provider(settings.SMS_PROVIDER))
@@ -115,6 +129,3 @@ class BackupCode(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     code = models.CharField(max_length=10, unique=True)
     is_used = models.BooleanField(default=False)
-
-
-# TODO: seperate manager

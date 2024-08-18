@@ -77,7 +77,7 @@ ROOT_URLCONF = "RITengine.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / 'user/templates'],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
