@@ -21,14 +21,24 @@ from RITengine.exceptions import CustomAPIException
 from rest_framework.exceptions import ValidationError
 from . import exceptions
 from .serializers import (
-        Verify2FASerializer, Enable2FASerializer, Request2FASerializer,
-        PasswordChangeSerializer, PasswordResetSerializer,
-        LoginSerializer, CompleteRegisterSerializer, UsernameChangeSerializer,
-        UserSerializer, CompleteLoginSerializer, CustomRegisterSerializer,
-        UserDetailsSerializer, BackupCodeSerializer, EmailChangeSerializer,
-        CompleteEmailorPhoneChangeSerializer, PhoneChangeSerializer,
-        CompleteDisable2FASerializer
-    )
+    Verify2FASerializer,
+    Enable2FASerializer,
+    Request2FASerializer,
+    PasswordChangeSerializer,
+    PasswordResetSerializer,
+    LoginSerializer,
+    CompleteRegisterSerializer,
+    UsernameChangeSerializer,
+    UserSerializer,
+    CompleteLoginSerializer,
+    CustomRegisterSerializer,
+    UserDetailsSerializer,
+    BackupCodeSerializer,
+    EmailChangeSerializer,
+    CompleteEmailorPhoneChangeSerializer,
+    PhoneChangeSerializer,
+    CompleteDisable2FASerializer,
+)
 from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
 from rest_framework import generics
 
@@ -46,6 +56,7 @@ class GitHubLoginView(SocialLoginView):
         self.request.user.is_oauth_based = True
         self.request.user.save()
 
+
 class CustomRegisterView(RegisterView):
     serializer_class = CustomRegisterSerializer
 
@@ -54,19 +65,19 @@ class CustomRegisterView(RegisterView):
         serializer.is_valid(raise_exception=True)
         serializer.save(request)
 
-        return Response({
-            'status': "success",
-            'details': 'Verification code sent successfully.'
+        return Response(
+            {"status": "success", "details": "Verification code sent successfully."},
+            status=status.HTTP_200_OK,
+        )
 
-        }, status=status.HTTP_200_OK)
 
 class CompleteRegistrationView(APIView):
     def post(self, request):
         serializer = CompleteRegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        otp_code = serializer.validated_data['otp']
-        email = serializer.validated_data['email']
+        otp_code = serializer.validated_data["otp"]
+        email = serializer.validated_data["email"]
         try:
             user = User.objects.get(email=email)
             otp_secret = cache.get(f"otp_secret_{user.id}")
@@ -74,52 +85,57 @@ class CompleteRegistrationView(APIView):
             if not user.is_email_verified:
                 if otp_secret is not None:
                     totp = pyotp.TOTP(otp_secret, interval=300)
-        
+
                     if totp.verify(otp_code):
                         user.is_email_verified = True
                         user.save()
-                        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+                        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(
+                            user
+                        )
                         user_serializer = UserSerializer(user)
 
-                        return Response({
-                            # 'status': "success",
-                            # 'data': {
-                            'access': str(access),
-                            'refresh': str(refresh),
-                            'access_expiration': access_exp,
-                            'refresh_expiration': refresh_exp,
-                            'user': user_serializer.data,
-
-                            # }
-                        }, status=status.HTTP_200_OK)
+                        return Response(
+                            {
+                                # 'status': "success",
+                                # 'data': {
+                                "access": str(access),
+                                "refresh": str(refresh),
+                                "access_expiration": access_exp,
+                                "refresh_expiration": refresh_exp,
+                                "user": user_serializer.data,
+                                # }
+                            },
+                            status=status.HTTP_200_OK,
+                        )
 
                     else:
                         raise exceptions.InvalidTwoFaOrOtp()
 
-            return Response({
-                'status': 'error',
-                'details': "User's email has already been verified.",
-            }, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response(
+                {
+                    "status": "error",
+                    "details": "User's email has already been verified.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         except User.DoesNotExist:
             raise exceptions.InvalidCredentials
-           
+
+
 class CustomLoginView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
+        user = serializer.validated_data["user"]
 
         if user.preferred_2fa:
             tmp_token = utils.generate_tmp_token(user, "2fa")
             utils.generate_2fa_challenge(user)
 
-            return Response({
-                    "status": "2fa_required",
-                    "tmp_token": tmp_token
-                },
-                status=status.HTTP_202_ACCEPTED
+            return Response(
+                {"status": "2fa_required", "tmp_token": tmp_token},
+                status=status.HTTP_202_ACCEPTED,
             )
 
         user.last_login = timezone.now()
@@ -127,13 +143,16 @@ class CustomLoginView(APIView):
         access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
         user_serializer = UserSerializer(user)
 
-        return Response({
-            'access': str(access),
-            'refresh': str(refresh),
-            'access_expiration': access_exp,
-            'refresh_expiration': refresh_exp,
-            'user': user_serializer.data,            
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "access": str(access),
+                "refresh": str(refresh),
+                "access_expiration": access_exp,
+                "refresh_expiration": refresh_exp,
+                "user": user_serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class CompleteLoginView(APIView):
@@ -141,19 +160,22 @@ class CompleteLoginView(APIView):
         serializer = CompleteLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        user = serializer.validated_data['user']
+        user = serializer.validated_data["user"]
         user.last_login = timezone.now()
         user.save()
         access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
         user_serializer = UserSerializer(user)
 
-        return Response({
-            'access': str(access),
-            'refresh': str(refresh),
-            'access_expiration': access_exp,
-            'refresh_expiration': refresh_exp,
-            'user': user_serializer.data,
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "access": str(access),
+                "refresh": str(refresh),
+                "access_expiration": access_exp,
+                "refresh_expiration": refresh_exp,
+                "user": user_serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class UserDetailsView(generics.RetrieveUpdateAPIView):
@@ -165,28 +187,35 @@ class UserDetailsView(generics.RetrieveUpdateAPIView):
 
     def partial_update(self, request, *args, **kwargs):
         if request.user.is_oauth_based:
-            return Response({
-                'status': 'error',
-                'details': 'Method "PATCH" not allowed for OAuth-based users.',
-                'error_code': 'oauth_restricted'
-            }, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {
+                    "status": "error",
+                    "details": 'Method "PATCH" not allowed for OAuth-based users.',
+                    "error_code": "oauth_restricted",
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
-        required_fields = ['f_name', 'l_name', 'birthday']
+        required_fields = ["f_name", "l_name", "birthday"]
 
-        
         current_data = self.get_object()
         serializer = self.get_serializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
         for field in required_fields:
-            if field not in serializer.validated_data and getattr(current_data, field) is None:
+            if (
+                field not in serializer.validated_data
+                and getattr(current_data, field) is None
+            ):
                 # Required field is missing
-                return Response({
-                    'status': 'error',
-                    'details': f'The field {field} is required to be updated first.',
-                    'error_code': 'required_field_missing'
-                }, status=status.HTTP_400_BAD_REQUEST)
-
+                return Response(
+                    {
+                        "status": "error",
+                        "details": f"The field {field} is required to be updated first.",
+                        "error_code": "required_field_missing",
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         user = self.get_object()
         serializer = self.get_serializer(user, data=request.data, partial=True)
@@ -194,59 +223,64 @@ class UserDetailsView(generics.RetrieveUpdateAPIView):
         self.perform_update(serializer)
 
         return Response(serializer.data)
- 
+
+
 class PasswordResetView(APIView):
     permission_classes = [IsNotOAuthUser]
+
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        new_password = serializer.validated_data['new_password']
+        user = serializer.validated_data["user"]
+        new_password = serializer.validated_data["new_password"]
         user.set_password(new_password)
         user.save()
 
-        return Response({
-            'status': 'success',
-            'details': 'Password has been reset.'
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {"status": "success", "details": "Password has been reset."},
+            status=status.HTTP_200_OK,
+        )
+
 
 class PasswordChangeView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
+
     def post(self, request, *args, **kwargs):
-        serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
+        serializer = PasswordChangeSerializer(
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
-        new_password = serializer.validated_data['new_password1']
+        new_password = serializer.validated_data["new_password1"]
         user = request.user
         user.set_password(new_password)
         user.save()
-        return Response({
-            'status': 'success',
-            'details': 'Password has been changed.'
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {"status": "success", "details": "Password has been changed."},
+            status=status.HTTP_200_OK,
+        )
 
 
 class Request2FAView(APIView):
     throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
+
     def post(self, request):
         serializer = Request2FASerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
+        user = serializer.validated_data["user"]
         if not user.preferred_2fa:
             otp, secret = utils.generate_otp()
             user.send_email("otp", otp.now())
             cache.set(f"otp_secret_{user.id}", secret, timeout=300)
 
-            return Response({
-                'status': 'success',
-                "details": "an otp has been sent successfully."
-            })
-
+            return Response(
+                {"status": "success", "details": "an otp has been sent successfully."}
+            )
 
         utils.generate_2fa_challenge(user)
-        return Response({
-            'status': 'success',
-            "details": "a 2fa code has been sent successfully."
-        })
+        return Response(
+            {"status": "success", "details": "a 2fa code has been sent successfully."}
+        )
+
 
 class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
@@ -257,38 +291,50 @@ class Enable2FAView(APIView):
         serializer = Enable2FASerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        method = serializer.validated_data['method']
+        method = serializer.validated_data["method"]
         device = getattr(user, f"{method}_device", None)
 
         if not user.preferred_2fa:
             if device is None or not device.confirmed:
-            
-                if method == 'email':
+                if method == "email":
                     device = EmailDevice(user=user, confirmed=False)
-                elif method == 'sms':
-                    device = SMSDevice(user=user, number=user.phone_number, confirmed=False)
-                elif method == 'totp':
+                elif method == "sms":
+                    device = SMSDevice(
+                        user=user, number=user.phone_number, confirmed=False
+                    )
+                elif method == "totp":
                     device = TOTPDevice(user=user, step=60, confirmed=False)
 
                 device.save()
                 setattr(user, f"{method}_device", device)
                 user.save()
 
-                if method in ['email', 'sms']:
+                if method in ["email", "sms"]:
                     device.generate_challenge()
-                    details = 'An E-mail has been sent.' if method == 'email' else 'An SMS has been sent.'
+                    details = (
+                        "An E-mail has been sent."
+                        if method == "email"
+                        else "An SMS has been sent."
+                    )
                 else:  # TOTP
                     details = {"provisioning_uri": device.config_url}
 
-                return Response({
-                    'status': 'success',
-                    'details': details,
-                }, status=status.HTTP_200_OK)
+                return Response(
+                    {
+                        "status": "success",
+                        "details": details,
+                    },
+                    status=status.HTTP_200_OK,
+                )
 
-        return Response({
-            'status': 'error',
-            'details': '2FA is already enabled or an unknown error occurred.',
-        }, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "status": "error",
+                "details": "2FA is already enabled or an unknown error occurred.",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
 
 class Verify2FASetupView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
@@ -296,8 +342,8 @@ class Verify2FASetupView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = Verify2FASerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        method = serializer.validated_data['method']
-        otp_code = serializer.validated_data['code']
+        method = serializer.validated_data["method"]
+        otp_code = serializer.validated_data["code"]
         user = request.user
 
         device = getattr(user, f"{method}_device", None)
@@ -313,16 +359,20 @@ class Verify2FASetupView(APIView):
                 BackupCode.objects.bulk_create(backup_codes)
                 backup_code_serializer = BackupCodeSerializer(backup_codes, many=True)
 
-                return Response({
-                    'status': 'success',
-                    'details': '2FA setup completed.',
-                    "backup_codes": backup_code_serializer.data
-                }, status=status.HTTP_200_OK)
+                return Response(
+                    {
+                        "status": "success",
+                        "details": "2FA setup completed.",
+                        "backup_codes": backup_code_serializer.data,
+                    },
+                    status=status.HTTP_200_OK,
+                )
             else:
                 raise exceptions.InvalidTwoFaOrOtp()
 
         else:
             raise exceptions.UnknownError()
+
 
 class Disable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
@@ -333,20 +383,27 @@ class Disable2FAView(APIView):
         if not user.preferred_2fa:
             raise exceptions.No2FASetUp()
 
-        if user.preferred_2fa == 'totp': # no need to generate challenge
-            return Response({
-                "status": "verification_required",
-            }, status=status.HTTP_202_ACCEPTED)
+        if user.preferred_2fa == "totp":  # no need to generate challenge
+            return Response(
+                {
+                    "status": "verification_required",
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
 
         device = getattr(user, f"{user.preferred_2fa}_device", None)
 
         if device:
             device.generate_challenge()
-            return Response({
-                "status": "verification_required",
-            }, status=status.HTTP_202_ACCEPTED)
+            return Response(
+                {
+                    "status": "verification_required",
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
 
         raise exceptions.UnknownError
+
 
 class CompleteDisable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
@@ -359,14 +416,14 @@ class CompleteDisable2FAView(APIView):
 
         serializer = CompleteDisable2FASerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        code = serializer.validated_data['code']
+        code = serializer.validated_data["code"]
 
         if not utils.validate_two_fa(user, code):
             raise exceptions.InvalidTwoFaOrOtp()
 
         method = user.preferred_2fa
         device = getattr(user, f"{user.preferred_2fa}_device", None)
-        
+
         if device:
             user.preferred_2fa = None
             device.delete()
@@ -375,12 +432,10 @@ class CompleteDisable2FAView(APIView):
 
         BackupCode.objects.filter(user=user).delete()
         return Response(
-            {
-                "status": "success",
-                "details": "2FA has been disabled."
-            },
-            status=status.HTTP_200_OK
+            {"status": "success", "details": "2FA has been disabled."},
+            status=status.HTTP_200_OK,
         )
+
 
 class UsernameChangeView(generics.UpdateAPIView):
     permission_class = [IsAuthenticated, IsNotOAuthUser]
@@ -401,9 +456,12 @@ class UsernameChangeView(generics.UpdateAPIView):
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
         user = self.get_object()
-        remaining_changes = settings.MAXIMUM_ALLOWED_USERNAME_CHANGE - user.username_change_count
-        response.data['remaining_changes'] = remaining_changes
+        remaining_changes = (
+            settings.MAXIMUM_ALLOWED_USERNAME_CHANGE - user.username_change_count
+        )
+        response.data["remaining_changes"] = remaining_changes
         return response
+
 
 class EmailChangeView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
@@ -412,7 +470,7 @@ class EmailChangeView(APIView):
         serializer = EmailChangeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        new_email = serializer.validated_data.get('new_email')
+        new_email = serializer.validated_data.get("new_email")
         user = request.user
 
         otp, secret = utils.generate_otp()
@@ -422,10 +480,11 @@ class EmailChangeView(APIView):
         cache.set(f"email_change_otp_{user.id}", secret, timeout=300)
         cache.set(f"email_change_email_{user.id}", new_email, timeout=300)
 
-        return Response({
-            "status": "verification_required",
-            "tmp_token": tmp_token
-        }, status=status.HTTP_202_ACCEPTED)
+        return Response(
+            {"status": "verification_required", "tmp_token": tmp_token},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
 
 class CompleteEmailChangeView(APIView):
     permission_classes = [IsAuthenticated]
@@ -434,18 +493,18 @@ class CompleteEmailChangeView(APIView):
         serializer = CompleteEmailorPhoneChangeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        tmp_token = serializer.validated_data.get('tmp_token')
-        code = serializer.validated_data.get('code')
+        tmp_token = serializer.validated_data.get("tmp_token")
+        code = serializer.validated_data.get("code")
         user = request.user
 
         cached_tmp_token = cache.get(f"email_change_tmp_token_{user.id}")
         if cached_tmp_token != tmp_token:
             raise exceptions.InvalidTmpToken
- 
+
         try:
             otp_secret = cache.get(f"email_change_otp_{user.id}")
             totp = pyotp.TOTP(otp_secret, interval=300)
-        except:
+        except Exception:
             raise exceptions.UnknownError()
 
         if not totp.verify(code):
@@ -462,10 +521,13 @@ class CompleteEmailChangeView(APIView):
         cache.delete(f"email_change_tmp_token_{user.id}")
         cache.delete(f"email_change_new_email_{user.id}")
 
-        return Response({
-            'status': 'success',
-            'email': new_email,
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "status": "success",
+                "email": new_email,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class PhoneChangeView(APIView):
@@ -475,14 +537,14 @@ class PhoneChangeView(APIView):
         serializer = PhoneChangeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        new_phone = serializer.validated_data.get('new_phone')
+        new_phone = serializer.validated_data.get("new_phone")
         user = request.user
 
         if new_phone == user.phone_number:
             raise CustomAPIException(
-                    "Your previous phone number can't be same with the new one.", 
-                    status_code=400
-                )
+                "Your previous phone number can't be same with the new one.",
+                status_code=400,
+            )
 
         sms_service = SMSService(get_sms_provider(settings.SMS_PROVIDER))
         otp = sms_service.send_otp(phone_number=new_phone)
@@ -492,10 +554,11 @@ class PhoneChangeView(APIView):
         cache.set(f"phone_change_otp_{user.id}", otp, timeout=300)
         cache.set(f"phone_change_new_phone_{user.id}", new_phone, timeout=300)
 
-        return Response({
-            "status": "verification_required",
-            "tmp_token": tmp_token
-        }, status=status.HTTP_202_ACCEPTED)
+        return Response(
+            {"status": "verification_required", "tmp_token": tmp_token},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
 
 class CompletePhoneChangeView(APIView):
     permission_classes = [IsAuthenticated]
@@ -504,8 +567,8 @@ class CompletePhoneChangeView(APIView):
         serializer = CompleteEmailorPhoneChangeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        tmp_token = serializer.validated_data.get('tmp_token')
-        code = serializer.validated_data.get('code')
+        tmp_token = serializer.validated_data.get("tmp_token")
+        code = serializer.validated_data.get("code")
         user = request.user
 
         cached_tmp_token = cache.get(f"phone_change_tmp_token_{user.id}")
@@ -522,9 +585,9 @@ class CompletePhoneChangeView(APIView):
         new_phone = cache.get(f"phone_change_new_phone_{user.id}")
         if not new_phone:
             raise CustomAPIException(
-                    detail='New Phone not found. try again from the initial step.',
-                    status_code=401,      
-                )
+                detail="New Phone not found. try again from the initial step.",
+                status_code=401,
+            )
         user.phone_number = new_phone
         user.save()
 
@@ -532,14 +595,14 @@ class CompletePhoneChangeView(APIView):
         cache.delete(f"phone_change_tmp_token_{user.id}")
         cache.delete(f"phone_change_new_phone_{user.id}")
 
-        return Response({
-            'status': 'success',
-            'phone': str(new_phone)
-        }, status=status.HTTP_200_OK)
-        
+        return Response(
+            {"status": "success", "phone": str(new_phone)}, status=status.HTTP_200_OK
+        )
+
 
 # TODO: Refactor password resets
 # TODO: change 2fa method
 # TODO: other social auths
 # TODO: generate new sets backup codes & complete
 # TODO: Validations check
+# TODO: Remove CORS

@@ -24,17 +24,17 @@ services:
       - /etc/letsencrypt/live/test2.rithub.org-0001/privkey.pem:/etc/nginx/ssl/privkey.pem
       - static_volume:/app/staticfiles
       - media_volume:/app/mediafiles
-    
+
     depends_on:
       - web
-      
+
   redis:
     image: redis:latest
     ports:
       - "6379:6379"
 
   db:
-    image: postgres:14
+    image: postgres:latest
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     env_file:

@@ -27,27 +27,27 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    'django.contrib.sites',
-    'rest_framework',
-    'rest_framework.authtoken',
-    'dj_rest_auth',
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'dj_rest_auth.registration',
-    'allauth.socialaccount.providers.facebook',
-    'allauth.socialaccount.providers.google',
-    'allauth.socialaccount.providers.github',
+    "django.contrib.sites",
+    "rest_framework",
+    "rest_framework.authtoken",
+    "dj_rest_auth",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "dj_rest_auth.registration",
+    "allauth.socialaccount.providers.facebook",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.github",
     "corsheaders",
-    'drf_spectacular',
-    'phonenumber_field',
-    'django_otp',
-    'django_otp.plugins.otp_email',
-    'django_otp.plugins.otp_totp',
-    'django_twilio',
-    'otp_twilio',
-    'channels',
-    'django_filters',
+    "drf_spectacular",
+    "phonenumber_field",
+    "django_otp",
+    "django_otp.plugins.otp_email",
+    "django_otp.plugins.otp_totp",
+    "django_twilio",
+    "otp_twilio",
+    "channels",
+    "django_filters",
 ]
 
 INSTALLED_APPS += [
@@ -64,7 +64,6 @@ SITE_ID = 1
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -111,26 +110,30 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 REST_AUTH = {
-    'SESSION_LOGIN': True,
-    'USE_JWT': True,
-    'JWT_AUTH_COOKIE': 'auth',
-    'JWT_AUTH_HTTPONLY': True,
+    "SESSION_LOGIN": True,
+    "USE_JWT": True,
+    "JWT_AUTH_COOKIE": "auth",
+    "JWT_AUTH_HTTPONLY": True,
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': parse_duration(os.getenv('ACCESS_TOKEN_LIFETIME', default='5m')),
-    'REFRESH_TOKEN_LIFETIME': parse_duration(os.getenv('REFRESH_TOKEN_LIFETIME', default='1d')),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
-    'VERIFYING_KEY': None,
-    'AUTH_HEADER_TYPES': ('Bearer',),
-    'USER_ID_FIELD': 'id',
-    'USER_ID_CLAIM': 'user_id',
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-    'TOKEN_TYPE_CLAIM': 'token_type',
-    'JTI_CLAIM': 'jti',
+    "ACCESS_TOKEN_LIFETIME": parse_duration(
+        os.getenv("ACCESS_TOKEN_LIFETIME", default="5m")
+    ),
+    "REFRESH_TOKEN_LIFETIME": parse_duration(
+        os.getenv("REFRESH_TOKEN_LIFETIME", default="1d")
+    ),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "VERIFYING_KEY": None,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type",
+    "JTI_CLAIM": "jti",
 }
 
 WSGI_APPLICATION = "RITengine.wsgi.application"
@@ -138,46 +141,44 @@ ASGI_APPLICATION = "RITengine.asgi.application"
 
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'RITengine ENDPOINTs',
-    'DESCRIPTION': 'API ENDPOINTs',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
+    "TITLE": "RITengine ENDPOINTs",
+    "DESCRIPTION": "API ENDPOINTs",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
-        'dj_rest_auth.jwt_auth.JWTCookieAuthentication'
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework.authentication.TokenAuthentication",
+        "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
     ),
-    'DEFAULT_THROTTLE_CLASSES':[
-        'RITengine.throttles.CustomAnonRateThrottle',
-        'RITengine.throttles.CustomUserRateThrottle'
+    "DEFAULT_THROTTLE_CLASSES": [
+        "RITengine.throttles.CustomAnonRateThrottle",
+        "RITengine.throttles.CustomUserRateThrottle",
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': os.getenv("ANONYMOUS_RATELIMIT"),
-        'user': os.getenv("USERS_RATELIMIT")
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.getenv("ANONYMOUS_RATELIMIT"),
+        "user": os.getenv("USERS_RATELIMIT"),
     },
-    'DEFAULT_FILTER_BACKENDS': (
-        'django_filters.rest_framework.DjangoFilterBackend',
-    ),
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'EXCEPTION_HANDLER': 'RITengine.exceptions.custom_exception_handler',
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
-    'PAGE_SIZE_QUERY_PARAM': 'page_size',
-    'MAX_PAGE_SIZE': 100,
+    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "RITengine.exceptions.custom_exception_handler",
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
+    "PAGE_SIZE_QUERY_PARAM": "page_size",
+    "MAX_PAGE_SIZE": 100,
 }
 
-AUTH_USER_MODEL = 'user.CustomUser'
+AUTH_USER_MODEL = "user.CustomUser"
 
 
 SOCIALACCOUNT_PROVIDERS = {
-    'github': {
-        'APP': {
-            'client_id': 'Ov23liXqhsFzWkqk4wjg',
-            'secret': 'e37750864300c00446441be82788222da9814399',
-            'key': ''
+    "github": {
+        "APP": {
+            "client_id": "Ov23liXqhsFzWkqk4wjg",
+            "secret": "e37750864300c00446441be82788222da9814399",
+            "key": "",
         }
     },
 }
@@ -193,9 +194,9 @@ USE_I18N = True
 
 USE_TZ = True
 
-REST_AUTH_REGISTER_SERIALIZER = 'user.serializers.CustomRegisterSerializer'
-REST_AUTH_LOGIN_SERIALIZER = 'user.serializers.CustomLoginSerializer'
-SOCIALACCOUNT_ADAPTER = 'user.adapters.CustomSocialAccountAdapter'
+REST_AUTH_REGISTER_SERIALIZER = "user.serializers.CustomRegisterSerializer"
+REST_AUTH_LOGIN_SERIALIZER = "user.serializers.CustomLoginSerializer"
+SOCIALACCOUNT_ADAPTER = "user.adapters.CustomSocialAccountAdapter"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
@@ -212,7 +213,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = True
-ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_UNIQUE_EMAIL = True
 
 FRONTEND_URL = os.getenv("FRONTEND_URL")
@@ -221,7 +222,7 @@ SMS_PROVIDER = os.getenv("SMS_PROVIDER")
 MELI_PAYAMAK_KEY = os.getenv("MELI_PAYAMAK_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL")
-MAXIMUM_ALLOWED_USERNAME_CHANGE=3
+MAXIMUM_ALLOWED_USERNAME_CHANGE = 3
 
 # TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
 # TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")

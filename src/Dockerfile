@@ -5,16 +5,14 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /app
 
-COPY requirements.txt /app/
+COPY . /app/
 
 RUN apt-get update \
     && apt-get -y install libpq-dev gcc
-    
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . /app/
+RUN chmod +x entrypoint.sh
 
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "RITengine.asgi:application"]
