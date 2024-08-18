@@ -1,48 +1,47 @@
 services:
-  web:
-    build: ./src
-    volumes:
-      - ./src:/app
-      - static_volume:/app/staticfiles
-    expose:
-      - 8000
-    depends_on:
-      - redis
-      - db
-    env_file:
-      - .env.prod
+    web:
+        build: ./src
+        volumes:
+            - static_volume:/app/staticfiles
+        expose:
+            - 8000
+        depends_on:
+            - redis
+            - db
+        env_file:
+            - .env.prod
 
-  nginx:
-    build: ./nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    env_file:
-      - .env.prod
-    volumes:
-      - /etc/letsencrypt/live/test2.rithub.org-0001/fullchain.pem:/etc/nginx/ssl/fullchain.pem
-      - /etc/letsencrypt/live/test2.rithub.org-0001/privkey.pem:/etc/nginx/ssl/privkey.pem
-      - static_volume:/app/staticfiles
-      - media_volume:/app/mediafiles
+    nginx:
+        build: ./nginx
+        ports:
+            - "80:80"
+            - "443:443"
+        env_file:
+            - .env.prod
+        volumes:
+            - /etc/letsencrypt/live/test2.rithub.org-0001/fullchain.pem:/etc/nginx/ssl/fullchain.pem
+            - /etc/letsencrypt/live/test2.rithub.org-0001/privkey.pem:/etc/nginx/ssl/privkey.pem
+            - static_volume:/app/staticfiles
+            - media_volume:/app/mediafiles
 
-    depends_on:
-      - web
+        depends_on:
+            - web
 
-  redis:
-    image: redis:latest
-    ports:
-      - "6379:6379"
+    redis:
+        image: redis:latest
+        ports:
+            - "6379:6379"
 
-  db:
-    image: postgres:latest
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    env_file:
-      - .env.prod
-    ports:
-      - "5432:5432"
+    db:
+        image: postgres:14 #temproray
+        volumes:
+            - postgres_data:/var/lib/postgresql/data/
+        env_file:
+            - .env.prod
+        ports:
+            - "5432:5432"
 
 volumes:
-  static_volume:
-  media_volume:
-  postgres_data:
+    static_volume:
+    media_volume:
+    postgres_data:

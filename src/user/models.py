@@ -4,6 +4,7 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
+from .managers import UserManager
 from django.core.mail import send_mail
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
@@ -15,27 +16,6 @@ from django.db import models
 from datetime import timedelta
 from .providers import MeliPayamakProvider
 from .services import SMSService
-
-
-class UserManager(BaseUserManager):
-    def create_user(self, username, email, password=None, **extra_fields):
-        if not email:
-            raise ValueError("The Email field must be set")
-
-        if not username:
-            raise ValueError("The username field must be set")
-
-        email = self.normalize_email(email)
-        user = self.model(username=username, email=email, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
-
-    def create_superuser(self, username, email, password, **extra_fields):
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", True)
-        return self.create_user(username, email, password, **extra_fields)
-
 
 class SMSDevice(TwilioSMSDevice):
     class Meta:
