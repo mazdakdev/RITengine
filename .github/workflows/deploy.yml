@@ -24,7 +24,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}
           ssh-keyscan -t rsa ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.WORK_DIR }} && git pull origin main"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.WORK_DIR }} && git stash && git pull origin main"
           echo "Successfully pulled repo."
 
       - name: Rebuild using Docker Compose
