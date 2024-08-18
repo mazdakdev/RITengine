@@ -605,4 +605,3 @@ class CompletePhoneChangeView(APIView):
 # TODO: other social auths
 # TODO: generate new sets backup codes & complete
 # TODO: Validations check
-# TODO: Remove CORS
