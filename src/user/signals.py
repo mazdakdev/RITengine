@@ -15,7 +15,7 @@ def send_otp_on_registration(sender, instance, created, **kwargs):
             instance.send_email(
                 subject=f"RITengine: {otp.now()}",
                 template_name="emails/verification.html",
-                context={"code": otp.now()}
+                context={"token": otp.now()}
             )
             cache.set(f"otp_secret_{instance.id}", secret, timeout=300)
         else:

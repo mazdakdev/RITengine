@@ -12,7 +12,7 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+#EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 # EMAIL_HOST = os.getenv('EMAIL_HOST')
@@ -21,6 +21,9 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 # EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 # EMAIL_FROM = os.getenv("EMAIL_FROM")
+# OTP_EMAIL_SENDER = EMAIL_FROM
+# OTP_EMAIL_SUBJECT = "RITengine: Your 2FA Code"
+# OTP_EMAIL_BODY_HTML_TEMPLATE_PATH = "emails/verification.html"
 
 DATABASES = {
     "default": {
