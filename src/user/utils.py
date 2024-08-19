@@ -13,10 +13,19 @@ import string
 User = get_user_model()
 
 
-def generate_otp():
+def generate_and_send_otp(user):
+    """
+    Generates an otp, cache its secret and sends the e-mail.
+    """
     secret = pyotp.random_base32()
     otp = pyotp.TOTP(secret, interval=300)
-    return otp, secret
+    cache.set(f"otp_secret_{user.id}", secret, timeout=300)
+
+    user.send_email(
+                subject=f"RITengine: {otp.now()}",
+                template_name="emails/verification.html",
+                context={"token": otp.now()}
+            )
 
 
 def get_jwt_token(user):

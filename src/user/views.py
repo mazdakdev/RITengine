@@ -1,6 +1,6 @@
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
-from dj_rest_auth.registration.views import SocialLoginView, RegisterView
+from dj_rest_auth.registration.views import SocialLoginView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
@@ -27,11 +27,11 @@ from .serializers import (
     PasswordChangeSerializer,
     PasswordResetSerializer,
     LoginSerializer,
-    CompleteRegisterSerializer,
+    CompleteRegisterationSerializer,
     UsernameChangeSerializer,
     UserSerializer,
     CompleteLoginSerializer,
-    CustomRegisterSerializer,
+    RegistrationSerializer,
     UserDetailsSerializer,
     BackupCodeSerializer,
     EmailChangeSerializer,
@@ -57,70 +57,34 @@ class GitHubLoginView(SocialLoginView):
         self.request.user.save()
 
 
-class CustomRegisterView(RegisterView):
-    serializer_class = CustomRegisterSerializer
+class CustomRegisterView(APIView):
+    """
+    Creates user obj and sends an otp
+    """
+    def post(self, request):
+          serializer = RegistrationSerializer(data=request.data)
+          serializer.is_valid(raise_exception=True)
+          user = serializer.save(request)
 
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(request)
-
-        return Response(
-            {"status": "success", "details": "Verification code sent successfully."},
-            status=status.HTTP_200_OK,
-        )
+          return Response(
+              {"status": "success", "details": "Verification code sent successfully."},
+              status=status.HTTP_200_OK,
+          )
 
 
 class CompleteRegistrationView(APIView):
+    """
+    Verifies the otp and hence the user
+    """
     def post(self, request):
-        serializer = CompleteRegisterSerializer(data=request.data)
+        serializer = CompleteRegisterationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        user = serializer.save()
 
-        otp_code = serializer.validated_data["otp"]
-        email = serializer.validated_data["email"]
-        try:
-            user = User.objects.get(email=email)
-            otp_secret = cache.get(f"otp_secret_{user.id}")
-
-            if not user.is_email_verified:
-                if otp_secret is not None:
-                    totp = pyotp.TOTP(otp_secret, interval=300)
-
-                    if totp.verify(otp_code):
-                        user.is_email_verified = True
-                        user.save()
-                        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(
-                            user
-                        )
-                        user_serializer = UserSerializer(user)
-
-                        return Response(
-                            {
-                                # 'status': "success",
-                                # 'data': {
-                                "access": str(access),
-                                "refresh": str(refresh),
-                                "access_expiration": access_exp,
-                                "refresh_expiration": refresh_exp,
-                                "user": user_serializer.data,
-                                # }
-                            },
-                            status=status.HTTP_200_OK,
-                        )
-
-                    else:
-                        raise exceptions.InvalidTwoFaOrOtp()
-
-            return Response(
-                {
-                    "status": "error",
-                    "details": "User's email has already been verified.",
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        except User.DoesNotExist:
-            raise exceptions.InvalidCredentials
+        return Response(
+            {"status": "success", "details": "Registration completed successfully."},
+            status=status.HTTP_200_OK,
+        )
 
 
 class CustomLoginView(APIView):
@@ -604,4 +568,6 @@ class CompletePhoneChangeView(APIView):
 # TODO: change 2fa method
 # TODO: other social auths
 # TODO: generate new sets backup codes & complete
-# TODO: Validations check
+# TODO: Validations check & make all messages better
+# TODO: make otp/2fa expiration time dynamic
+# TODO: deactive unverified email after ...

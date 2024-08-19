@@ -1,29 +1,111 @@
-from allauth.account.adapter import get_adapter
-from dj_rest_auth.registration.serializers import RegisterSerializer
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from rest_framework.exceptions import ValidationError, APIException
 from RITengine.exceptions import CustomAPIException
 from . import exceptions
-from .utils import get_user_by_identifier, validate_two_fa, validate_backup_code
 from phonenumber_field.serializerfields import PhoneNumberField
 from .models import BackupCode
 from rest_framework import serializers, status
 import pyotp
+from .utils import (
+        generate_and_send_otp, get_user_by_identifier,
+        validate_two_fa, validate_backup_code
+    )
+
 
 User = get_user_model()
 
 
-class CustomRegisterSerializer(RegisterSerializer):
-    def validate_email(self, email):
-        email = get_adapter().clean_email(email)
+class RegistrationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    username = serializers.CharField()
+    password1 = serializers.CharField(style={"input_type": "password"})
+    password2 = serializers.CharField(style={"input_type": "password"})
 
-        if email and User.objects.filter(email=email):
-            raise serializers.ValidationError(
-                "A user is already registered with this e-mail address.",
-            )
-        return email
+    def validate(self, attrs):
+        email = attrs.get('email')
+        username = attrs.get('username')
+        password1 = attrs.get('password1')
+        password2 = attrs.get('password2')
+
+        if password1 != password2:
+            raise serializers.ValidationError("Passwords must match.")
+
+        if User.objects.filter(email=email).exists():
+            user = User.objects.get(email=email)
+            if not user.is_email_verified:
+                return attrs
+            else:
+                raise serializers.ValidationError("Email is already registered.")
+
+        if User.objects.filter(username=username).exists():
+            user = User.objects.get(username=username)
+            if not user.is_email_verified:
+                return attrs
+            else:
+                raise serializers.ValidationError("Username is already taken.")
+
+        return attrs
+
+    def save(self, request):
+        email = self.validated_data['email']
+        username = self.validated_data['username']
+        password = self.validated_data['password1']
+
+        user, created = User.objects.get_or_create(email=email, defaults={
+                'username': username,
+                'password': password,
+            })
+
+        if created:
+            user.set_password(password)  # Hash the password before saving
+            user.save()
+            generate_and_send_otp(user)
+
+        else:
+            if not user.is_email_verified:
+                generate_and_send_otp(user)
+
+            else:
+                raise ValidationError("User is already completed the registeration process.")
+
+        return user
+
+class CompleteRegisterationSerializer(serializers.Serializer):
+    otp = serializers.IntegerField()
+    email = serializers.EmailField()
+
+    def validate(self, attrs):
+        email = attrs.get("email")
+        otp = attrs.get("otp")
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise exceptions.InvalidCredentials()
+
+        otp_secret = cache.get(f"otp_secret_{user.id}")
+
+        if user.is_email_verified:
+            raise ValidationError("You don't need to complete your register.")
+
+        if otp_secret is not None:
+            totp = pyotp.TOTP(otp_secret, interval=300)
+
+            if not totp.verify(otp):
+                raise exceptions.InvalidTwoFaOrOtp()
+
+            attrs['user'] = user
+            return attrs
+        else:
+            raise exceptions.InvalidTwoFaOrOtp()
+
+    def save(self):
+        user = self.validated_data['user']
+        user.is_email_verified = True
+        user.save()
+        return user
 
 
 class LoginSerializer(serializers.Serializer):
@@ -122,12 +204,6 @@ class UserDetailsSerializer(serializers.ModelSerializer):
             "birthday": {"required": True},
         }
         read_only_fields = ["username", "email", "phone_number", "last_login"]
-
-
-class CompleteRegisterSerializer(serializers.Serializer):
-    otp = serializers.IntegerField()
-    email = serializers.EmailField()
-
 
 class PasswordResetSerializer(serializers.Serializer):
     identifier = serializers.CharField()
@@ -267,6 +343,5 @@ class PhoneChangeSerializer(serializers.Serializer):
 
 class CompleteDisable2FASerializer(serializers.Serializer):
     code = serializers.CharField()
-
 
 # TODO: adjust code max and min
