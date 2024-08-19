@@ -5,6 +5,7 @@ from .models import BackupCode
 from django.core.cache import cache
 from django.utils import timezone
 from datetime import datetime
+from . import exceptions
 import pyotp
 import uuid
 import random
@@ -43,8 +44,8 @@ def get_jwt_token(user):
 
 
 def get_user_by_identifier(identifier: str):
-    user = None
     identifier_choices = ["username", "email", "phone_number"]
+    user = None
 
     for attr in identifier_choices:
         try:
@@ -53,8 +54,10 @@ def get_user_by_identifier(identifier: str):
         except User.DoesNotExist:
             continue
 
-    return user
+    if user is None:
+        raise exceptions.InvalidCredentials()
 
+    return user
 
 def validate_two_fa(user, otp):
     device = getattr(user, f"{user.preferred_2fa}_device", None)
@@ -65,6 +68,9 @@ def validate_two_fa(user, otp):
 
 
 def generate_2fa_challenge(user):
+    """
+    If user 2FA method is E-mail or SMS, Sends 2FA code to the user.
+    """
     method = user.preferred_2fa
 
     if method != "totp":

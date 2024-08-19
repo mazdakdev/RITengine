@@ -6,8 +6,9 @@ from .views import (
     CompleteLoginView, GitHubLoginView, UserDetailsView,
     PasswordChangeView, PasswordResetView, Enable2FAView,
     Verify2FASetupView, Request2FAView, UsernameChangeView,
-    EmailChangeView, CompleteEmailChangeView, PhoneChangeView, 
-    CompletePhoneChangeView, Disable2FAView, CompleteDisable2FAView
+    EmailChangeView, CompleteEmailChangeView, PhoneChangeView,
+    CompletePhoneChangeView, Disable2FAView, CompleteDisable2FAView,
+    CompletePasswordChangeView
 )
 
 urlpatterns = [
@@ -19,7 +20,8 @@ urlpatterns = [
     path('token/refresh/', get_refresh_view().as_view(), name='token_refresh'),
     path('github/', GitHubLoginView.as_view(), name='github_login'),
     path("me/", UserDetailsView.as_view(), name="user_details"),
-    path("password/change/", PasswordChangeView.as_view(), name='rest_password_change'),
+    path("password/change/", PasswordChangeView.as_view(), name='password_change'),
+    path("password/change/complete/", CompletePasswordChangeView.as_view(), name='password_change_complete'),
     path("password/reset/", PasswordResetView.as_view(), name='rest_password_reset'),
     path('accounts/', include('allauth.urls')),
     path('2fa/enable/', Enable2FAView.as_view(), name="two_fa_enable"),

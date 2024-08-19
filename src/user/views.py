@@ -21,23 +21,12 @@ from RITengine.exceptions import CustomAPIException
 from rest_framework.exceptions import ValidationError
 from . import exceptions
 from .serializers import (
-    Verify2FASerializer,
-    Enable2FASerializer,
-    Request2FASerializer,
-    PasswordChangeSerializer,
-    PasswordResetSerializer,
-    LoginSerializer,
-    CompleteRegisterationSerializer,
-    UsernameChangeSerializer,
-    UserSerializer,
-    CompleteLoginSerializer,
-    RegistrationSerializer,
-    UserDetailsSerializer,
-    BackupCodeSerializer,
-    EmailChangeSerializer,
-    CompleteEmailorPhoneChangeSerializer,
-    PhoneChangeSerializer,
-    CompleteDisable2FASerializer,
+    Verify2FASerializer, Enable2FASerializer, Request2FASerializer,
+    PasswordChangeSerializer, PasswordResetSerializer, LoginSerializer,
+    CompleteRegisterationSerializer, UsernameChangeSerializer, UserSerializer,
+    CompleteLoginSerializer, RegistrationSerializer, UserDetailsSerializer,
+    BackupCodeSerializer, EmailChangeSerializer, CompleteEmailorPhoneChangeSerializer,
+    PhoneChangeSerializer, CompleteDisable2FASerializer, CompletePasswordChangeSerializer,
 )
 from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
 from rest_framework import generics
@@ -71,18 +60,29 @@ class CustomRegisterView(APIView):
               status=status.HTTP_200_OK,
           )
 
-
 class CompleteRegistrationView(APIView):
     """
-    Verifies the otp and hence the user
+    Verifies the otp and hence the user's registertaion
     """
     def post(self, request):
         serializer = CompleteRegisterationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
+        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+        user_serializer = UserSerializer(user)
+
         return Response(
-            {"status": "success", "details": "Registration completed successfully."},
+            {
+                # 'status': "success",
+                # 'data': {
+                "access": str(access),
+                "refresh": str(refresh),
+                "access_expiration": access_exp,
+                "refresh_expiration": refresh_exp,
+                "user": user_serializer.data,
+                # }
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -211,15 +211,29 @@ class PasswordChangeView(APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = PasswordChangeSerializer(
-            data=request.data, context={"request": request}
+            data=request.data, context={"user": request.user}
         )
         serializer.is_valid(raise_exception=True)
-        new_password = serializer.validated_data["new_password1"]
-        user = request.user
-        user.set_password(new_password)
-        user.save()
         return Response(
-            {"status": "success", "details": "Password has been changed."},
+            {"status": "verification_required",},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+class CompletePasswordChangeView(APIView):
+    permission_classes = [IsAuthenticated, IsNotOAuthUser]
+
+    def post(self , request, *args, **kwargs):
+        serializer = CompletePasswordChangeSerializer(
+            data=request.data, context={"user": request.user}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(
+            {
+                "status": "success",
+                "details":"Password changed successfully"
+            },
             status=status.HTTP_200_OK,
         )
 

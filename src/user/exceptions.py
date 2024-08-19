@@ -32,6 +32,6 @@ class UnknownError(CustomAPIException):
     default_code = "unknown_error"
 
 class No2FASetUp(CustomAPIException):
-     status_code=status.HTTP_400_BAD_REQUEST,
-     default_detail="There is no two-factor setup for this user.",
-     default_code="two_fa_not_set_up"
+    status_code=status.HTTP_400_BAD_REQUEST,
+    default_detail="There is no two-factor setup for this user.",
+    default_code="two_fa_not_set_up"

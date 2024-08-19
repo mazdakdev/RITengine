@@ -9,7 +9,7 @@ from .models import BackupCode
 from rest_framework import serializers, status
 import pyotp
 from .utils import (
-        generate_and_send_otp, get_user_by_identifier,
+        generate_2fa_challenge, generate_and_send_otp, get_user_by_identifier,
         validate_two_fa, validate_backup_code
     )
 
@@ -237,39 +237,58 @@ class PasswordResetSerializer(serializers.Serializer):
 
 
 class PasswordChangeSerializer(serializers.Serializer):
-    code = serializers.CharField(max_length=6)
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        password = attrs.get("password")
+        user = self.context.get("user")
+
+        if not user.check_password(password):
+            raise ValidationError("Your current password is incorrect.")
+
+        if not user.preferred_2fa:
+            generate_and_send_otp(user)
+
+        else:
+           generate_2fa_challenge(user)
+
+        return attrs
+
+class CompletePasswordChangeSerializer(serializers.Serializer):
+    code = serializers.CharField()
     new_password1 = serializers.CharField(write_only=True)
     new_password2 = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        code = attrs.get("code")
         new_password1 = attrs.get("new_password1")
         new_password2 = attrs.get("new_password2")
-
-        if not code:
-            raise exceptions.TwoFaRequired()
+        code = attrs.get("code")
+        user = self.context.get("user")
 
         if new_password1 != new_password2:
-            raise CustomAPIException(
-                detail="New passwords do not match",
-                code="passwords_do_not_match",
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
-        user = self.context["request"].user
+            raise ValidationError("New passwords do not match.")
 
         if not user.preferred_2fa:
-            otp_secret = cache.get(f"otp_secret{user.id}")
+            otp_secret = cache.get(f"otp_secret_{user.id}")
+            if otp_secret is None:
+                raise exceptions.InvalidTwoFaOrOtp()
+
             totp = pyotp.TOTP(otp_secret, interval=300)
-            if totp.verify(code):
-                return attrs
-            else:
-                raise exceptions.InvalidTwoFaOrOtp
+            if not totp.verify(code):
+                raise exceptions.InvalidTwoFaOrOtp()
 
         else:
             if not validate_two_fa(user, code):
-                raise exceptions.InvalidTwoFaOrOtp
-            return attrs
+                raise exceptions.InvalidTwoFaOrOtp()
+
+        return attrs
+
+    def save(self):
+        user = self.context.get("user")
+        new_password = self.validated_data.get("new_password1")
+        user.set_password(new_password)
+        user.save()
+        return user
 
 
 class Request2FASerializer(serializers.Serializer):
