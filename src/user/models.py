@@ -98,7 +98,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.username
 
-    def send_email(self, subject, template_name, context, from_email=settings.EMAIL_FROM):
+    def send_email(self, subject, template_name, context={}, from_email=settings.EMAIL_FROM):
         """
         Send an email using an HTML template.
 

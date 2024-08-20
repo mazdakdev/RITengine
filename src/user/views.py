@@ -68,6 +68,10 @@ class CompleteRegistrationView(APIView):
         serializer = CompleteRegisterationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        user.send_email(
+                subject=f"Welcome to RITengine",
+                template_name="emails/welcome.html",
+            )
 
         access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
         user_serializer = UserSerializer(user)

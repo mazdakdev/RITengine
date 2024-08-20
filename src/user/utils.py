@@ -23,10 +23,10 @@ def generate_and_send_otp(user):
     cache.set(f"otp_secret_{user.id}", secret, timeout=300)
 
     user.send_email(
-                subject=f"RITengine: {otp.now()}",
-                template_name="emails/verification.html",
-                context={"token": otp.now()}
-            )
+            subject=f"RITengine: {otp.now()}",
+            template_name="emails/verification.html",
+            context={"token": otp.now()}
+        )
 
 
 def get_jwt_token(user):
