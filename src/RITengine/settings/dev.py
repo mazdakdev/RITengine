@@ -1,7 +1,10 @@
+from RITengine.settings.prod import ALLOWED_HOSTS
 from .base import *
 from dotenv import load_dotenv
 
 load_dotenv(BASE_DIR.parent / ".env.dev")
+
+ALLOWED_HOSTS = ["*"]
 
 DEBUG = True
 
