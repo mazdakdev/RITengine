@@ -3,6 +3,7 @@ services:
         build: ./src
         volumes:
             - static_volume:/app/staticfiles
+            - media_volume:/app/mediafiles
         expose:
             - 8000
         depends_on:
