@@ -281,6 +281,9 @@ class Enable2FAView(APIView):
                 if method == "email":
                     device = EmailDevice(user=user, confirmed=False)
                 elif method == "sms":
+                    if not user.phone_number:
+                        raise CustomAPIException("You have not set any phone number.")
+
                     device = SMSDevice(
                         user=user, number=user.phone_number, confirmed=False
                     )
@@ -530,7 +533,6 @@ class PhoneChangeView(APIView):
 
         sms_service = SMSService(get_sms_provider(settings.SMS_PROVIDER))
         otp = sms_service.send_otp(phone_number=new_phone)
-        print(otp)
 
         tmp_token = utils.generate_tmp_token(user, "phone_change")
         cache.set(f"phone_change_otp_{user.id}", otp, timeout=300)
@@ -586,6 +588,6 @@ class CompletePhoneChangeView(APIView):
 # TODO: change 2fa method
 # TODO: other social auths
 # TODO: generate new sets backup codes & complete
-# TODO: Validations check & make all messages better
+# TODO: make all error messages better
 # TODO: make otp/2fa expiration time dynamic
 # TODO: deactive unverified email after ...
