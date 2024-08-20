@@ -31,7 +31,7 @@ class SMSDevice(TwilioSMSDevice):
                 Provider itself generates the challenge and delivers it.
             """
 
-            service = SMSService(MeliPayamakProvider)
+            service = SMSService(MeliPayamakProvider())
 
             code = service.send_otp(phone_number=self.number)
 

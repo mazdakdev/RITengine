@@ -15,7 +15,7 @@ CACHES = {
     }
 }
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 EMAIL_HOST = os.getenv('EMAIL_HOST')
 EMAIL_FROM = os.getenv("EMAIL_FROM")

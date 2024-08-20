@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-
 def parse_duration(duration_str):
     """ Convert a duration string to a timedelta object. """
     if duration_str.endswith('m'):
