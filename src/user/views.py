@@ -30,6 +30,8 @@ from .serializers import (
 )
 from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
 from rest_framework import generics
+from django.db.models import Q
+
 
 User = get_user_model()
 
@@ -582,6 +584,32 @@ class CompletePhoneChangeView(APIView):
         return Response(
             {"status": "success", "phone": str(new_phone)}, status=status.HTTP_200_OK
         )
+
+
+class UserSearchView(APIView):
+    """
+    Filter users based on their identifier (email, username, or phone number).
+    Supports partial matches.
+    """
+    def get(self, request, *args, **kwargs):
+        identifier = request.query_params.get('identifier', '').strip()
+
+        if identifier:
+            User = get_user_model()
+
+            users = User.objects.filter(
+                Q(email__icontains=identifier) |
+                Q(username__icontains=identifier) |
+                Q(phone_number__icontains=identifier)
+            )
+
+            if users.exists():
+                serializer = UserSerializer(users, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                raise CustomAPIException("No users found with the given identifier.")
+
+        raise CustomAPIException("Identifier is required.")
 
 
 # TODO: Refactor password resets

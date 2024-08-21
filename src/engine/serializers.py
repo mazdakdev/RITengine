@@ -28,16 +28,14 @@ class EngineCategorySerializer(serializers.ModelSerializer):
 class ChatSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chat
-        fields = [
-            "id", "title", "slug", "shareable_key", 
-            "viewers", "created_at", "updated_at"]
+        fields = ["id", "title", "slug", "viewers", "created_at", "updated_at"]
         read_only_fields = ["created_at", "id", "shareable_key", "viewers"]
 
 
 class MessageSerializer(serializers.ModelSerializer):
     is_bookmarked = serializers.SerializerMethodField()
     projects_in = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Message
         fields = '__all__'
@@ -67,4 +65,3 @@ class AssistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assist
         fields = '__all__'
-
