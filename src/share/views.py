@@ -1,12 +1,12 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth import get_user_model
 from rest_framework import generics, status
 from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from engine.models import Chat
 from bookmark.models import Bookmark
 from project.models import Project
@@ -14,21 +14,47 @@ from engine.serializers import ChatSerializer
 from bookmark.serializers import BookmarkSerializer
 from project.serializers import ProjectSerializer
 from share.models import AccessRequest
+from .serializers import GenerateShareableLinkSerializer
 
+User = get_user_model()
 
 class GenerateShareableLinkView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated,]
+    serializer_class = GenerateShareableLinkSerializer
 
     def post(self, request, *args, **kwargs):
         obj = self.get_object()
         if obj.user != request.user:
-            raise PermissionDenied("You do not have permission to generate a link for this item.")
+            raise PermissionDenied("You do not have the permission to generate a link for this item.")
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
         if not obj.shareable_key:
             obj.shareable_key = obj.generate_shareable_key()
+            obj.save()
 
+        user_ids = serializer.validated_data.get('user_ids', [])
+        if user_ids:
+            self.add_viewers(user_ids, obj)
 
-        return Response({'shareable_key': obj.shareable_key}, status=200)
+        return Response({
+            'status': 'success',
+            'shareable_key': obj.shareable_key
+        }, status=200)
+
+    def add_viewers(self, user_ids, obj):
+        users = User.objects.filter(id__in=user_ids)
+        for user in users:
+            if user not in obj.viewers.all():
+                obj.viewers.add(user)
+                self.notify_user(user, obj)
+
+    def notify_user(self, user, obj):
+        subject = "You have been granted access to shared content"
+        message = f"You have been granted access to {obj}."
+        #user.send_email(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+        print(subject, message) #TODO:
 
     def get_object(self):
         raise NotImplementedError("Subclasses should implement this method.")
@@ -55,7 +81,7 @@ class AccessSharedContentView(generics.GenericAPIView):
 
         # Check if the user has access
         if request.user in obj.viewers.all() or obj.user == request.user:
-            serializer = self.get_serializer(obj)
+            serializer = self.get_serializer(obj, request)
             return Response(serializer.data)
 
         # If the user is not in the viewers, create an access request
@@ -103,13 +129,13 @@ class AccessSharedContentView(generics.GenericAPIView):
         self.notify_owner(obj.user, access_request)
         return True
 
-    def get_serializer(self, obj):
+    def get_serializer(self, obj, request):
         if isinstance(obj, Chat):
             return ChatSerializer(obj)
         elif isinstance(obj, Bookmark):
             return BookmarkSerializer(obj)
         elif isinstance(obj, Project):
-            return ProjectSerializer(obj)
+            return ProjectSerializer(obj, context={"user":request.user})
         return None
 
 
