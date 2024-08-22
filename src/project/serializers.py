@@ -6,7 +6,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     messages_in = serializers.SerializerMethodField()
     class Meta:
         model = Project
-        fields = ["id", "title", "description", "image", "messages_in", "viewers", "created_at", "updated_at"]
+        fields = ["id", "user", "title", "description", "image", "messages_in", "viewers", "created_at", "updated_at"]
         read_only_fields = ['user',"created_at", "updated_at", "id"]
 
     def get_messages_in(self, obj):
@@ -16,7 +16,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         Returns:
             list: A list of message IDs associated with the project that belong to the current user.
         """
-        user = self.context.get("user")
+        user = self.context['request'].user
         message_ids = obj.messages.filter(chat__user=user).values_list('id', flat=True)
         return list(message_ids)
 

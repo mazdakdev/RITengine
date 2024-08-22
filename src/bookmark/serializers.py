@@ -10,8 +10,8 @@ class BookmarkSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bookmark
         fields = [
-                'id', 'user', 'message_id', 
-                'message','viewers', 'shareable_key', 
+                'id', 'user', 'message_id',
+                'message','viewers', 'shareable_key',
                 'created_at'
             ]
         read_only_fields = fields
@@ -19,6 +19,6 @@ class BookmarkSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         message_id = validated_data.pop('message_id')
         message = Message.objects.get(id=message_id)
-        user = self.context['request'].user
+        user = self.context.get('user')
         bookmark = Bookmark.objects.create(user=user, message=message)
         return bookmark

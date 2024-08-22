@@ -250,3 +250,48 @@ class BaseViewersListView(generics.GenericAPIView):
         message = f"You've been added as a viewer to the {obj.__class__.__name__.lower()}."
         # Send an email or notification here
         print(message)
+
+
+class SharedWithMeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+
+        shared_projects = Project.objects.filter(viewers=user)
+        project_serializer = ProjectSerializer(shared_projects, many=True, context={'request': request})
+
+        shared_bookmarks = Bookmark.objects.filter(viewers=user)
+        bookmark_serializer = BookmarkSerializer(shared_bookmarks, many=True, context={'request': request})
+
+        shared_chats = Chat.objects.filter(viewers=user)
+        chat_serializer = ChatSerializer(shared_chats, many=True, context={'request': request})
+
+        return Response({
+            'status':"success",
+            'projects': project_serializer.data,
+            'bookmarks': bookmark_serializer.data,
+            'chats': chat_serializer.data,
+        }, status=status.HTTP_200_OK)
+
+class SharedByMeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+
+        shared_projects = Project.objects.filter(user=user, viewers__isnull=False).distinct()
+        project_serializer = ProjectSerializer(shared_projects, many=True, context={'request': request})
+
+        shared_bookmarks = Bookmark.objects.filter(user=user, viewers__isnull=False).distinct()
+        bookmark_serializer = BookmarkSerializer(shared_bookmarks, many=True, context={'request': request})
+
+        shared_chats = Chat.objects.filter(user=user, viewers__isnull=False).distinct()
+        chat_serializer = ChatSerializer(shared_chats, many=True, context={'request': request})
+
+        return Response({
+            'status': 'sucess',
+            'projects': project_serializer.data,
+            'bookmarks': bookmark_serializer.data,
+            'chats': chat_serializer.data,
+        }, status=status.HTTP_200_OK)

@@ -30,8 +30,8 @@ class ChatSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Chat
-        fields = ["id", "title", "slug", "viewers", "excerpt", "created_at", "updated_at"]
-        read_only_fields = ["created_at", "id", "shareable_key", "viewers", "slug"] #TODO: excerpt
+        fields = ["id", "user", "title", "slug", "viewers", "excerpt", "created_at", "updated_at"]
+        read_only_fields = ["created_at", "id", "shareable_key", "viewers", "slug", "user"] #TODO: excerpt
 
     def get_excerpt(self, obj):
         return obj.messages.first().text[:150].strip() + "..."
