@@ -7,6 +7,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from RITengine.exceptions import CustomAPIException
 from engine.models import Chat
 from bookmark.models import Bookmark
 from project.models import Project
@@ -15,6 +16,7 @@ from bookmark.serializers import BookmarkSerializer
 from project.serializers import ProjectSerializer
 from share.models import AccessRequest
 from .serializers import GenerateShareableLinkSerializer
+from user.serializers import UserSerializer
 
 User = get_user_model()
 
@@ -97,7 +99,7 @@ class AccessSharedContentView(generics.GenericAPIView):
                 "status": "error",
                 "detail": "You have already requested access to this content."
             },
-                            status=status.HTTP_400_BAD_REQUEST)
+            status=status.HTTP_400_BAD_REQUEST)
 
 
     def notify_owner(self, owner, access_request):
@@ -166,3 +168,85 @@ class ApproveAccessRequestView(APIView):
             "status": "success",
             "detail": "Access request approved."
         }, status=status.HTTP_200_OK)
+
+
+class BaseViewersListView(generics.GenericAPIView):
+    """
+    Base class to list, add, or remove viewers for any model that has viewers.
+    """
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        obj = self.get_object()
+        return obj.viewers.all()
+
+    def get_object(self):
+        """
+        Subclasses must implement this method to return the object
+        (e.g., Project, Bookmark, Chat) for which viewers are being managed.
+        """
+        raise NotImplementedError("Subclasses must implement the get_object method.")
+
+    def get(self, request, *args, **kwargs):
+        viewers = self.get_queryset()
+        serializer = self.get_serializer(viewers, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        obj = self.get_object()
+
+        if obj.user != request.user:
+            raise CustomAPIException("Item not found", status_code=status.HTTP_404_NOT_FOUND)
+
+        user_ids = request.data.get('user_ids', [])
+        if not isinstance(user_ids, list):
+            raise CustomAPIException("user_ids must be a list.")
+
+        users = User.objects.filter(id__in=user_ids)
+
+        existing_viewers = obj.viewers.filter(id__in=user_ids).values_list('id', flat=True)
+        if existing_viewers:
+            raise CustomAPIException(f"Some users are already viewers: {list(existing_viewers)}")
+
+        obj.viewers.add(*users)
+
+        for user in users:
+            self.notify_user(user, obj)
+
+        updated_viewers = obj.viewers.all()
+        serializer = self.get_serializer(updated_viewers, many=True)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, *args, **kwargs):
+        obj = self.get_object()
+
+        if obj.user != request.user:
+            raise CustomAPIException("Item not found", status_code=status.HTTP_404_NOT_FOUND)
+
+        user_ids = request.data.get('user_ids', [])
+        if not isinstance(user_ids, list):
+            raise CustomAPIException("user_ids must be a list.")
+
+        users = User.objects.filter(id__in=user_ids)
+
+        non_existing_viewers = set(user_ids) - set(obj.viewers.values_list('id', flat=True))
+        if non_existing_viewers:
+            raise CustomAPIException(f"Some users are not viewers: {list(non_existing_viewers)}")
+
+        obj.viewers.remove(*users)
+
+        for user in users:
+            self.notify_user(user, obj)
+
+        updated_viewers = obj.viewers.all()
+        serializer = self.get_serializer(updated_viewers, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def notify_user(self, user, obj):
+        subject = "You've been added as a viewer"
+        message = f"You've been added as a viewer to the {obj.__class__.__name__.lower()}."
+        # Send an email or notification here
+        print(message)

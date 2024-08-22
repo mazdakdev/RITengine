@@ -2,7 +2,7 @@ from rest_framework import generics
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from bookmark.serializers import BookmarkSerializer
-from share.views import GenerateShareableLinkView
+from share.views import GenerateShareableLinkView, BaseViewersListView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Bookmark
@@ -12,6 +12,7 @@ from engine.serializers import MessageSerializer
 from collections import defaultdict
 from RITengine.exceptions import CustomAPIException
 from rest_framework.views import APIView
+from user.serializers import UserSerializer
 
 class BookmarksListView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
@@ -48,7 +49,7 @@ class BookmarksDetailView(generics.RetrieveDestroyAPIView):
 class BookmarkMessageView(APIView):
     """
     Toggles the bookmark status of the specified message using a one-to-one relationship
-    with the Bookmark model. 
+    with the Bookmark model.
 
     Returns the message object with the updated 'is_bookmarked' status (True/False).
     """
@@ -57,7 +58,7 @@ class BookmarkMessageView(APIView):
     def post(self, request, message_id):
         user = request.user
         message = get_object_or_404(Message, id=message_id, chat__user=user )
-        
+
         if Bookmark.objects.filter(message=message).exists():
             raise CustomAPIException(
                 detail='Message is already bookmarked',
@@ -79,3 +80,8 @@ class BookmarkMessageView(APIView):
 class GenerateBookmarkLinkView(GenerateShareableLinkView):
     def get_object(self):
         return get_object_or_404(Bookmark, id=self.kwargs.get('id'))
+
+class BookmarkViewersListView(BaseViewersListView):
+    def get_object(self):
+        bookmark_id = self.kwargs.get('id')
+        return get_object_or_404(Bookmark, id=bookmark_id)

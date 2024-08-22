@@ -4,7 +4,7 @@ from django.conf import settings
 from openai import AsyncOpenAI
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
-from share.views import GenerateShareableLinkView
+from share.views import GenerateShareableLinkView, BaseViewersListView
 from rest_framework.response import Response
 from .filters import ChatFilter, MessageFilter
 from collections import defaultdict
@@ -135,3 +135,8 @@ class EngineCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
             return [AllowAny()]
         return [IsAdminUser()]
 
+
+class ChatViewersListView(BaseViewersListView):
+    def get_object(self):
+        chat_slug = self.kwargs.get('slug')
+        return get_object_or_404(Chat, slug=chat_slug)
