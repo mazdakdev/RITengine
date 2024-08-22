@@ -27,7 +27,7 @@ class Message(models.Model):
         ('user', 'User'),
         ('engine', 'RIT-engine'),
     ) #IDEA: different prompts
-    chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="messages")
     text = models.TextField()
     sender = models.CharField(max_length=10, choices=SENDER_CHOICES, default='user')
 
@@ -58,4 +58,3 @@ class Assist(models.Model):
 
     def __str__(self):
         return self.name
-

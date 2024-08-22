@@ -26,11 +26,15 @@ class EngineCategorySerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class ChatSerializer(serializers.ModelSerializer):
+    excerpt = serializers.SerializerMethodField()
+
     class Meta:
         model = Chat
-        fields = ["id", "title", "slug", "viewers", "created_at", "updated_at"]
-        read_only_fields = ["created_at", "id", "shareable_key", "viewers"]
+        fields = ["id", "title", "slug", "viewers", "excerpt", "created_at", "updated_at"]
+        read_only_fields = ["created_at", "id", "shareable_key", "viewers", "slug"]
 
+    def get_excerpt(self, obj):
+        return obj.messages.first().text[:150].strip() + "..."
 
 class MessageSerializer(serializers.ModelSerializer):
     is_bookmarked = serializers.SerializerMethodField()
