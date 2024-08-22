@@ -12,6 +12,8 @@ server {
     listen 443 ssl;
     server_name ${BACKEND_URL};
 
+    client_max_body_size 3M;
+
     ssl_certificate /etc/nginx/ssl/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/privkey.pem;
 

@@ -54,8 +54,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         },
     )
     email = models.EmailField(unique=True)
-    f_name = models.CharField(max_length=50, blank=True, null=True)
-    l_name = models.CharField(max_length=50, blank=True, null=True)
+    first_name = models.CharField(max_length=50, blank=True, null=True)
+    last_name = models.CharField(max_length=50, blank=True, null=True)
     inv_code = models.CharField(max_length=17, blank=True, null=True)
     birthday = models.DateField(null=True, blank=True)
     role = models.CharField(max_length=50, blank=True, null=True)
@@ -87,6 +87,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(blank=True, null=True)
 

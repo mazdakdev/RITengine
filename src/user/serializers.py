@@ -174,7 +174,7 @@ class CompleteLoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "email", "f_name", "l_name", "image"]
+        fields = ["id", "username", "email", "first_name", "last_name", "image"]
 
         def __init__(self, *args, **kwargs):
             super(UserSerializer, self).__init__(*args, **kwargs)
@@ -190,8 +190,8 @@ class UserDetailsSerializer(serializers.ModelSerializer):
         fields = [
             "username",
             "email",
-            "f_name",
-            "l_name",
+            "first_name",
+            "last_name",
             "phone_number",
             "inv_code",
             "birthday",
@@ -199,8 +199,8 @@ class UserDetailsSerializer(serializers.ModelSerializer):
             "last_login",
         ]
         extra_kwargs = {
-            "f_name": {"required": True},
-            "l_name": {"required": True},
+            "first_name": {"required": True},
+            "last_name": {"required": True},
             "birthday": {"required": True},
         }
         read_only_fields = ["username", "email", "phone_number", "last_login"]
