@@ -6,8 +6,8 @@ class ProjectSerializer(serializers.ModelSerializer):
     messages_in = serializers.SerializerMethodField()
     class Meta:
         model = Project
-        fields = ["id", "title", "description", "image", "messages_in", "viewers"]
-        read_only_fields = ['user']
+        fields = ["id", "title", "description", "image", "messages_in", "viewers", "created_at", "updated_at"]
+        read_only_fields = ['user',"created_at", "updated_at", "id"]
 
     def get_messages_in(self, obj):
         """

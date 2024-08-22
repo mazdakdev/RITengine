@@ -47,6 +47,9 @@ class Engine(models.Model):
     name = models.CharField(max_length=100)
     prompt = models.TextField()
     category = models.ForeignKey(EngineCategory, related_name="engines", on_delete=models.CASCADE, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return self.name
 
@@ -55,6 +58,8 @@ class Assist(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     icon = models.ImageField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
