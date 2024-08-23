@@ -1,6 +1,7 @@
 from django.db import models
 from engine.models import Message
 from share.models import ShareableModel
+
 class Bookmark(ShareableModel):
     message = models.OneToOneField(Message, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)

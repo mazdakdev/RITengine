@@ -257,41 +257,70 @@ class SharedWithMeView(APIView):
 
     def get(self, request, *args, **kwargs):
         user = request.user
+        query_params = request.query_params
 
-        shared_projects = Project.objects.filter(viewers=user)
-        project_serializer = ProjectSerializer(shared_projects, many=True, context={'request': request})
+        data = {}
 
-        shared_bookmarks = Bookmark.objects.filter(viewers=user)
-        bookmark_serializer = BookmarkSerializer(shared_bookmarks, many=True, context={'request': request})
+        # Check for 'projects' in query params
+        if 'projects' in query_params:
+            shared_projects = Project.objects.filter(viewers=user)
+            project_serializer = ProjectSerializer(shared_projects, many=True, context={'request': request})
+            data['projects'] = project_serializer.data
 
-        shared_chats = Chat.objects.filter(viewers=user)
-        chat_serializer = ChatSerializer(shared_chats, many=True, context={'request': request})
+        # Check for 'bookmarks' in query params
+        if 'bookmarks' in query_params:
+            shared_bookmarks = Bookmark.objects.filter(viewers=user)
+            bookmark_serializer = BookmarkSerializer(shared_bookmarks, many=True, context={'request': request})
+            data['bookmarks'] = bookmark_serializer.data
+
+        # Check for 'chats' in query params
+        if 'chats' in query_params:
+            shared_chats = Chat.objects.filter(viewers=user)
+            chat_serializer = ChatSerializer(shared_chats, many=True, context={'request': request})
+            data['chats'] = chat_serializer.data
+
+        # If no query params provided, return an error or empty response
+        if not data:
+            return Response({'status': 'error', 'message': 'No valid query parameters provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
-            'status':"success",
-            'projects': project_serializer.data,
-            'bookmarks': bookmark_serializer.data,
-            'chats': chat_serializer.data,
+            'status': "success",
+            **data,
         }, status=status.HTTP_200_OK)
+
 
 class SharedByMeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         user = request.user
+        query_params = request.query_params
 
-        shared_projects = Project.objects.filter(user=user, viewers__isnull=False).distinct()
-        project_serializer = ProjectSerializer(shared_projects, many=True, context={'request': request})
+        data = {}
 
-        shared_bookmarks = Bookmark.objects.filter(user=user, viewers__isnull=False).distinct()
-        bookmark_serializer = BookmarkSerializer(shared_bookmarks, many=True, context={'request': request})
+        # Check for 'projects' in query params
+        if 'projects' in query_params:
+            shared_projects = Project.objects.filter(user=user, viewers__isnull=False).distinct()
+            project_serializer = ProjectSerializer(shared_projects, many=True, context={'request': request})
+            data['projects'] = project_serializer.data
 
-        shared_chats = Chat.objects.filter(user=user, viewers__isnull=False).distinct()
-        chat_serializer = ChatSerializer(shared_chats, many=True, context={'request': request})
+        # Check for 'bookmarks' in query params
+        if 'bookmarks' in query_params:
+            shared_bookmarks = Bookmark.objects.filter(user=user, viewers__isnull=False).distinct()
+            bookmark_serializer = BookmarkSerializer(shared_bookmarks, many=True, context={'request': request})
+            data['bookmarks'] = bookmark_serializer.data
+
+        # Check for 'chats' in query params
+        if 'chats' in query_params:
+            shared_chats = Chat.objects.filter(user=user, viewers__isnull=False).distinct()
+            chat_serializer = ChatSerializer(shared_chats, many=True, context={'request': request})
+            data['chats'] = chat_serializer.data
+
+        # If no query params provided, return an error or empty response
+        if not data:
+            return Response({'status': 'error', 'message': 'No valid query parameters provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
-            'status': 'sucess',
-            'projects': project_serializer.data,
-            'bookmarks': bookmark_serializer.data,
-            'chats': chat_serializer.data,
+            'status': 'success',
+            **data,
         }, status=status.HTTP_200_OK)
