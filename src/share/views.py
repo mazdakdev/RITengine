@@ -189,9 +189,14 @@ class BaseViewersListView(generics.GenericAPIView):
         raise NotImplementedError("Subclasses must implement the get_object method.")
 
     def get(self, request, *args, **kwargs):
+        obj = self.get_object()
         viewers = self.get_queryset()
         serializer = self.get_serializer(viewers, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        response_data = {
+                "viewers": serializer.data,
+                "sharable_key": obj.shareable_key
+            }
+        return Response(response_data, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         obj = self.get_object()
