@@ -101,3 +101,13 @@ def validate_backup_code(user, code):
         return True
     except BackupCode.DoesNotExist:
         return False
+
+
+def validate_otp(user, otp):
+    otp_secret = cache.get(f"otp_secret_{user.id}")\
+
+    if otp_secret is not None:
+        totp = pyotp.TOTP(otp_secret, interval=300)
+        if not totp.verify(otp):
+           return False
+        return True

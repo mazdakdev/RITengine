@@ -9,7 +9,7 @@ from .models import BackupCode
 from rest_framework import serializers, status
 import pyotp
 from .utils import (
-        generate_2fa_challenge, generate_and_send_otp, get_user_by_identifier,
+        generate_2fa_challenge, generate_and_send_otp, get_user_by_identifier, validate_otp,
         validate_two_fa, validate_backup_code
     )
 
@@ -205,35 +205,78 @@ class UserDetailsSerializer(serializers.ModelSerializer):
         }
         read_only_fields = ["username", "email", "phone_number", "last_login"]
 
+# password reset
+#   identifier
+#       sends 2fa or otp
+#
+# password reset complete
+#   new_password1
+#   new_password2
+#   tmp_token
+#
+
 class PasswordResetSerializer(serializers.Serializer):
     identifier = serializers.CharField()
-    code = serializers.CharField(max_length=6)
-    new_password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
         identifier = attrs.get("identifier")
-        code = attrs.get("code")
-
-        user = get_user_by_identifier(identifier)
+        user = get_user_by_identifier(identifier)  # You need to implement this method
 
         if not user.is_email_verified:
             raise exceptions.EmailNotVerified()
 
+        # Send OTP or trigger 2FA challenge based on user's preferred method
         if not user.preferred_2fa:
-            otp_secret = cache.get(f"otp_secret_{user.id}")
-            totp = pyotp.TOTP(otp_secret, interval=300)
-            if totp.verify(code):
-                attrs["user"] = user
-                return attrs
-            else:
-                raise exceptions.InvalidTwoFaOrOtp()
-
+            generate_and_send_otp(user)  # Implement this method
         else:
-            if not validate_two_fa(user, code):
-                raise exceptions.InvalidTwoFaOrOtp()
+            generate_2fa_challenge(user)  # Implement this method
 
         attrs["user"] = user
         return attrs
+
+
+class CompletePasswordResetSerializer(serializers.Serializer):
+    new_password1 = serializers.CharField(style={"input_type": "password"})
+    new_password2 = serializers.CharField(style={"input_type": "password"})
+    identifier = serializers.CharField()
+    tmp_token = serializers.CharField()
+    code = serializers.CharField()
+
+    def validate(self, attrs):
+        identifier = attrs.get("identifier")
+        new_password1 = attrs.get("new_password1")
+        new_password2 = attrs.get("new_password2")
+        code = attrs.get("code")
+        tmp_token = attrs.get("tmp_token")
+
+        # Validate new passwords match
+        if new_password1 != new_password2:
+            raise ValidationError("New passwords must match.")
+
+        user = get_user_by_identifier(identifier)
+
+        if not user.is_email_verified:
+            raise CustomAPIException("Email is not verified.")
+
+        # Retrieve tmp_token and validate both tmp_token and user.id
+        cached_tmp_token = cache.get(f"2fa_tmp_token_{user.id}")
+        if cached_tmp_token != tmp_token:
+            raise exceptions.InvalidTmpToken()
+
+        # Validate OTP or 2FA code
+        if not validate_otp(user, code) and not validate_two_fa(user, code):
+            raise exceptions.InvalidTwoFaOrOtp()
+
+        attrs["user"] = user
+        return attrs
+
+    def save(self):
+        user = self.validated_data["user"]
+        new_password = self.validated_data["new_password1"]
+
+        # Set the new password
+        user.set_password(new_password)
+        user.save()
 
 
 class PasswordChangeSerializer(serializers.Serializer):

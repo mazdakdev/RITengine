@@ -2,13 +2,13 @@ from django.urls import path, include
 from dj_rest_auth.jwt_auth import get_refresh_view
 from rest_framework_simplejwt.views import TokenVerifyView
 from .views import (
-    CustomRegisterView, CompleteRegistrationView, CustomLoginView,
+    CompletePasswordResetView, CustomRegisterView, CompleteRegistrationView, CustomLoginView,
     CompleteLoginView, GitHubLoginView, UserDetailsView,
     PasswordChangeView, PasswordResetView, Enable2FAView,
     Verify2FASetupView, Request2FAView, UsernameChangeView,
     EmailChangeView, CompleteEmailChangeView, PhoneChangeView,
     CompletePhoneChangeView, Disable2FAView, CompleteDisable2FAView,
-    CompletePasswordChangeView, UserSearchView
+    CompletePasswordChangeView, UserSearchView, CompletePasswordResetSerializer,
 )
 
 urlpatterns = [
@@ -22,7 +22,8 @@ urlpatterns = [
     path("me/", UserDetailsView.as_view(), name="user_details"),
     path("password/change/", PasswordChangeView.as_view(), name='password_change'),
     path("password/change/complete/", CompletePasswordChangeView.as_view(), name='password_change_complete'),
-    path("password/reset/", PasswordResetView.as_view(), name='rest_password_reset'),
+    path("password/reset/", PasswordResetView.as_view(), name='password_reset'),
+    path("password/reset/complete/", CompletePasswordResetView.as_view(), name='password_reset_complete'),
     path('accounts/', include('allauth.urls')),
     path('2fa/enable/', Enable2FAView.as_view(), name="two_fa_enable"),
     path('2fa/disable/', Disable2FAView.as_view(), name="two_fa_disable"),

@@ -4,7 +4,6 @@ from .views import (
         SharedWithMeView, SharedByMeView
     )
 
-
 urlpatterns = [
     path('shared-with-me/', SharedWithMeView.as_view(), name='shared_with_me'),
     path('shared-by-me/', SharedByMeView.as_view(), name='shared_by_me'),
