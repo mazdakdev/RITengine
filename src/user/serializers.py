@@ -205,31 +205,22 @@ class UserDetailsSerializer(serializers.ModelSerializer):
         }
         read_only_fields = ["username", "email", "phone_number", "last_login"]
 
-# password reset
-#   identifier
-#       sends 2fa or otp
-#
-# password reset complete
-#   new_password1
-#   new_password2
-#   tmp_token
-#
 
 class PasswordResetSerializer(serializers.Serializer):
     identifier = serializers.CharField()
 
     def validate(self, attrs):
         identifier = attrs.get("identifier")
-        user = get_user_by_identifier(identifier)  # You need to implement this method
+        user = get_user_by_identifier(identifier)
 
         if not user.is_email_verified:
             raise exceptions.EmailNotVerified()
 
-        # Send OTP or trigger 2FA challenge based on user's preferred method
+
         if not user.preferred_2fa:
-            generate_and_send_otp(user)  # Implement this method
+            generate_and_send_otp(user)
         else:
-            generate_2fa_challenge(user)  # Implement this method
+            generate_2fa_challenge(user)
 
         attrs["user"] = user
         return attrs
@@ -258,12 +249,10 @@ class CompletePasswordResetSerializer(serializers.Serializer):
         if not user.is_email_verified:
             raise CustomAPIException("Email is not verified.")
 
-        # Retrieve tmp_token and validate both tmp_token and user.id
         cached_tmp_token = cache.get(f"2fa_tmp_token_{user.id}")
         if cached_tmp_token != tmp_token:
             raise exceptions.InvalidTmpToken()
 
-        # Validate OTP or 2FA code
         if not validate_otp(user, code) and not validate_two_fa(user, code):
             raise exceptions.InvalidTwoFaOrOtp()
 
@@ -274,7 +263,6 @@ class CompletePasswordResetSerializer(serializers.Serializer):
         user = self.validated_data["user"]
         new_password = self.validated_data["new_password1"]
 
-        # Set the new password
         user.set_password(new_password)
         user.save()
 
@@ -405,5 +393,8 @@ class PhoneChangeSerializer(serializers.Serializer):
 
 class CompleteDisable2FASerializer(serializers.Serializer):
     code = serializers.CharField()
+
+class Change2FAMethodSerializer(serializers.Serializer):
+    new_method = serializers.ChoiceField(choices=["email", "sms", "totp"])
 
 # TODO: adjust code max and min

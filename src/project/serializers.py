@@ -16,7 +16,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         Returns:
             list: A list of message IDs associated with the project that belong to the current user.
         """
-        user = self.context['request'].user
+        user = self.context.get("user")
         message_ids = obj.messages.filter(chat__user=user).values_list('id', flat=True)
         return list(message_ids)
 

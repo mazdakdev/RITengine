@@ -9,6 +9,7 @@ from .views import (
     EmailChangeView, CompleteEmailChangeView, PhoneChangeView,
     CompletePhoneChangeView, Disable2FAView, CompleteDisable2FAView,
     CompletePasswordChangeView, UserSearchView, CompletePasswordResetSerializer,
+    Change2FAMethodView
 )
 
 urlpatterns = [
@@ -27,6 +28,7 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('2fa/enable/', Enable2FAView.as_view(), name="two_fa_enable"),
     path('2fa/disable/', Disable2FAView.as_view(), name="two_fa_disable"),
+    path('2fa/change/', Change2FAMethodView.as_view(), name="two_fa_change"),
     path('2fa/disable/complete/', CompleteDisable2FAView.as_view(), name="two_fa_disable_complete"),
     path('2fa/enable/complete/', Verify2FASetupView.as_view(), name="two_fa_verify"),
     path('2fa/request/', Request2FAView.as_view(), name="two_fa_request"),

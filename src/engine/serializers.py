@@ -51,7 +51,7 @@ class MessageSerializer(serializers.ModelSerializer):
         Returns:
             bool: True if a bookmark exists for this message and user, False otherwise.
         """
-        user = self.context['request'].user
+        user = self.context.get("user")
         return Bookmark.objects.filter(message=obj, user=user).exists()
 
     def get_projects_in(self, obj):
@@ -61,7 +61,7 @@ class MessageSerializer(serializers.ModelSerializer):
         Returns:
             list: A list of project IDs associated with the message that belongs to the current user.
         """
-        user = self.context['request'].user
+        user = self.context.get("user")
         project_ids = obj.projects.filter(user=user).values_list('id', flat=True)
         return list(project_ids)
 

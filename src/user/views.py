@@ -27,7 +27,7 @@ from .serializers import (
     CompleteLoginSerializer, RegistrationSerializer, UserDetailsSerializer,
     BackupCodeSerializer, EmailChangeSerializer, CompleteEmailorPhoneChangeSerializer,
     PhoneChangeSerializer, CompleteDisable2FASerializer, CompletePasswordChangeSerializer,
-    CompletePasswordResetSerializer
+    CompletePasswordResetSerializer, Change2FAMethodSerializer
 )
 from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
 from rest_framework import generics
@@ -322,13 +322,15 @@ class Enable2FAView(APIView):
                         if method == "email"
                         else "An SMS has been sent."
                     )
-                else:  # TOTP
-                    details = {"provisioning_uri": device.config_url}
+                else: #TOTP
+                    provisioning_uri = device.config_url or None
+                    details = "success"
 
                 return Response(
                     {
                         "status": "success",
                         "details": details,
+                        "provisioning_uri": provisioning_uri
                     },
                     status=status.HTTP_200_OK,
                 )
@@ -379,6 +381,53 @@ class Verify2FASetupView(APIView):
         else:
             raise exceptions.UnknownError()
 
+class Change2FAMethodView(APIView):
+    permission_classes = [IsAuthenticated, IsNotOAuthUser]
+    throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
+
+    def post(self, request):
+        user = request.user
+        serializer = Change2FAMethodSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        new_method = serializer.validated_data["new_method"]
+        new_device = getattr(user, f"{new_method}_device", None)
+
+        if new_device is None or not new_device.confirmed:
+            if new_method == "email":
+                new_device = EmailDevice(user=user, confirmed=False)
+            elif new_method == "sms":
+                if not user.phone_number:
+                    raise CustomAPIException("You have not set any phone number.")
+                new_device = SMSDevice(user=user, number=user.phone_number, confirmed=False)
+            elif new_method == "totp":
+                new_device = TOTPDevice(user=user, step=60, confirmed=False)
+            else:
+                raise CustomAPIException("Invalid 2FA method.")
+
+            new_device.save()
+            setattr(user, f"{new_method}_device", new_device)
+            user.save()
+
+            response_data = {"status": "success"}
+            if new_method in ["email", "sms"]:
+                new_device.generate_challenge()
+                response_data["details"] = "An email has been sent." if new_method == "email" else "An SMS has been sent."
+            else:
+                response_data["provisioning_uri"] = new_device.config_url
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        user.preferred_2fa = new_method
+        user.save()
+
+        return Response(
+            {
+                "status": "success",
+                "details": "2FA method updated successfully.",
+            },
+            status=status.HTTP_200_OK,
+        )
 
 class Disable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
@@ -630,9 +679,7 @@ class UserSearchView(APIView):
 
         raise CustomAPIException("Identifier is required.")
 
-
-# TODO: Refactor password resets
-# TODO: change 2fa method
+# make 2fa change verify endpoint better
 # TODO: other social auths
 # TODO: generate new sets backup codes & complete
 # TODO: make all error messages better
