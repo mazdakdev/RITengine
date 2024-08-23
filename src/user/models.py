@@ -121,6 +121,16 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         email.content_subtype = "html"
         email.send(fail_silently=False)
 
+
+    def send_text_email(self, subject, message, from_email=settings.EMAIL_FROM):
+          email = EmailMessage(
+              subject,
+              message,
+              from_email,
+              [self.email]
+          )
+          email.send(fail_silently=False)
+
     # def send_sms(self, message):
     #     sms_service = SMSService(get_sms_provider(settings.SMS_PROVIDER))
     #     sms_service.send_message(self.phone_number, message)

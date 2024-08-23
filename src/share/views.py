@@ -55,7 +55,7 @@ class GenerateShareableLinkView(generics.GenericAPIView):
     def notify_user(self, user, obj):
         subject = "You have been granted access to shared content"
         message = f"You have been granted access to {obj}."
-        #user.send_email(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+        user.send_text_email(subject, message)
         print(subject, message) #TODO:
 
     def get_object(self):
@@ -107,7 +107,7 @@ class AccessSharedContentView(generics.GenericAPIView):
         subject = "New Access Request"
         approval_link = f"{settings.FRONTEND_URL}/approve-access/{access_request.approval_uuid}/"
         message = f"A user has requested access to your content. Approve the request using the following link: {approval_link}"
-        owner.send_email(subject, message)
+        owner.send_text_email(subject, message)
 
     def create_access_request(self, user, obj):
         content_type = ContentType.objects.get_for_model(obj)
@@ -252,9 +252,9 @@ class BaseViewersListView(generics.GenericAPIView):
 
     def notify_user(self, user, obj):
         subject = "You've been added as a viewer"
-        message = f"You've been added as a viewer to the {obj.__class__.__name__.lower()}."
+        message = f"You've been added as a viewer to the {obj.__class__.__name__.lower()} of {user.first_name}."
         # Send an email or notification here
-        print(message)
+        user.send_text_email(subject, message)
 
 
 class SharedWithMeView(APIView):
