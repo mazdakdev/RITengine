@@ -37,6 +37,7 @@ services:
         depends_on:
             - redis
             - db
+            - web
         env_file:
             - .env.prod
 
@@ -49,6 +50,7 @@ services:
         depends_on:
             - redis
             - db
+            - web
         env_file:
             - .env.prod
 
