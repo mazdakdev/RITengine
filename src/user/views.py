@@ -167,7 +167,7 @@ class UserDetailsView(generics.RetrieveUpdateAPIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        required_fields = ["f_name", "l_name", "birthday"]
+        required_fields = ["first_name", "last_name", "birthday"]
 
         current_data = self.get_object()
         serializer = self.get_serializer(data=request.data, partial=True)
