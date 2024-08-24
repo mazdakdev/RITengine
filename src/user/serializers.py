@@ -196,6 +196,7 @@ class UserDetailsSerializer(serializers.ModelSerializer):
             "inv_code",
             "birthday",
             "image",
+            "preferred_2fa",
             "last_login",
         ]
         extra_kwargs = {
@@ -203,7 +204,7 @@ class UserDetailsSerializer(serializers.ModelSerializer):
             "last_name": {"required": True},
             "birthday": {"required": True},
         }
-        read_only_fields = ["username", "email", "phone_number", "last_login"]
+        read_only_fields = ["username", "email", "phone_number", "preferred_2fa", "last_login"]
 
 
 class PasswordResetSerializer(serializers.Serializer):
