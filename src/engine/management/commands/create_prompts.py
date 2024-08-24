@@ -23,8 +23,8 @@ class Command(BaseCommand):
 
     def import_data(self, data):
         for category_name, category_data in data.items():
-    
-            category, created = EngineCategory.objects.get_or_create(
+
+            category, created = EngineCategory.objects.update_or_create(
                 name=category_name,
                 defaults={'prompt': category_data.get('prompt', '')}
             )
