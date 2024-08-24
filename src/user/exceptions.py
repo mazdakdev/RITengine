@@ -23,15 +23,15 @@ class InvalidTmpToken(CustomAPIException):
 
 class TwoFaRequired(CustomAPIException):
     status_code = status.HTTP_401_UNAUTHORIZED,
-    default_detail = "Two-Factor code is required.",
+    default_detail = "Two-Factor code is required."
     default_code = "two_fa_required"
 
 class UnknownError(CustomAPIException):
-    status_code = status.HTTP_400_BAD_REQUEST,
-    default_detail = "Something went wrong. Please try again later!",
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = "Something went wrong. Please try again later!"
     default_code = "unknown_error"
 
 class No2FASetUp(CustomAPIException):
-    status_code=status.HTTP_400_BAD_REQUEST,
-    default_detail="There is no two-factor setup for this user.",
+    status_code=status.HTTP_400_BAD_REQUEST
+    default_detail="There is no two-factor setup for this user."
     default_code="two_fa_not_set_up"

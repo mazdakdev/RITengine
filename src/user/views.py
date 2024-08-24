@@ -315,25 +315,14 @@ class Enable2FAView(APIView):
                 setattr(user, f"{method}_device", device)
                 user.save()
 
+                response_data = {"status": "success"}
                 if method in ["email", "sms"]:
                     device.generate_challenge()
-                    details = (
-                        "An E-mail has been sent."
-                        if method == "email"
-                        else "An SMS has been sent."
-                    )
-                else: #TOTP
-                    provisioning_uri = device.config_url or None
-                    details = "success"
+                    response_data["details"] = "An email has been sent." if method == "email" else "An SMS has been sent."
+                else:
+                    response_data["provisioning_uri"] = device.config_url
 
-                return Response(
-                    {
-                        "status": "success",
-                        "details": details,
-                        "provisioning_uri": provisioning_uri
-                    },
-                    status=status.HTTP_200_OK,
-                )
+                return Response(response_data, status=status.HTTP_200_OK,)
 
         return Response(
             {
@@ -381,6 +370,7 @@ class Verify2FASetupView(APIView):
         else:
             raise exceptions.UnknownError()
 
+#TODO: must delete previous device
 class Change2FAMethodView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
@@ -528,12 +518,10 @@ class EmailChangeView(APIView):
         new_email = serializer.validated_data.get("new_email")
         user = request.user
 
-        otp, secret = utils.generate_otp()
-        user.send_email("otp", otp.now())
+        utils.generate_and_send_otp(user)
 
         tmp_token = utils.generate_tmp_token(user, "email_change")
-        cache.set(f"email_change_otp_{user.id}", secret, timeout=300)
-        cache.set(f"email_change_email_{user.id}", new_email, timeout=300)
+        cache.set(f"email_change_new_email_{user.id}", new_email, timeout=300)
 
         return Response(
             {"status": "verification_required", "tmp_token": tmp_token},
@@ -554,10 +542,10 @@ class CompleteEmailChangeView(APIView):
 
         cached_tmp_token = cache.get(f"email_change_tmp_token_{user.id}")
         if cached_tmp_token != tmp_token:
-            raise exceptions.InvalidTmpToken
+            raise exceptions.InvalidTmpToken()
 
         try:
-            otp_secret = cache.get(f"email_change_otp_{user.id}")
+            otp_secret = cache.get(f"otp_secret_{user.id}")
             totp = pyotp.TOTP(otp_secret, interval=300)
         except Exception:
             raise exceptions.UnknownError()
@@ -572,16 +560,14 @@ class CompleteEmailChangeView(APIView):
         user.email = new_email
         user.save()
 
-        cache.delete(f"email_change_otp_{user.id}")
+        cache.delete(f"otp_secret_{user.id}")
         cache.delete(f"email_change_tmp_token_{user.id}")
         cache.delete(f"email_change_new_email_{user.id}")
 
-        return Response(
-            {
-                "status": "success",
-                "email": new_email,
-            },
-            status=status.HTTP_200_OK,
+        return Response({
+            "status": "success",
+            "email": new_email,
+            }, status=status.HTTP_200_OK
         )
 
 
