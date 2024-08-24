@@ -14,6 +14,8 @@ CACHES = {
         "LOCATION": os.getenv("REDIS_URL"),
     }
 }
+CELERY_BROKER_URL = 'redis://redis:6379/0'  #TODO: .env
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 

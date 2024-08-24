@@ -28,6 +28,30 @@ services:
         depends_on:
             - web
 
+    celery:
+        build: ./src
+        command: celery -A RITengine worker -l info
+        volumes:
+            - static_volume:/app/staticfiles
+            - media_volume:/app/mediafiles
+        depends_on:
+            - redis
+            - db
+        env_file:
+            - .env.prod
+
+    celery-beat:
+        build: ./src
+        command: celery -A RITengine beat -l info
+        volumes:
+            - static_volume:/app/staticfiles
+            - media_volume:/app/mediafiles
+        depends_on:
+            - redis
+            - db
+        env_file:
+            - .env.prod
+
     redis:
         image: redis:latest
         ports:

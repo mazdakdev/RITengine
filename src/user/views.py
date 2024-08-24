@@ -39,7 +39,7 @@ User = get_user_model()
 
 class GitHubLoginView(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
-    callback_url = "https://127.0.0.1:3000/oath/callback/github"
+    callback_url = "https://127.0.0.1:3000/oauth/callback/github"
     client_class = OAuth2Client
 
     def process_login(self):

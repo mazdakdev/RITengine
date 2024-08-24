@@ -2,6 +2,7 @@ from pathlib import Path
 from datetime import timedelta
 from RITengine.utils import parse_duration
 import os
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -221,7 +222,19 @@ MELI_PAYAMAK_KEY = os.getenv("MELI_PAYAMAK_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL")
 MAXIMUM_ALLOWED_USERNAME_CHANGE = 3
+OAUTH_CALLBACK_URL = f"http://{FRONTEND_URL}/oauth/callback"
 
+
+
+CELERY_BEAT_SCHEDULE = {
+    'deactivate_inactive_users_every_day': {
+        'task': 'user.tasks.deactivate_inactive_users',
+        'schedule': crontab(hour=0, minute=0),  # Runs every day at midnight
+    },
+}
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 # TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
 # TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
 # TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER")
