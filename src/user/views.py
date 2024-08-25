@@ -1,4 +1,5 @@
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
 from rest_framework.response import Response
@@ -39,7 +40,7 @@ User = get_user_model()
 
 class GitHubLoginView(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
-    callback_url = "https://127.0.0.1:3000/oauth/callback/github"
+    callback_url = f"{settings.OAUTH_BASE_CALLBACK_URL}/github"
     client_class = OAuth2Client
 
     def process_login(self):
@@ -48,6 +49,16 @@ class GitHubLoginView(SocialLoginView):
         self.request.user.is_oauth_based = True
         self.request.user.save()
 
+class GoogleLoginView(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+    callback_url = f"{settings.OAUTH_BASE_CALLBACK_URL}/google"
+    client_class = OAuth2Client
+
+    def process_login(self):
+        super().process_login()
+        self.request.user.is_email_verified = True
+        self.request.user.is_oauth_based = True
+        self.request.user.save()
 
 class CustomRegisterView(APIView):
     """

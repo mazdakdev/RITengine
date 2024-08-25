@@ -8,8 +8,8 @@ from .views import (
     Verify2FASetupView, Request2FAView, UsernameChangeView,
     EmailChangeView, CompleteEmailChangeView, PhoneChangeView,
     CompletePhoneChangeView, Disable2FAView, CompleteDisable2FAView,
-    CompletePasswordChangeView, UserSearchView, CompletePasswordResetSerializer,
-    Change2FAMethodView
+    CompletePasswordChangeView, UserSearchView, GoogleLoginView,
+    Change2FAMethodView,
 )
 
 urlpatterns = [
@@ -20,6 +20,7 @@ urlpatterns = [
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('token/refresh/', get_refresh_view().as_view(), name='token_refresh'),
     path('github/', GitHubLoginView.as_view(), name='github_login'),
+    path('google/', GoogleLoginView.as_view(), name='google_login'),
     path("me/", UserDetailsView.as_view(), name="user_details"),
     path("password/change/", PasswordChangeView.as_view(), name='password_change'),
     path("password/change/complete/", CompletePasswordChangeView.as_view(), name='password_change_complete'),

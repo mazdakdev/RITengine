@@ -178,9 +178,24 @@ SOCIALACCOUNT_PROVIDERS = {
         "APP": {
             "client_id": "Ov23liXqhsFzWkqk4wjg",
             "secret": "e37750864300c00446441be82788222da9814399",
-            "key": "",
+            "key": ""
         }
     },
+
+     'google': {
+            'APP': {
+                'client_id': '539857970125-19p2sm89b2j5s3ov7rgnbg926dhp8oif.apps.googleusercontent.com',
+                'secret': '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',
+                'key': ''
+            },
+            'SCOPE': [
+                'profile',
+                'email',
+            ],
+            'AUTH_PARAMS': {
+                'access_type': 'online',
+            }
+        }
 }
 
 # Internationalization
@@ -196,7 +211,7 @@ USE_TZ = True
 
 REST_AUTH_REGISTER_SERIALIZER = "user.serializers.CustomRegisterSerializer"
 REST_AUTH_LOGIN_SERIALIZER = "user.serializers.CustomLoginSerializer"
-SOCIALACCOUNT_ADAPTER = "user.adapters.CustomSocialAccountAdapter"
+# SOCIALACCOUNT_ADAPTER = "user.adapters.CustomSocialAccountAdapter"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
@@ -223,9 +238,7 @@ MELI_PAYAMAK_KEY = os.getenv("MELI_PAYAMAK_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL")
 MAXIMUM_ALLOWED_USERNAME_CHANGE = 3
-OAUTH_CALLBACK_URL = f"http://{FRONTEND_URL}/oauth/callback"
-
-
+OAUTH_BASE_CALLBACK_URL = os.getenv("OAUTH_BASE_CALLBACK_URL")
 
 
 # TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")

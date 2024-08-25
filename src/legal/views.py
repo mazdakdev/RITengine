@@ -35,6 +35,7 @@ class LegalDocumentViewSet(ModelViewSet):
 class FaqDocumentView(generics.ListCreateAPIView):
     queryset = FaqDocument.objects.all()
     serializer_class = FaqDocumentSerializer
+    pagination_class = None
 
     def post(self, request, *args, **kwargs):
         if not request.user.is_staff:
