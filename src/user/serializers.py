@@ -382,6 +382,11 @@ class UsernameChangeSerializer(serializers.ModelSerializer):
 class EmailChangeSerializer(serializers.Serializer):
     new_email = serializers.EmailField()
 
+    def validate_new_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This e-mail address is already associated with another user.")
+        return value
+
 
 class CompleteEmailorPhoneChangeSerializer(serializers.Serializer):
     tmp_token = serializers.CharField()
@@ -390,6 +395,11 @@ class CompleteEmailorPhoneChangeSerializer(serializers.Serializer):
 
 class PhoneChangeSerializer(serializers.Serializer):
     new_phone = PhoneNumberField()
+
+    def validate_new_phone(self, value):
+        if User.objects.filter(phone_number=value).exists():
+            raise serializers.ValidationError("This phone number is already associated with another user.")
+        return value
 
 
 class CompleteDisable2FASerializer(serializers.Serializer):
