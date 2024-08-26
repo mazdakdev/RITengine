@@ -57,6 +57,7 @@ INSTALLED_APPS += [
     "project",
     "bookmark",
     "share",
+    "stats"
 ]
 
 SITE_ID = 1
@@ -77,7 +78,10 @@ ROOT_URLCONF = "RITengine.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'user/templates'],
+        'DIRS': [
+            BASE_DIR / 'user/templates',
+            BASE_DIR / 'templates',
+        ],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

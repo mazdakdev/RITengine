@@ -8,7 +8,7 @@ from .views import (
     Verify2FASetupView, Request2FAView, UsernameChangeView,
     EmailChangeView, CompleteEmailChangeView, PhoneChangeView,
     CompletePhoneChangeView, Disable2FAView, CompleteDisable2FAView,
-    CompletePasswordChangeView, UserSearchView, GoogleLoginView,
+    CompletePasswordChangeView, UserGetView, GoogleLoginView,
     Change2FAMethodView,
 )
 
@@ -38,5 +38,5 @@ urlpatterns = [
     path("me/change-email/complete/", CompleteEmailChangeView.as_view(), name="email_change_complete"),
     path('me/change-phone/', PhoneChangeView.as_view(), name="phone_change"),
     path('me/change-phone/complete/', CompletePhoneChangeView.as_view(), name="phone_change_complete"),
-    path('users/', UserSearchView.as_view(), name="user_search_view"),
+    path('users/', UserGetView.as_view(), name="user_search_view"),
 ]

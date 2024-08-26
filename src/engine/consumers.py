@@ -41,7 +41,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 self.chat = await self.create_chat(title=message_text[:50].strip())
                 self.slug = self.chat.slug
 
-            await self.save_message(message_text, sender="user")
+            await self.save_message(message_text, sender="user", engine_ids=engines_list)
             self.messages.append({"role": "user", "content": final_msg})
 
             client = AsyncOpenAI()
@@ -62,7 +62,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         "is_ended": False
                     }))
 
-            engine_msg = await self.save_message(final_response, sender="engine")
+            engine_msg = await self.save_message(final_response, "engine", engines_list)
             await self.send(text_data=json.dumps({
                 "content": "",
                 "slug": self.slug,
@@ -81,13 +81,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return Chat.objects.create(user=self.user, title=title)
 
     @database_sync_to_async
-    def save_message(self, text, sender):
-        message = Message.objects.create(
-            chat=self.chat,
-            text=text,
-            sender=sender,
-            timestamp=timezone.now()
-        )
+    def save_message(self, text, sender, engine_ids):
+        try:
+            engines = Engine.objects.filter(id__in=engine_ids)
+            message = Message.objects.create(
+                chat=self.chat,
+                text=text,
+                sender=sender,
+                timestamp=timezone.now()
+            )
+            message.engines.set(engines)
+        except Exception as ex:
+            print(ex)
+
         return message
 
     @database_sync_to_async

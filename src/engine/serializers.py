@@ -41,7 +41,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ['id', 'is_bookmarked', 'projects_in', 'text', 'sender', 'timestamp', 'chat']
+        fields = ['id', 'is_bookmarked', 'projects_in', 'text', 'sender', 'timestamp', 'chat', 'engines']
 
     def get_is_bookmarked(self, obj):
         """

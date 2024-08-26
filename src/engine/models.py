@@ -22,20 +22,6 @@ class Chat(ShareableModel):
         return self.title
 
 
-class Message(models.Model):
-    SENDER_CHOICES = (
-        ('user', 'User'),
-        ('engine', 'RIT-engine'),
-    )
-    chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="messages")
-    text = models.TextField()
-    sender = models.CharField(max_length=10, choices=SENDER_CHOICES, default='user')
-    bookmark = models.ForeignKey(Bookmark, on_delete=models.SET_NULL, related_name='messages', null=True, blank=True)
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.get_sender_display()}: {self.text[:50]}"
-
 class EngineCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
     prompt = models.TextField()
@@ -53,6 +39,20 @@ class Engine(models.Model):
     def __str__(self):
         return self.name
 
+class Message(models.Model):
+    SENDER_CHOICES = (
+        ('user', 'User'),
+        ('engine', 'RIT-engine'),
+    )
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="messages")
+    text = models.TextField()
+    sender = models.CharField(max_length=10, choices=SENDER_CHOICES, default='user')
+    engines = models.ManyToManyField(Engine, related_name="messages")
+    bookmark = models.ForeignKey(Bookmark, on_delete=models.SET_NULL, related_name='messages', null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.get_sender_display()}: {self.text[:50]}"
 
 class Assist(models.Model):
     name = models.CharField(max_length=100)

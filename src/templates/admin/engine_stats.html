@@ -1,0 +1,140 @@
+{% extends "admin/change_list.html" %}
+
+{% block content %}
+    <h1>Admin Dashboard</h1>
+    <!-- Render default result list -->
+    {{ block.super }}
+
+    <h2>Engine Performance Overview</h2>
+
+    <!-- Original Bar Chart for Likes and Dislikes -->
+    <h3>Likes and Dislikes by Engine</h3>
+    <canvas id="engineBarChart" width="400" height="200"></canvas>
+
+    <!-- Stacked Bar Chart for Like and Dislike Distribution -->
+    <h3>Engagement Breakdown (Stacked)</h3>
+    <canvas id="stackedBarChart" width="400" height="200"></canvas>
+
+    <!-- Pie Chart for Engine Popularity -->
+    <h3>Engine Popularity (Likes)</h3>
+    <canvas id="enginePieChart" width="400" height="200"></canvas>
+
+    <!-- Radar Chart for Engine Attribute Comparison -->
+    <h3>Engine Attribute Comparison</h3>
+    <canvas id="engineRadarChart" width="400" height="200"></canvas>
+
+    <!-- Load Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        var ctxBar = document.getElementById('engineBarChart').getContext('2d');
+        var chartData = {{ chart_data|safe }};
+
+        // Extract labels, likes, and dislikes
+        var labels = chartData.map(function(data) { return data.name; });
+        var likes = chartData.map(function(data) { return data.total_likes; });
+        var dislikes = chartData.map(function(data) { return data.total_dislikes; });
+
+        // Bar Chart for Likes and Dislikes
+        var barChart = new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Likes',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    data: likes
+                }, {
+                    label: 'Dislikes',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    data: dislikes
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Stacked Bar Chart for Like and Dislike Distribution
+        var ctxStackedBar = document.getElementById('stackedBarChart').getContext('2d');
+        var stackedBarChart = new Chart(ctxStackedBar, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Likes',
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    data: likes
+                }, {
+                    label: 'Dislikes',
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    data: dislikes
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Pie Chart for Engine Popularity (Likes)
+        var ctxPie = document.getElementById('enginePieChart').getContext('2d');
+        var pieChart = new Chart(ctxPie, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Likes',
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(255, 205, 86, 0.6)',
+                        'rgba(201, 203, 207, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                    ],
+                    data: likes
+                }]
+            }
+        });
+
+        // Radar Chart for Engine Attribute Comparison
+        var ctxRadar = document.getElementById('engineRadarChart').getContext('2d');
+        var radarChart = new Chart(ctxRadar, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Likes',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    data: likes
+                }, {
+                    label: 'Dislikes',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    data: dislikes
+                }]
+            },
+            options: {
+                scales: {
+                    r: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+
+{% endblock %}
