@@ -8,5 +8,10 @@ User = get_user_model()
 @shared_task
 def deactivate_inactive_users():
     one_week_ago = timezone.now() - timedelta(weeks=1)
-    inactive_users = User.objects.filter(is_active=True, created_at__lte=one_week_ago)
+    inactive_users = User.objects.filter(
+        is_active=True,
+        is_superuser=False,
+        is_staff=False,
+        created_at__lte=one_week_ago
+    )
     inactive_users.update(is_active=False)
