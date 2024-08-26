@@ -685,8 +685,7 @@ class CompletePhoneChangeView(APIView):
 
 class UserSearchView(APIView):
     """
-    Filter users based on their identifier (email, username, or phone number).
-    Supports partial matches.
+    Retrieve a user based on their exact identifier (email, username, or phone number).
     """
     def get(self, request, *args, **kwargs):
         identifier = request.query_params.get('identifier', '').strip()
@@ -694,19 +693,20 @@ class UserSearchView(APIView):
         if identifier:
             User = get_user_model()
 
-            users = User.objects.filter(
-                Q(email__icontains=identifier) |
-                Q(username__icontains=identifier) |
-                Q(phone_number__icontains=identifier)
-            )
+            try:
+                user = User.objects.get(
+                    Q(email__iexact=identifier) |
+                    Q(username__iexact=identifier) |
+                    Q(phone_number__iexact=identifier)
+                )
 
-            if users.exists():
-                serializer = UserSerializer(users, many=True)
+                serializer = UserSerializer(user)
                 return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                raise CustomAPIException("No users found with the given identifier.")
 
-        raise CustomAPIException("Identifier is required.")
+            except User.DoesNotExist:
+                raise CustomAPIException("No user found with the given identifier.", status_code=status.HTTP_404_NOT_FOUND)
+
+        raise CustomAPIException("Identifier is required.", status_code=status.HTTP_400_BAD_REQUEST)
 
 # make 2fa change verify endpoint better
 # TODO: other social auths

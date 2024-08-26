@@ -46,6 +46,7 @@ def get_jwt_token(user):
 def get_user_by_identifier(identifier: str):
     identifier_choices = ["username", "email", "phone_number"]
     user = None
+    #TODO: use Q
 
     for attr in identifier_choices:
         try:
