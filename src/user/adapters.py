@@ -2,7 +2,6 @@ from uuid import uuid4
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.utils.text import slugify
 
 User = get_user_model()
 
@@ -13,30 +12,38 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         if not email:
             raise ValidationError("Email is required to continue registration and nothing was provided by the provider.")
 
-        # Check if a user with this email already exists
-        try:
-            user = User.objects.get(email=email)
-            sociallogin.user = user
-            return user
-        except User.DoesNotExist:
-            # If the user doesn't exist, create a new one
-            user = sociallogin.user
-            user.email = email
+        user = sociallogin.user
+        user.email = email
 
-            # Generate a username based on the provided data or email
-            username = data.get('username')
-            if username:
-                user.username = self.generate_unique_username(username)
-            else:
-                user.username = self.generate_unique_username(email.split('@')[0])
+        provider = sociallogin.account.provider
 
-            # Assign first and last name if provided by the provider
-            if data.get('name'):
-                name_parts = data.get('name').split()
-                user.first_name = name_parts[0] if name_parts else ''
-                user.last_name = name_parts[-1] if len(name_parts) > 1 else ''
+        if provider == 'google':
+            user.first_name = data.get('last_name', '')
+            user.last_name = data.get('first_name', '')
+            user.image = data.get('picture', '')
 
-            return user
+        elif provider == 'facebook':
+            user.first_name = data.get('first_name', '')
+            user.last_name = data.get('last_name', '')
+            user.image = f"https://graph.facebook.com/{sociallogin.account.uid}/picture?type=large"
+
+        elif provider == 'github':
+            user.first_name = data.get('name', '').split()[0]
+            user.last_name = data.get('name', '').split()[-1] if len(data.get('name', '').split()) > 1 else ''
+            user.image = data.get('avatar_url', '')
+
+        elif provider == 'apple':
+            user.first_name = data.get('first_name', user.first_name)
+            user.last_name = data.get('last_name', user.last_name)
+
+        username = data.get('username')
+        if not username:
+            username = email.split('@')[0]  # Use email prefix if no username is provided
+            username = self.generate_unique_username(username)
+
+        user.username = username
+
+        return user
 
     def generate_unique_username(self, base_username):
         username = base_username

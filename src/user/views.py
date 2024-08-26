@@ -49,6 +49,22 @@ class GitHubLoginView(SocialLoginView):
         self.request.user.is_oauth_based = True
         self.request.user.save()
 
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        serializer = UserSerializer(user)
+        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+        return Response(
+            {
+                "access": str(access),
+                "refresh": str(refresh),
+                "access_expiration": access_exp,
+                "refresh_expiration": refresh_exp,
+                "user": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 class GoogleLoginView(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
     callback_url = f"{settings.OAUTH_BASE_CALLBACK_URL}/google"
@@ -60,19 +76,35 @@ class GoogleLoginView(SocialLoginView):
         self.request.user.is_oauth_based = True
         self.request.user.save()
 
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        serializer = UserSerializer(user)
+        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+        return Response(
+            {
+                "access": str(access),
+                "refresh": str(refresh),
+                "access_expiration": access_exp,
+                "refresh_expiration": refresh_exp,
+                "user": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 class CustomRegisterView(APIView):
     """
     Creates user obj and sends an otp
     """
     def post(self, request):
-          serializer = RegistrationSerializer(data=request.data)
-          serializer.is_valid(raise_exception=True)
-          user = serializer.save(request)
+        serializer = RegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(request)
 
-          return Response(
-              {"status": "success", "details": "Verification code sent successfully."},
-              status=status.HTTP_200_OK,
-          )
+        return Response(
+            {"status": "success", "details": "Verification code sent successfully."},
+            status=status.HTTP_200_OK,
+        )
 
 class CompleteRegistrationView(APIView):
     """
