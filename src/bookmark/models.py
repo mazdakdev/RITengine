@@ -1,11 +1,18 @@
 from django.db import models
-from engine.models import Message
 from share.models import ShareableModel
+from rest_framework.validators import ValidationError
+from RITengine.exceptions import CustomAPIException
 
 class Bookmark(ShareableModel):
-    message = models.OneToOneField(Message, on_delete=models.CASCADE)
+    """
+    A singleton based bookmark collection (for now)
+    """
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return f"{self.message.sender}: {self.message.text}"
+    def save(self, *args, **kwargs):
+        if not self.pk and Bookmark.objects.filter(user=self.user).exists():
+            raise CustomAPIException(
+                detail='Only one instance of Bookmark could exist for each user (singleton is enforced for now).'
+            )
+        return super(Bookmark, self).save(*args, **kwargs)

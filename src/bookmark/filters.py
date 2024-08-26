@@ -1,9 +1,9 @@
 from django_filters import rest_framework as filters
-from .models import Bookmark
+from engine.models import Message
 
 class BookmarkFilter(filters.FilterSet):
-    text = filters.CharFilter(field_name="message__text", lookup_expr='icontains')
+    text = filters.CharFilter(field_name="text", lookup_expr='icontains')
 
     class Meta:
-        model = Bookmark
-        fields = ['message__text']
+        model = Message
+        fields = ['text']

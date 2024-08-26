@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from bookmark.models import Bookmark
 from share.models import ShareableModel
 import uuid
 
@@ -8,7 +9,6 @@ class Chat(ShareableModel):
     slug = models.SlugField(max_length=100, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
 
     class Meta:
         ordering = ['created_at']
@@ -26,11 +26,11 @@ class Message(models.Model):
     SENDER_CHOICES = (
         ('user', 'User'),
         ('engine', 'RIT-engine'),
-    ) #IDEA: different prompts
+    )
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="messages")
     text = models.TextField()
     sender = models.CharField(max_length=10, choices=SENDER_CHOICES, default='user')
-
+    bookmark = models.ForeignKey(Bookmark, on_delete=models.SET_NULL, related_name='messages', null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

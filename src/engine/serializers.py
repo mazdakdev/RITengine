@@ -18,7 +18,6 @@ class EngineSerializer(serializers.ModelSerializer):
         model = Engine
         fields = ["id", "name", "prompt", "category"]
 
-
 class EngineCategorySerializer(serializers.ModelSerializer):
     engines = EngineSerializer(many=True, read_only=True)
     class Meta:
@@ -42,17 +41,25 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = '__all__'
+        fields = ['id', 'is_bookmarked', 'projects_in', 'text', 'sender', 'timestamp', 'chat']
 
     def get_is_bookmarked(self, obj):
         """
-        Checks if the message is bookmarked by the current user.
+        Checks if the message is bookmarked by the current user using the BookmarkCollection model.
 
         Returns:
-            bool: True if a bookmark exists for this message and user, False otherwise.
+            bool: True if the message is in the user's BookmarkCollection, False otherwise.
         """
         user = self.context.get("user")
-        return Bookmark.objects.filter(message=obj, user=user).exists()
+        if not user:
+            return False
+
+        try:
+            bookmark_collection = Bookmark.objects.get(user=user)
+        except Bookmark.DoesNotExist:
+            return False
+
+        return obj in bookmark_collection.messages.all()
 
     def get_projects_in(self, obj):
         """
