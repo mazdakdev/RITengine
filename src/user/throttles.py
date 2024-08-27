@@ -1,9 +1,10 @@
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.exceptions import Throttled
+from django.conf import settings
 import os
 
 class TwoFAAnonRateThrottle(AnonRateThrottle):
-    rate = "10/min"
+    rate = settings.TWO_FA_ANON_RATELIMIT
 
     def wait(self):
         wait_time = super().wait()
@@ -12,7 +13,7 @@ class TwoFAAnonRateThrottle(AnonRateThrottle):
         return wait_time
 
 class TwoFAUserRateThrottle(UserRateThrottle):
-    rate = "10/min"
+    rate = settings.TWO_FA_USER_RATELIMIT
 
     def wait(self):
         wait_time = super().wait()
