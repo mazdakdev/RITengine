@@ -180,16 +180,16 @@ AUTH_USER_MODEL = "user.CustomUser"
 SOCIALACCOUNT_PROVIDERS = {
     "github": {
         "APP": {
-            "client_id": "Ov23liXqhsFzWkqk4wjg",
-            "secret": "e37750864300c00446441be82788222da9814399",
+            "client_id": os.getenv("GITHUB_CLIENT_ID"),
+            "secret": os.getenv("GITHUB_CLIENT_SECRET"),
             "key": ""
         }
     },
 
      'google': {
             'APP': {
-                'client_id': '539857970125-19p2sm89b2j5s3ov7rgnbg926dhp8oif.apps.googleusercontent.com',
-                'secret': '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',
+                'client_id': os.getenv("GOOGLE_CLIENT_ID"),
+                'secret': os.getenv("GOOGLE_CLIENT_SECRET"),
                 'key': ''
             },
             'SCOPE': [
