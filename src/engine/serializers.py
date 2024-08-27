@@ -38,10 +38,15 @@ class ChatSerializer(serializers.ModelSerializer):
 class MessageSerializer(serializers.ModelSerializer):
     is_bookmarked = serializers.SerializerMethodField()
     projects_in = serializers.SerializerMethodField()
+    reply_to = serializers.PrimaryKeyRelatedField(queryset=Message.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = Message
-        fields = ['id', 'is_bookmarked', 'projects_in', 'text', 'sender', 'timestamp', 'chat', 'engines']
+        fields = [
+            'id', 'is_bookmarked', 'projects_in',
+            'text', 'sender', 'timestamp',
+            'chat', 'engines', 'reply_to'
+        ]
 
     def get_is_bookmarked(self, obj):
         """

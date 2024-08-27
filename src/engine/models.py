@@ -49,6 +49,7 @@ class Message(models.Model):
     sender = models.CharField(max_length=10, choices=SENDER_CHOICES, default='user')
     engines = models.ManyToManyField(Engine, related_name="messages")
     bookmark = models.ForeignKey(Bookmark, on_delete=models.SET_NULL, related_name='messages', null=True, blank=True)
+    reply_to = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='replies')
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

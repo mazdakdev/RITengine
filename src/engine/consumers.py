@@ -20,11 +20,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
         message_text = data.get("message")
         engines_list = data.get("engines_list")
         token = data.get("token")
+        reply_to_id = data.get("reply_to")
 
         self.user = await self.authenticate_user(token)
 
         if self.user:
-            final_msg, initial_prompt = await self.get_final_prompt(message_text, engines_list)
+            reply_to_text = None
+            reply_to_message = None
+            if reply_to_id:
+                reply_to_message = await self.get_message_by_id(reply_to_id)
+                if reply_to_message:
+                    reply_to_text = reply_to_message.text
+
+            final_msg, initial_prompt = await self.get_final_prompt(message_text, engines_list, reply_to_text)
+            print(initial_prompt)
+            print(final_msg)
             if final_msg is None:
                 return
             self.messages.append({"role": "system", "content": initial_prompt})
@@ -36,12 +46,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     await self.close(code=4404)
                     return
                 self.messages = await self.load_chat_history(self.chat)
-
             else:
                 self.chat = await self.create_chat(title=message_text[:50].strip())
                 self.slug = self.chat.slug
 
-            await self.save_message(message_text, sender="user", engine_ids=engines_list)
+            await self.save_message(message_text, sender="user", engine_ids=engines_list, reply_to=reply_to_message)
             self.messages.append({"role": "user", "content": final_msg})
 
             client = AsyncOpenAI()
@@ -75,24 +84,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
         else:
             await self.close(code=4401, reason="JWT token is invalid or expired.")
 
-
     @database_sync_to_async
     def create_chat(self, title):
         return Chat.objects.create(user=self.user, title=title)
 
     @database_sync_to_async
-    def save_message(self, text, sender, engine_ids):
-        try:
-            engines = Engine.objects.filter(id__in=engine_ids)
-            message = Message.objects.create(
-                chat=self.chat,
-                text=text,
-                sender=sender,
-                timestamp=timezone.now()
-            )
-            message.engines.set(engines)
-        except Exception as ex:
-            print(ex)
+    def save_message(self, text, sender, engine_ids, reply_to=None):
+        engines = Engine.objects.filter(id__in=engine_ids)
+        message = Message.objects.create(
+            chat=self.chat,
+            text=text,
+            sender=sender,
+            timestamp=timezone.now(),
+            reply_to=reply_to
+        )
+        message.engines.set(engines)
 
         return message
 
@@ -101,6 +107,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         try:
             return Chat.objects.get(slug=slug, user=self.user)
         except Chat.DoesNotExist:
+            return None
+
+    @database_sync_to_async
+    def get_message_by_id(self, message_id):
+        try:
+            return Message.objects.get(id=message_id)
+        except Message.DoesNotExist:
             return None
 
     @database_sync_to_async
@@ -116,7 +129,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         categories = list(engines.values_list('category__id', flat=True).distinct())
         return engine_prompts, category_prompts, categories
 
-    async def get_final_prompt(self, message, engines_list):
+    async def get_final_prompt(self, message, engines_list, reply_to_text):
         engine_prompts, category_prompts, categories = await self.fetch_engine_data(engines_list)
 
         if not engine_prompts:
@@ -129,6 +142,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         category_prompt = category_prompts[0] if category_prompts else "No category prompt available."
         final_prompt = f"msg: {message}\n\n prompts: {engine_prompts}"
+
+        if reply_to_text:
+            final_prompt += f"\n\nin_reply_to: {reply_to_text}"
 
         return final_prompt, category_prompt
 
