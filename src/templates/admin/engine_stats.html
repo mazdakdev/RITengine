@@ -15,6 +15,9 @@
     <h3>Engagement Breakdown (Stacked)</h3>
     <canvas id="stackedBarChart" width="400" height="200"></canvas>
 
+    <h2>Engine Popularity Over Time</h2>
+    <canvas id="popularityOverTimeChart" width="400" height="200"></canvas>
+
     <!-- Pie Chart for Engine Popularity -->
     <h3>Engine Popularity (Likes)</h3>
     <canvas id="enginePieChart" width="400" height="200"></canvas>
@@ -135,6 +138,60 @@
                 }
             }
         });
-    </script>
 
+        // Helper function to generate random colors for the line chart
+        function getRandomColor() {
+            var letters = '0123456789ABCDEF';
+            var color = '#';
+            for (var i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        // Popularity Over Time Chart Data
+        var popularityCtx = document.getElementById('popularityOverTimeChart').getContext('2d');
+        var popularityData = {{ popularity_data|safe }};
+
+        // Extract unique time labels (dates) and engine names
+        var timeLabels = [...new Set(popularityData.map(function(data) { return data.date; }))];
+        var engineNames = [...new Set(popularityData.map(function(data) { return data.name; }))];
+
+        // Create datasets for each engine
+        var datasets = engineNames.map(function(engineName) {
+            return {
+                label: engineName,
+                data: timeLabels.map(function(date) {
+                    var filtered = popularityData.find(function(data) {
+                        return data.name === engineName && data.date === date;
+                    });
+                    return filtered ? filtered.likes - filtered.dislikes : 0;
+                }),
+                borderColor: getRandomColor(),
+                fill: false
+            };
+        });
+
+        // Check if datasets and labels are not empty before rendering the chart
+        if (datasets.length > 0 && timeLabels.length > 0) {
+            // Line Chart for Popularity Over Time
+            var popularityChart = new Chart(popularityCtx, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: datasets
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        } else {
+            console.error("No data available for the popularity chart.");
+        }
+
+    </script>
 {% endblock %}
