@@ -50,7 +50,7 @@ class EngineDetailView(generics.RetrieveUpdateDestroyAPIView):
 class UserChatsListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated,]
     serializer_class = ChatSerializer
-    pagination_class = None
+    pagination_class = PageNumberPagination
     filterset_class = ChatFilter
 
     def get_queryset(self):

@@ -17,6 +17,7 @@ from project.serializers import ProjectSerializer
 from share.models import AccessRequest
 from .serializers import GenerateShareableLinkSerializer
 from user.serializers import UserSerializer
+from rest_framework.pagination import PageNumberPagination
 
 User = get_user_model()
 
@@ -259,6 +260,7 @@ class BaseViewersListView(generics.GenericAPIView):
 
 class SharedWithMeView(APIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination
 
     def get(self, request, *args, **kwargs):
         user = request.user
@@ -292,6 +294,7 @@ class SharedWithMeView(APIView):
 
 class SharedByMeView(APIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination
 
     def get(self, request, *args, **kwargs):
         user = request.user

@@ -12,6 +12,7 @@ from engine.serializers import MessageSerializer
 from django_filters import rest_framework as filters
 from user.exceptions import CustomAPIException
 from .filters import ProjectFilter
+from rest_framework.pagination import PageNumberPagination
 
 
 User = get_user_model()
@@ -20,6 +21,7 @@ class ProjectListCreateView(generics.ListCreateAPIView):
     serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated]
     filterset_class = ProjectFilter
+    pagination_class = PageNumberPagination
 
     def get_queryset(self):
         return Project.objects.filter(user=self.request.user).order_by('-created_at')
@@ -41,6 +43,8 @@ class GenerateProjectLinkView(GenerateShareableLinkView):
 
 class ProjectsInMessageView(APIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination
+
     def post(self, request, message_id):
         user = request.user
         message = get_object_or_404(Message, id=message_id, chat__user=user)
@@ -74,6 +78,7 @@ class ProjectsInMessageView(APIView):
 
 class MessagesInProjectView(APIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination
 
     def get(self, request, id):
         project = get_object_or_404(Project, id=id, user=request.user)
