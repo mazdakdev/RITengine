@@ -96,6 +96,11 @@ class ChatsMessagesListView(generics.ListAPIView):
 
         return Message.objects.filter(chat=chat).order_by('timestamp')
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['user'] = self.request.user
+        return context
+
 class GenerateChatLinkView(GenerateShareableLinkView):
     def get_object(self):
         return get_object_or_404(Chat, slug=self.kwargs.get('slug'))

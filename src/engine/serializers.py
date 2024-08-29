@@ -56,8 +56,6 @@ class MessageSerializer(serializers.ModelSerializer):
             bool: True if the message is in the user's BookmarkCollection, False otherwise.
         """
         user = self.context.get("user")
-        if not user:
-            return False
 
         try:
             bookmark_collection = Bookmark.objects.get(user=user)

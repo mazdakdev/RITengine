@@ -20,6 +20,7 @@ class CustomAdminSite(admin.AdminSite):
         engine_performance = get_engine_performance()
         engine_popularity = get_engine_performance_over_time()
         user_stats = get_user_stats()
+        print(engine_popularity)
 
         context = {
             'chart_data': json.dumps(list(engine_performance), cls=DjangoJSONEncoder),
