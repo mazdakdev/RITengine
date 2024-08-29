@@ -5,8 +5,10 @@ from django.conf.urls.static import static
 from django.urls import re_path
 from rest_framework import permissions
 from django.conf import settings
+from RITengine.admin import admin_site
 
 urlpatterns = [
+   path("admin/", admin_site.urls),
    path("admin/", admin.site.urls),
    path("api/auth/", include("user.urls")),
    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

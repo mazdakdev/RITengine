@@ -1,0 +1,389 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+    <h1>Statstics</h1>
+    <!-- Render default result list -->
+
+
+    <div class="container">
+        <div class="chart-container">
+            <h1>Engine Performance Overview</h1>
+            <h3>Likes and Dislikes by Engine</h3>
+            <canvas id="engineBarChart" class="chart"></canvas>
+
+            <h3>Engagement Breakdown (Stacked)</h3>
+            <canvas id="stackedBarChart" class="chart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h1>Engine Performance Overview</h1>
+            <h2>Engine Popularity Over Time</h2>
+            <canvas id="popularityOverTimeChart" class="chart"></canvas>
+
+            <h2>Engine Popularity (Likes)</h3>
+            <canvas id="enginePieChart" class="chart"></canvas>
+
+            <h2>Engine Attribute Comparison</h2>
+            <canvas id="engineRadarChart" class="chart"></canvas>
+        </div>
+    </div>
+
+    <div class="container">
+            <div class="chart-container">
+                <h1>User Statistics Overview</h1>
+                <h2>User Registration Trends</h2>
+                <canvas id="registrationChart"></canvas>
+
+                <h2>User Activity</h2>
+                <canvas id="activityChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h1>Engine Performance Overview</h1>
+                <h2>User Login Frequency</h2>
+                   <canvas id="loginFrequencyChart"></canvas>
+
+                   <h2>User Status</h2>
+                   <canvas id="statusChart"></canvas>
+
+            </div>
+        </div>
+
+
+    <!-- Load Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        var ctxBar = document.getElementById('engineBarChart').getContext('2d');
+        var chartData = {{ chart_data|safe }};
+
+        // Extract labels, likes, and dislikes
+        var labels = chartData.map(function(data) { return data.name; });
+        var likes = chartData.map(function(data) { return data.total_likes; });
+        var dislikes = chartData.map(function(data) { return data.total_dislikes; });
+
+        // Bar Chart for Likes and Dislikes
+        var barChart = new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Likes',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    data: likes
+                }, {
+                    label: 'Dislikes',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    data: dislikes
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Stacked Bar Chart for Like and Dislike Distribution
+        var ctxStackedBar = document.getElementById('stackedBarChart').getContext('2d');
+        var stackedBarChart = new Chart(ctxStackedBar, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Likes',
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    data: likes
+                }, {
+                    label: 'Dislikes',
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    data: dislikes
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Pie Chart for Engine Popularity (Likes)
+        var ctxPie = document.getElementById('enginePieChart').getContext('2d');
+        var pieChart = new Chart(ctxPie, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Likes',
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(255, 205, 86, 0.6)',
+                        'rgba(201, 203, 207, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                    ],
+                    data: likes
+                }]
+            }
+        });
+
+        // Radar Chart for Engine Attribute Comparison
+        var ctxRadar = document.getElementById('engineRadarChart').getContext('2d');
+        var radarChart = new Chart(ctxRadar, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Likes',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    data: likes
+                }, {
+                    label: 'Dislikes',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    data: dislikes
+                }]
+            },
+            options: {
+                scales: {
+                    r: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Helper function to generate random colors for the line chart
+        function getRandomColor() {
+            var letters = '0123456789ABCDEF';
+            var color = '#';
+            for (var i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        // Popularity Over Time Chart Data
+        var popularityCtx = document.getElementById('popularityOverTimeChart').getContext('2d');
+        var popularityData = {{ popularity_data|safe }};
+
+        // Extract unique time labels (dates) and engine names
+        var timeLabels = [...new Set(popularityData.map(function(data) { return data.date; }))];
+        var engineNames = [...new Set(popularityData.map(function(data) { return data.name; }))];
+
+        // Create datasets for each engine
+        var datasets = engineNames.map(function(engineName) {
+            return {
+                label: engineName,
+                data: timeLabels.map(function(date) {
+                    var filtered = popularityData.find(function(data) {
+                        return data.name === engineName && data.date === date;
+                    });
+                    return filtered ? filtered.likes - filtered.dislikes : 0;
+                }),
+                borderColor: getRandomColor(),
+                fill: false
+            };
+        });
+
+        // Check if datasets and labels are not empty before rendering the chart
+        if (datasets.length > 0 && timeLabels.length > 0) {
+            // Line Chart for Popularity Over Time
+            var popularityChart = new Chart(popularityCtx, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: datasets
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        } else {
+            console.error("No data available for the popularity chart.");
+        }
+
+        // User Registration Trends
+        var ctx1 = document.getElementById('registrationChart').getContext('2d');
+        new Chart(ctx1, {
+            type: 'line',
+            data: {{ registration_data|safe }},
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Month/Year'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Registrations'
+                        }
+                    }
+                }
+            }
+        });
+
+        // User Activity
+        var ctx2 = document.getElementById('activityChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {{ activity_data|safe }},
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Active Users'
+                        }
+                    }
+                }
+            }
+        });
+
+        // User Demographics
+
+        // User Status
+        var ctx4 = document.getElementById('statusChart').getContext('2d');
+        new Chart(ctx4, {
+            type: 'bar',
+            data: {{ status_data|safe }},
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Status'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Users'
+                        }
+                    }
+                }
+            }
+        });
+
+        // User Login Frequency
+        var ctx5 = document.getElementById('loginFrequencyChart').getContext('2d');
+        new Chart(ctx5, {
+            type: 'line',
+            data: {{ login_frequency_data|safe }},
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Month/Year'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Logins'
+                        }
+                    }
+                }
+            }
+        });
+
+    </script>
+<style>
+/* styles.css */
+
+/* Ensure all text is black */
+body {
+    color: #000; /* Black text color */
+    font-family: Arial, sans-serif; /* Clean font */
+    margin: 0; /* Remove default body margin */
+    padding: 0; /* Remove default body padding */
+    background-color: #f8f9fa; /* Light gray background color */
+}
+
+/* Container for aligning chart containers */
+.container {
+    display: grid;
+    gap: 2rem; /* Space between chart containers */
+    padding: 1rem; /* Padding around the container */
+}
+
+/* Grid layout for chart containers */
+.container > .chart-container {
+    background-color: #fff; /* White background color */
+    border-radius: 0.5rem; /* Rounded corners */
+    box-shadow: 0 0 1rem rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    padding: 1rem; /* Padding inside each container */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Style for each canvas */
+.chart {
+    width: 100%; /* Full width of its container */
+    height: 300px; /* Fixed height */
+    border-radius: 0.5rem; /* Rounded corners */
+    border: 1px solid #e5e7eb; /* Light gray border color */
+}
+
+/* Heading styles */
+h1, h2, h3 {
+    color: #000; /* Black color for all headings */
+}
+
+/* Optional: Additional text styling */
+p, span, label {
+    color: #000; /* Ensure text in paragraphs, spans, and labels is black */
+}
+
+/* Responsive grid layout */
+.container {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive grid */
+}
+
+/* Style for containers with different numbers of charts */
+.chart-container-two {
+    grid-column: span 2; /* Span two columns if you want two charts per row */
+}
+
+.chart-container-three {
+    grid-column: span 3; /* Span three columns if you want three charts per row */
+}
+</style>
+{% endblock %}
