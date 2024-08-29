@@ -12,7 +12,7 @@ class CustomAdminSite(admin.AdminSite):
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path('charts/', self.admin_view(self.statstics_view), name="charts"),
+            path('/', self.admin_view(self.statstics_view), name="charts"),
         ]
         return custom_urls + urls
 
