@@ -54,7 +54,7 @@ class BookmarkMessageView(APIView):
 
         bookmark.messages.add(message)
 
-        serializer = MessageSerializer(message, context={'request': request})
+        serializer = MessageSerializer(message, context={'user': user})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, message_id):
@@ -71,7 +71,7 @@ class BookmarkMessageView(APIView):
 
         bookmark.messages.remove(message)
 
-        serializer = MessageSerializer(message, context={'request': request})
+        serializer = MessageSerializer(message, context={'user': user})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class GenerateBookmarkLinkView(GenerateShareableLinkView):
