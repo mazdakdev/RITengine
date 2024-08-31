@@ -20,8 +20,8 @@ services:
         env_file:
             - .env.prod
         volumes:
-            - /etc/letsencrypt/live/test2.rithub.org-0001/fullchain.pem:/etc/nginx/ssl/fullchain.pem
-            - /etc/letsencrypt/live/test2.rithub.org-0001/privkey.pem:/etc/nginx/ssl/privkey.pem
+            - /etc/letsencrypt/live/backend.rithub.org/fullchain.pem:/etc/letsencrypt/live/backend.rithub.org/fullchain.pem
+            - /etc/letsencrypt/live/backend.rithub.org/privkey.pem:/etc/letsencrypt/live/backend.rithub.org/privkey.pem
             - static_volume:/app/staticfiles
             - media_volume:/app/mediafiles
 

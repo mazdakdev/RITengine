@@ -14,8 +14,8 @@ server {
 
     client_max_body_size 3M;
 
-    ssl_certificate /etc/nginx/ssl/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/backend.rithub.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/backend.rithub.org/privkey.pem;
 
     # Optional SSL settings
     ssl_protocols TLSv1.2 TLSv1.3;
