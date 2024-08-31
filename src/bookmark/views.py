@@ -13,14 +13,27 @@ from collections import defaultdict
 from RITengine.exceptions import CustomAPIException
 from rest_framework.views import APIView
 from user.serializers import UserSerializer
+from django.db.models import Q
+from share.permissions import IsOwnerOrViewer
 
 class BookmarksDetailView(generics.RetrieveUpdateAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrViewer]
     serializer_class = BookmarkSerializer
 
     def get_object(self):
-        bookmark_collection, created = Bookmark.objects.get_or_create(user=self.request.user)
-        return bookmark_collection
+        bookmark_id = self.kwargs.get('id')
+
+        if bookmark_id is not None:
+            try:
+                bookmark = Bookmark.objects.get(
+                                    Q(id=bookmark_id) & (Q(user=self.request.user) | Q(viewers=self.request.user))
+                                )
+            except Bookmark.DoesNotExist:
+                raise CustomAPIException("Bookmark not found", status_code=404)
+        else:
+            bookmark, created = Bookmark.objects.get_or_create(user=self.request.user)
+
+        return bookmark
 
 class BookmarkMessageView(APIView):
     """
