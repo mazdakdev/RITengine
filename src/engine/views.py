@@ -8,7 +8,7 @@ from share.views import GenerateShareableLinkView, BaseViewersListView
 from rest_framework.response import Response
 from .filters import ChatFilter, MessageFilter
 from collections import defaultdict
-
+from share.permissions import IsOwnerOrViewer
 from .serializers import (
     EngineSerializer,
     ChatSerializer,
@@ -71,14 +71,14 @@ class UserChatsListView(generics.ListAPIView):
         return grouped_chats
 
 class UserChatsDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated,]
+    permission_classes = [IsAuthenticated, IsOwnerOrViewer]
     serializer_class = ChatSerializer
     lookup_field = 'slug'
 
     def get_queryset(self):
         user = self.request.user
         slug = self.kwargs['slug']
-        return Chat.objects.filter(user=user, slug=slug)
+        return Chat.objects.filter(user=user, slug=slug) | Chat.objects.filter(viewers=user, slug=slug)
 
 class ChatsMessagesListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, ]

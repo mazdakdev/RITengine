@@ -13,6 +13,7 @@ from django_filters import rest_framework as filters
 from user.exceptions import CustomAPIException
 from .filters import ProjectFilter
 from rest_framework.pagination import PageNumberPagination
+from share.permissions import IsOwnerOrViewer
 
 
 User = get_user_model()
@@ -31,11 +32,12 @@ class ProjectListCreateView(generics.ListCreateAPIView):
 
 class ProjectRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated,]
+    permission_classes = [IsAuthenticated, IsOwnerOrViewer]
     lookup_field = 'id'
 
     def get_queryset(self):
-        return Project.objects.filter(user=self.request.user, id=self.kwargs['id'])
+        user = self.request.user
+        return Project.objects.filter(id=self.kwargs['id'], user=user) | Project.objects.filter(id=self.kwargs['id'], viewers=user)
 
 class GenerateProjectLinkView(GenerateShareableLinkView):
     def get_object(self):

@@ -33,7 +33,9 @@ class ChatSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_at", "id", "shareable_key", "viewers", "slug", "user"] #TODO: excerpt
 
     def get_excerpt(self, obj):
-        return obj.messages.first().text[:150].strip() + "..."
+        if obj.messages.first():
+            return obj.messages.first().text[:150].strip() + "..."
+        return None
 
 class MessageSerializer(serializers.ModelSerializer):
     is_bookmarked = serializers.SerializerMethodField()
