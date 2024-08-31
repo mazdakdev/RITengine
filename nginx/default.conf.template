@@ -44,11 +44,12 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
 
         # CORS headers
-        add_header 'Access-Control-Allow-Origin' 'https://${FRONTEND_URL}';
+        add_header 'Access-Control-Allow-Origin' 'https://${FRONTEND_URL}' always;
         add_header 'Access-Control-Allow-Credentials' 'true' always;
         add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS' always;
         add_header 'Access-Control-Allow-Headers' 'Origin, Authorization, Content-Type, Accept' always;
 
+        # Handle CORS preflight requests
         if ($request_method = OPTIONS) {
             add_header 'Access-Control-Allow-Origin' 'https://${FRONTEND_URL}' always;
             add_header 'Access-Control-Allow-Credentials' 'true' always;
@@ -60,7 +61,6 @@ server {
             return 204;
         }
     }
-
     location /static/ {
         alias /app/staticfiles/;
         expires 30d;
