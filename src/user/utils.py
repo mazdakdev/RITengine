@@ -4,17 +4,18 @@ from django.contrib.auth import get_user_model
 from .models import BackupCode
 from django.core.cache import cache
 from django.utils import timezone
+from django.db.models import Q
 from datetime import datetime
 from . import exceptions
-import pyotp
-import uuid
-import random
-import string
 from django.db.models import Count, F
 from django.db.models.functions import ExtractMonth, ExtractYear
 from django.utils.timezone import now
 from datetime import timedelta
 import json
+import pyotp
+import uuid
+import random
+import string
 
 User = get_user_model()
 
@@ -49,21 +50,16 @@ def get_jwt_token(user):
 
 
 def get_user_by_identifier(identifier: str):
-    identifier_choices = ["username", "email", "phone_number"]
-    user = None
-    #TODO: use Q
-
-    for attr in identifier_choices:
-        try:
-            user = User.objects.get(**{attr: identifier})
-            break
-        except User.DoesNotExist:
-            continue
-
-    if user is None:
+    """
+      Fetch a user by either username, email, or phone number/
+    """
+    try:
+        user = User.objects.get(
+            Q(username=identifier) | Q(email=identifier) | Q(phone_number=identifier)
+        )
+        return user
+    except User.DoesNotExist:
         raise exceptions.InvalidCredentials()
-
-    return user
 
 def validate_two_fa(user, otp):
     device = getattr(user, f"{user.preferred_2fa}_device", None)
