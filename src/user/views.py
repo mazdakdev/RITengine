@@ -200,16 +200,6 @@ class UserDetailsView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
     def partial_update(self, request, *args, **kwargs):
-        if request.user.is_oauth_based:
-            return Response(
-                {
-                    "status": "error",
-                    "details": 'Method "PATCH" not allowed for OAuth-based users.',
-                    "error_code": "oauth_restricted",
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         required_fields = ["first_name", "last_name", "birthday"]
 
         current_data = self.get_object()
