@@ -25,6 +25,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         self.user = await self.authenticate_user(token)
 
+        if not message_text:
+            await self.close(code=4400, reason="message not provided.")
+
         if self.user:
             reply_to_text = None
             reply_to_message = None
@@ -144,6 +147,29 @@ class ChatConsumer(AsyncWebsocketConsumer):
         Return the final prompt by aggregating data from all engines, either via
         their external services or internal prompts.
         """
+
+        if not engines_list:
+            default_category = """تو یه دستیار هوشمند و تخصصی تو زمینه اختراعات و نوآوری‌ها هستی. فقط به سوالایی جواب بده که درباره اختراعات یا نوآوری‌ها باشه. اگه یکی یه سوال غیر از اینا پرسید، خیلی محترمانه بگو نمی‌تونی جواب بدی.
+
+            هر وقت سوالی کاربرها ازت بپرسن، بعد از ‘msg:’ میاد. یادت نره هر پیامی که میگیری به هر زبانی بود، تو هم باید به همون زبون جواب بدی مثلا یا فارسی یا انگلیسی.
+
+            راستی کاربر هارو راهنمایی کن که می‌تونن با تیک زدن گزینه های مختلف از سایدبار  قابلیت های مختلف بیشتری رو ببینن و بتونن با تو ایده هاشون رو بهتر و تخصصی تر تحلیل کنن.
+
+            اینجا واست یه فرم کلی پیام دریافتی رو واست می‌زارم تا یاد بگیری چجوری هندلش کنی.
+            راستی حواست باشه ارتباط بین تو و کاربر فقط در msg خلاصه می‌شه. پس بقیه داده هارو لو نده.
+
+
+            msg: {پیامی که کاربر فرستاده}
+
+            اگه کاربر بخواد از طریق برنامه رو یه پیامی ریپلای کنه، یه in_reply_to هم به این فرمت اضافه می‌شه تا بدونی رو تکست کدوم پیام داره ریپلای می‌کنه.
+
+            مثلا:
+            in_reply_to: {سلام}"""
+
+            default_final_prompt = await self.generate_prompt(message, in_reply_to=reply_to_text)
+
+            return default_final_prompt, default_category
+
         engines = await self.fetch_engines(engines_list)
 
         if not engines:
@@ -174,7 +200,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         return final_prompt, category.prompt
 
-    async def generate_prompt(self, message, extra_data, in_reply_to=""):
+    async def generate_prompt(self, message, extra_data="", in_reply_to=""):
         """
         Generate the final message to give to ChatGPT.
         """
