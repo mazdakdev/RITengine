@@ -199,11 +199,11 @@ class UserDetailsSerializer(serializers.ModelSerializer):
             "preferred_2fa",
             "last_login",
         ]
-        extra_kwargs = {
-            "first_name": {"required": True},
-            "last_name": {"required": True},
-            "birthday": {"required": True},
-        }
+        # extra_kwargs = {
+        #     "first_name": {"required": True},
+        #     "last_name": {"required": True},
+        #     "birthday": {"required": True},
+        # }
         read_only_fields = ["username", "email", "phone_number", "preferred_2fa", "last_login"]
 
 

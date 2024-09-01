@@ -199,34 +199,34 @@ class UserDetailsView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
-    def partial_update(self, request, *args, **kwargs):
-        required_fields = ["first_name", "last_name", "birthday"]
+    # def partial_update(self, request, *args, **kwargs):
+    #     required_fields = ["first_name", "last_name", "birthday"]
 
-        current_data = self.get_object()
-        serializer = self.get_serializer(data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
+    #     current_data = self.get_object()
+    #     serializer = self.get_serializer(data=request.data, partial=True)
+    #     serializer.is_valid(raise_exception=True)
 
-        for field in required_fields:
-            if (
-                field not in serializer.validated_data
-                and getattr(current_data, field) is None
-            ):
-                # Required field is missing
-                return Response(
-                    {
-                        "status": "error",
-                        "details": f"The field {field} is required to be updated first.",
-                        "error_code": "required_field_missing",
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+    #     for field in required_fields:
+    #         if (
+    #             field not in serializer.validated_data
+    #             and getattr(current_data, field) is None
+    #         ):
+    #             # Required field is missing
+    #             return Response(
+    #                 {
+    #                     "status": "error",
+    #                     "details": f"The field {field} is required to be updated first.",
+    #                     "error_code": "required_field_missing",
+    #                 },
+    #                 status=status.HTTP_400_BAD_REQUEST,
+    #             )
 
-        user = self.get_object()
-        serializer = self.get_serializer(user, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
+    #     user = self.get_object()
+    #     serializer = self.get_serializer(user, data=request.data, partial=True)
+    #     serializer.is_valid(raise_exception=True)
+    #     self.perform_update(serializer)
 
-        return Response(serializer.data)
+    #     return Response(serializer.data)
 
 
 
