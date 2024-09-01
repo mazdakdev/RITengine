@@ -23,10 +23,10 @@ class Command(BaseCommand):
 
     def import_data(self, data):
         for category_name, category_data in data.items():
-
+            category_prompt = category_data.get('prompt', '')
             category, created = EngineCategory.objects.update_or_create(
                 name=category_name,
-                defaults={'prompt': category_data.get('prompt', '')}
+                defaults={'prompt': category_prompt}
             )
 
             if created:
@@ -34,11 +34,14 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(f"EngineCategory already exists: {category_name}")
 
-            for engine in category_data.get('engines', []):
-                for engine_name, engine_description in engine.items():
-                   Engine.objects.update_or_create(
-                    category=category,
-                    name=engine_name,
-                    defaults={'prompt': engine_description}
-                )
-                self.stdout.write(self.style.SUCCESS(f"Created/Updated Engine: {engine_name} for Category: {category_name}"))
+            for engine_data in category_data.get('engines', []):
+                for engine_name, engine_info in engine_data.items():
+                    engine_prompt = engine_info.get('prompt', None)
+                    external_service = engine_info.get('external_service', None)
+
+                    Engine.objects.update_or_create(
+                        category=category,
+                        name=engine_name,
+                        defaults={'prompt': engine_prompt, 'external_service': external_service}
+                    )
+                    self.stdout.write(self.style.SUCCESS(f"Created/Updated Engine: {engine_name} for Category: {category_name}"))

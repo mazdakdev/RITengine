@@ -164,7 +164,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     data = await service_adapter.perform_action(message)
                     extra_data.append(data)
             elif engine.prompt:
-                extra_data.append({"prompt":engine.prompt})
+                extra_data.append({engine.title:engine.prompt})
 
         if not extra_data:
             await self.close(code=4404, reason="No valid prompts or external data found.")
