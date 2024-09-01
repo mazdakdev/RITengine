@@ -25,10 +25,23 @@ class Chat(ShareableModel):
 class EngineCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
     prompt = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Engine(models.Model):
+    name = models.CharField(max_length=100)
+    prompt = models.TextField(null=True, blank=True)
+    category = models.ForeignKey(EngineCategory, related_name="engines", on_delete=models.CASCADE)
     EXTERNAL_SERVICE_CHOICES = (
         ('darkob', 'Darkob'),
     )
     external_service = models.CharField(max_length=255, choices=EXTERNAL_SERVICE_CHOICES, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -36,16 +49,6 @@ class EngineCategory(models.Model):
     def get_service_adapter(self):
         return ExternalServiceFactory.get_service_adapter(self.external_service)
 
-
-class Engine(models.Model):
-    name = models.CharField(max_length=100)
-    prompt = models.TextField(null=True, blank=True)
-    category = models.ForeignKey(EngineCategory, related_name="engines", on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.name
 
 class Message(models.Model):
     SENDER_CHOICES = (

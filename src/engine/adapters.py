@@ -32,7 +32,7 @@ class DarkobAdapter(ExternalServiceAdapter):
         if response.status_code == 200:
             try:
                 response_data = response.json()
-                return [item['kholaseh_ekhterah'] for item in response_data['data']['aghahi']['data']]
+                return {"patents_data": [item['kholaseh_ekhterah'] for item in response_data['data']['aghahi']['data']]}
             except Exception:
                 return ["something wen't wrong the patents data couldn't be retrieved."]
 

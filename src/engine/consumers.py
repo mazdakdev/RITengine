@@ -126,56 +126,63 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def load_chat_history(self, chat):
         """
-        returns the chat history in a format readable
+        Return the chat history in a format readable
         by chatgpt context based API
         """
         messages = Message.objects.filter(chat=chat).order_by('timestamp').values('sender', 'text')
         return [{'role': 'user' if msg['sender'] == 'user' else 'system', 'content': msg['text']} for msg in messages]
 
     @database_sync_to_async
-    def fetch_engine_data(self, engines_list):
+    def fetch_engines(self, engines_list):
         """
-        return prompts and categories of given engines by their id
+        Fetch the engines and their related categories.
         """
-        engines = Engine.objects.filter(id__in=engines_list).select_related('category')
-        engine_prompts = [prompt for prompt in engines.values_list('prompt', flat=True) if prompt]
-        categories = list(engines.values_list('category__id', 'category__prompt').distinct())
-
-        return engine_prompts, categories
+        return list(Engine.objects.filter(id__in=engines_list).select_related('category'))
 
     async def get_final_prompt(self, message, engines_list, reply_to_text=""):
         """
-        return the prompt of category and the prompt of each engine if needed.
-        in scenarios where external services like darkob is required,
-        the engine prompts would be empty and thus the data would be retrieved
-        dynamically by their adapter.
+        Return the final prompt by aggregating data from all engines, either via
+        their external services or internal prompts.
         """
-        engine_prompts, categories = await self.fetch_engine_data(engines_list)
+        engines = await self.fetch_engines(engines_list)
 
+        if not engines:
+            await self.close(code=4404, reason="Engines not found.")
+            return None, None
+
+        categories = {engine.category.id for engine in engines}
         if len(categories) > 1:
             await self.close(code=4400, reason="All engines must be in the same category.")
             return None, None
 
-        category_id, category_prompt = categories[0] if categories else (None, None)
+        # Collect data from all engines, either from prompts or external services
+        extra_data = []
+        for engine in engines:
+            if engine.external_service:
+                service_adapter = engine.get_service_adapter()
+                if service_adapter:
+                    data = await service_adapter.perform_action(message)
+                    extra_data.append(data)
+            elif engine.prompt:
+                extra_data.append({"prompt":engine.prompt})
 
-        if not category_id:
-            await self.close(code=4404, reason="Category not found.")
+        if not extra_data:
+            await self.close(code=4404, reason="No valid prompts or external data found.")
             return None, None
 
-        category = await database_sync_to_async(EngineCategory.objects.get)(id=category_id)
-        service_adapter = category.get_service_adapter()
+        category = engines[0].category
+        final_prompt = await self.generate_prompt(message, extra_data, reply_to_text)
 
-        if service_adapter:
-            patents_data = await service_adapter.perform_action(message)
-            final_prompt = await self.generate_prompt(message=message, other_data=patents_data, in_reply_to=reply_to_text)
-        else:
-            if not engine_prompts:
-                await self.close(code=4404, reason="engines are empty.")
-                return None, None
+        return final_prompt, category.prompt
 
-            final_prompt = await self.generate_prompt(message=message, other_data=engine_prompts, in_reply_to=reply_to_text)
-
-        return final_prompt, category_prompt
+    async def generate_prompt(self, message, extra_data, in_reply_to=""):
+        """
+        Generate the final message to give to ChatGPT.
+        """
+        extra_data_str = str(extra_data)
+        if in_reply_to:
+            return f"msg: {message}\n\nextra_data: {extra_data_str}\n\nin_reply_to: {in_reply_to}"
+        return f"msg: {message}\n\nextra_data: {extra_data_str}"
 
     @database_sync_to_async
     def authenticate_user(self, token):
@@ -185,11 +192,3 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         except (InvalidToken, TokenError):
             return None
-
-    async def generate_prompt(self, message, other_data, in_reply_to=""):
-        """
-        generate the finalized message to give to chatgpt.
-        """
-        if in_reply_to:
-            return f"msg: {message}\n\nother_data: {str(other_data)}\n\nin_reply_to: {in_reply_to}"
-        return f"msg: {message} \n\n other_data: {str(other_data)}"
