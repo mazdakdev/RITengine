@@ -42,6 +42,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             message_text, engines_list, reply_to_text
         )
 
+        print(final_msg)
+
         if error_message:
             await self.close(code=4404, reason=error_message)
             return

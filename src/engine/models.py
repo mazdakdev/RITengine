@@ -1,5 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
-from django.db import models
+from django.db import models, IntegrityError
 from bookmark.models import Bookmark
 from share.models import ShareableModel
 from .factories import ExternalServiceFactory
@@ -25,11 +25,32 @@ class Chat(ShareableModel):
 class EngineCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
     prompt = models.TextField()
+    is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['is_default'],
+                name='unique_default_engine_category',
+                condition=models.Q(is_default=True)
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        """Ensure that only one default category exists"""
+        if self.is_default:
+            existing_default = EngineCategory.objects.filter(is_default=True).exclude(pk=self.pk).exists()
+            if existing_default:
+                raise IntegrityError('There can only be one default category.')
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
+
+
 
 
 class Engine(models.Model):

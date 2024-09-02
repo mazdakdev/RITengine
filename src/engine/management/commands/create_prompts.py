@@ -24,9 +24,12 @@ class Command(BaseCommand):
     def import_data(self, data):
         for category_name, category_data in data.items():
             category_prompt = category_data.get('prompt', '')
+            is_default = category_data.get('is_default', False)
+
+            # Create or update the EngineCategory with the is_default field
             category, created = EngineCategory.objects.update_or_create(
                 name=category_name,
-                defaults={'prompt': category_prompt}
+                defaults={'prompt': category_prompt, 'is_default': is_default}
             )
 
             if created:

@@ -121,7 +121,7 @@ class AssistsDetailView(generics.RetrieveUpdateDestroyAPIView):
 class EngineCategoryListCreateView(generics.ListCreateAPIView):
     serializer_class = EngineCategorySerializer
     lookup_field = 'id'
-    queryset = EngineCategory.objects.all()
+    queryset = EngineCategory.objects.filter(is_default=False)
     pagination_class = PageNumberPagination
 
     def get_permissions(self):

@@ -2,7 +2,7 @@ from channels.db import database_sync_to_async
 from django.utils import timezone
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .models import Chat, Message, Engine
+from .models import Chat, Message, Engine, EngineCategory
 
 @database_sync_to_async
 def save_message(chat, text, sender, engine_ids, reply_to=None):
@@ -52,9 +52,9 @@ async def get_prompts(message, engines_list, reply_to_text=""):
     or internal prompts, and handling the associated category prompt.
     """
     if not engines_list:
-        default_category = """تو یه دستیار هوشمند و تخصصی تو زمینه اختراعات و نوآوری‌ها هستی..."""
-        default_final_prompt = await format_message(message, in_reply_to=reply_to_text)
-        return default_final_prompt, default_category, None
+        default_category = await database_sync_to_async(EngineCategory.objects.get)(is_default=True).prompt
+        default_final_message = await format_message(message, in_reply_to=reply_to_text)
+        return default_final_message, default_category, None
 
     engines = await fetch_engines(engines_list)
     if not engines:
