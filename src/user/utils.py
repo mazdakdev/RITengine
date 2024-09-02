@@ -10,6 +10,10 @@ from . import exceptions
 from django.db.models import Count, F
 from django.db.models.functions import ExtractMonth, ExtractYear
 from django.utils.timezone import now
+from RITengine.exceptions import CustomAPIException
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django_otp.plugins.otp_email.models import EmailDevice
+from .models import SMSDevice
 from datetime import timedelta
 import json
 import pyotp
@@ -191,3 +195,16 @@ def get_user_stats():
         'status_data': status_data,
         'login_frequency_data': login_frequency_data,
     }
+
+
+def create_device(user, method):
+    if method == "email":
+        return EmailDevice(user=user, confirmed=False)
+    elif method == "sms":
+        if not user.phone_number:
+            raise CustomAPIException("You have not set any phone number.")
+        return SMSDevice(user=user, number=user.phone_number, confirmed=False)
+    elif method == "totp":
+        return TOTPDevice(user=user, step=60, confirmed=False)
+    else:
+        raise CustomAPIException("Invalid 2FA method.")

@@ -52,9 +52,9 @@ async def get_prompts(message, engines_list, reply_to_text=""):
     or internal prompts, and handling the associated category prompt.
     """
     if not engines_list:
-        default_category = await database_sync_to_async(EngineCategory.objects.get)(is_default=True).prompt
+        default_category = await database_sync_to_async(EngineCategory.objects.get)(is_default=True)
         default_final_message = await format_message(message, in_reply_to=reply_to_text)
-        return default_final_message, default_category, None
+        return default_final_message, default_category.prompt, None
 
     engines = await fetch_engines(engines_list)
     if not engines:

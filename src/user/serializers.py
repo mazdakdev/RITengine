@@ -161,8 +161,8 @@ class CompleteLoginSerializer(serializers.Serializer):
             raise exceptions.InvalidTmpToken()
 
         if not validate_two_fa(user, code):
-            if not validate_backup_code(user, code):
-                raise exceptions.InvalidTwoFaOrOtp()
+            # if not validate_backup_code(user, code):
+            #     raise exceptions.InvalidTwoFaOrOtp()
             raise exceptions.InvalidTwoFaOrOtp()
 
         cache.delete(f"2fa_{user.id}")
@@ -249,7 +249,7 @@ class CompletePasswordResetSerializer(serializers.Serializer):
         if not user.is_email_verified:
             raise CustomAPIException("Email is not verified.")
 
-        cached_tmp_token = cache.get(f"2fa_tmp_token_{user.id}")
+        cached_tmp_token = cache.get(f"passwd_tmp_token_{user.id}")
         if cached_tmp_token != tmp_token:
             raise exceptions.InvalidTmpToken()
 
