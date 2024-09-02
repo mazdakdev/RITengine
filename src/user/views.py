@@ -373,7 +373,7 @@ class Verify2FASetupView(APIView):
                 status=status.HTTP_200_OK,
             )
         else:
-            raise InvalidTwoFaOrOtp()
+            raise exceptions.InvalidTwoFaOrOtp()
 
 class Change2FAMethodView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
@@ -420,7 +420,7 @@ class Disable2FAView(APIView):
     def post(self, request):
         user = request.user
         if not user.preferred_2fa:
-            raise No2FASetUp()
+            raise exceptions.No2FASetUp()
 
         if user.preferred_2fa == "totp":
             return Response(
@@ -441,7 +441,7 @@ class Disable2FAView(APIView):
                 status=status.HTTP_202_ACCEPTED,
             )
 
-        raise UnknownError
+        raise exceptions.UnknownError()
 
 class CompleteDisable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
@@ -450,14 +450,14 @@ class CompleteDisable2FAView(APIView):
     def post(self, request):
         user = request.user
         if not user.preferred_2fa:
-            raise No2FASetUp()
+            raise exceptions.No2FASetUp()
 
         serializer = CompleteDisable2FASerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         code = serializer.validated_data["code"]
 
         if not utils.validate_two_fa(user, code):
-            raise InvalidTwoFaOrOtp()
+            raise exceptions.InvalidTwoFaOrOtp()
 
         method = user.preferred_2fa
         device = getattr(user, f"{user.preferred_2fa}_device", None)
