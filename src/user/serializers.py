@@ -217,7 +217,6 @@ class PasswordResetSerializer(serializers.Serializer):
         if not user.is_email_verified:
             raise exceptions.EmailNotVerified()
 
-
         if not user.preferred_2fa:
             generate_and_send_otp(user)
         else:

@@ -239,8 +239,8 @@ class PasswordResetView(APIView):
         user = serializer.validated_data["user"]
 
         # Generate temporary token and bind it to the user ID
-        tmp_token = utils.generate_tmp_token(user, "2fa")  # Implement this method
-        cache.set(f"2fa_tmp_token_{user.id}", tmp_token, timeout=300)  # Cache the token for a limited time
+        tmp_token = utils.generate_tmp_token(user, "2fa")
+        cache.set(f"2fa_tmp_token_{user.id}", tmp_token, timeout=300)
 
         return Response(
             {
@@ -256,7 +256,7 @@ class CompletePasswordResetView(APIView):
     def post(self, request):
         serializer = CompletePasswordResetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()  # This will reset the user's password
+        serializer.save()
 
         return Response(
             {"status": "success", "message": "Password has been reset successfully."},
