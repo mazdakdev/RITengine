@@ -51,8 +51,6 @@ class EngineCategory(models.Model):
         return self.name
 
 
-
-
 class Engine(models.Model):
     name = models.CharField(max_length=100)
     prompt = models.TextField(null=True, blank=True)

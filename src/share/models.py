@@ -17,9 +17,9 @@ class ShareableModel(models.Model):
         abstract = True
 
     def save(self, *args, **kwargs):
-            if not self.id:
-                self.id = self.generate_hex_pk()
-            super().save(*args, **kwargs)
+        if not self.id:
+            self.id = self.generate_hex_pk()
+        super().save(*args, **kwargs)
 
     def generate_hex_pk(self):
         return binascii.b2a_hex(uuid.uuid4().bytes[:3]).decode().upper()
@@ -34,8 +34,14 @@ class ShareableModel(models.Model):
 class AccessRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
+    object_id = models.CharField(max_length=6)
     content_object = GenericForeignKey('content_type', 'object_id')
     requested_at = models.DateTimeField(auto_now_add=True)
     is_approved = models.BooleanField(default=False)
-    approval_uuid = models.UUIDField(default=uuid.uuid4(), editable=False, unique=True)
+    approval_uuid = models.UUIDField(editable=False, unique=True)
+
+
+    def save(self, *args, **kwargs):
+        if not self.approval_uuid:
+            self.approval_uuid = uuid.uuid4()
+        super().save(*args, **kwargs)

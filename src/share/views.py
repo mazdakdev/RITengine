@@ -41,9 +41,10 @@ class GenerateShareableLinkView(generics.GenericAPIView):
         if user_ids:
             self.add_viewers(user_ids, obj)
 
+        share_link = f"{settings.FRONTEND_URL}/access/{obj.shareable_key}"
         return Response({
             'status': 'success',
-            'shareable_key': obj.shareable_key
+            'shareable_key': share_link
         }, status=200)
 
     def add_viewers(self, user_ids, obj):
@@ -55,7 +56,7 @@ class GenerateShareableLinkView(generics.GenericAPIView):
 
     def notify_user(self, user, obj):
         subject = "You have been granted access to shared content"
-        message = f"You have been granted access to {obj}."
+        message = f"You have been granted access to {obj.user.first_name}'s {obj.__name__} called ob."
         user.send_text_email(subject, message)
         print(subject, message) #TODO:
 
@@ -82,12 +83,10 @@ class AccessSharedContentView(generics.GenericAPIView):
         if obj is None:
             raise NotFound("Content not found.")
 
-        # Check if the user has access
         if request.user in obj.viewers.all() or obj.user == request.user:
             serializer = self.get_serializer(obj, request)
             return Response(serializer.data)
 
-        # If the user is not in the viewers, create an access request
         success = self.create_access_request(request.user, obj)
 
         if success:
@@ -104,11 +103,11 @@ class AccessSharedContentView(generics.GenericAPIView):
 
 
     def notify_owner(self, owner, access_request):
-        print("hi")
         subject = "New Access Request"
         approval_link = f"{settings.FRONTEND_URL}/approve-access/{access_request.approval_uuid}/"
         message = f"A user has requested access to your content. Approve the request using the following link: {approval_link}"
-        owner.send_text_email(subject, message)
+        # owner.send_text_email(subject, message)
+        print(message)
 
     def create_access_request(self, user, obj):
         content_type = ContentType.objects.get_for_model(obj)
