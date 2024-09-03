@@ -9,7 +9,7 @@ from .views import (
     EmailChangeView, CompleteEmailChangeView, PhoneChangeView,
     CompletePhoneChangeView, Disable2FAView, CompleteDisable2FAView,
     CompletePasswordChangeView, UserGetView, GoogleLoginView,
-    Change2FAMethodView,
+    Change2FAMethodView, CompleteChange2FAView
 )
 
 urlpatterns = [
@@ -28,10 +28,11 @@ urlpatterns = [
     path("password/reset/complete/", CompletePasswordResetView.as_view(), name='password_reset_complete'),
     path('accounts/', include('allauth.urls')),
     path('2fa/enable/', Enable2FAView.as_view(), name="two_fa_enable"),
+    path('2fa/enable/complete/', Verify2FASetupView.as_view(), name="two_fa_enable_complete"),
     path('2fa/disable/', Disable2FAView.as_view(), name="two_fa_disable"),
-    path('2fa/change/', Change2FAMethodView.as_view(), name="two_fa_change"),
     path('2fa/disable/complete/', CompleteDisable2FAView.as_view(), name="two_fa_disable_complete"),
-    path('2fa/enable/complete/', Verify2FASetupView.as_view(), name="two_fa_verify"),
+    path('2fa/change/', Change2FAMethodView.as_view(), name="two_fa_change"),
+    path('2fa/change/complete/', CompleteChange2FAView.as_view(), name="two_fa_change_complete"),
     path("me/change-username/", UsernameChangeView.as_view(), name="username_change"),
     path("me/change-email/", EmailChangeView.as_view(), name="email_change"),
     path("me/change-email/complete/", CompleteEmailChangeView.as_view(), name="email_change_complete"),

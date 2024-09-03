@@ -6,12 +6,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
-from django_otp.plugins.otp_totp.models import TOTPDevice
-from django_otp.plugins.otp_email.models import EmailDevice
 from django.utils import timezone
 from django.conf import settings
 from django.db import transaction
-from .models import SMSDevice, BackupCode
+from .models import BackupCode
 from django.core.cache import cache
 from rest_framework.permissions import IsAuthenticated
 import pyotp
@@ -20,16 +18,15 @@ from .services import SMSService
 from .providers import get_sms_provider
 from .permissions import IsNotOAuthUser
 from RITengine.exceptions import CustomAPIException
-from rest_framework.exceptions import ValidationError
 from . import exceptions
 from .serializers import (
-    Verify2FASerializer, Enable2FASerializer, Request2FASerializer,
+    Verify2FASerializer, Enable2FASerializer,
     PasswordChangeSerializer, PasswordResetSerializer, LoginSerializer,
     CompleteRegisterationSerializer, UsernameChangeSerializer, UserSerializer,
     CompleteLoginSerializer, RegistrationSerializer, UserDetailsSerializer,
     BackupCodeSerializer, EmailChangeSerializer, CompleteEmailorPhoneChangeSerializer,
     PhoneChangeSerializer, CompleteDisable2FASerializer, CompletePasswordChangeSerializer,
-    CompletePasswordResetSerializer, Change2FAMethodSerializer
+    CompletePasswordResetSerializer, Change2FAMethodSerializer, CompleteChange2FAMethodSerializer
 )
 from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
 from rest_framework import generics
@@ -230,7 +227,6 @@ class UserDetailsView(generics.RetrieveUpdateAPIView):
     #     return Response(serializer.data)
 
 
-
 class PasswordResetView(APIView):
     permission_classes = [IsNotOAuthUser,]
 
@@ -299,26 +295,25 @@ class Enable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
 
+    @transaction.atomic
     def post(self, request):
         user = request.user
         serializer = Enable2FASerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         method = serializer.validated_data["method"]
 
-        for device_type in ['email_device', 'sms_device', 'totp_device']:
-            device = getattr(user, device_type, None)
-            if device and not device.confirmed:
-                device.delete()
-                setattr(user, device_type, None)
+        if user.preferred_2fa:
+            return Response(
+                {"status": "error", "details": "2FA is already enabled."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        device = getattr(user, f"{method}_device", None)
-        if device and device.confirmed:
-            return Response({
-                "status": "error",
-                "details": f"{method.capitalize()} 2FA is already enabled.",
-            }, status=status.HTTP_400_BAD_REQUEST)
+        utils.remove_existing_2fa_devices(user)
+        user.preferred_2fa = None
+        user.save()
 
-        device = utils.create_device(user, method)
+        device = utils.create_2fa_device(user, method)
         device.save()
         setattr(user, f"{method}_device", device)
         user.save()
@@ -332,36 +327,31 @@ class Enable2FAView(APIView):
 
         return Response(response_data, status=status.HTTP_200_OK)
 
+
 class Verify2FASetupView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
         serializer = Verify2FASerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         method = serializer.validated_data["method"]
-        otp_code = serializer.validated_data["code"]
+        code = serializer.validated_data["code"]
         user = request.user
 
         device = getattr(user, f"{method}_device", None)
 
-        if device and device.verify_token(otp_code):
-            with transaction.atomic():
-                device.confirmed = True
-                device.save()
+        if device and device.verify_token(code):
+            device.confirmed = True
+            device.save()
+            user.preferred_2fa = method
+            user.save()
 
-                user.preferred_2fa = method
-                user.save()
-
-                for other_method in ['email', 'sms', 'totp']:
-                    if other_method != method:
-                        other_device = getattr(user, f"{other_method}_device", None)
-                        if other_device:
-                            other_device.delete()
-
-                codes = utils.generate_backup_codes()
-                backup_codes = [BackupCode(user=user, code=code) for code in codes]
-                BackupCode.objects.bulk_create(backup_codes)
-
+            # Generate backup codes
+            codes = utils.generate_backup_codes()
+            backup_codes = [BackupCode(user=user, code=code) for code in codes]
+            BackupCode.objects.bulk_create(backup_codes)
             backup_code_serializer = BackupCodeSerializer(backup_codes, many=True)
 
             return Response(
@@ -375,40 +365,77 @@ class Verify2FASetupView(APIView):
         else:
             raise exceptions.InvalidTwoFaOrOtp()
 
+
 class Change2FAMethodView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
 
+    @transaction.atomic
     def post(self, request):
         user = request.user
         serializer = Change2FAMethodSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         new_method = serializer.validated_data["new_method"]
+
+        if user.preferred_2fa == new_method:
+            return Response(
+                {"status": "error", "details": "This method is already your active 2FA method."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        new_device = utils.create_2fa_device(user, new_method)
+        new_device.save()
+        setattr(user, f"{new_method}_device", new_device)
+        user.save()
+
+        response_data = {"status": "success"}
+        if new_method in ["email", "sms"]:
+            new_device.generate_challenge()
+            response_data["details"] = "An email has been sent." if new_method == "email" else "An SMS has been sent."
+        else:
+            response_data["provisioning_uri"] = new_device.config_url
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class CompleteChange2FAView(APIView):
+    permission_classes = [IsAuthenticated, IsNotOAuthUser]
+
+    @transaction.atomic
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        serializer = CompleteChange2FAMethodSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        new_method = serializer.validated_data["new_method"]
+        code = serializer.validated_data["code"]
+
         new_device = getattr(user, f"{new_method}_device", None)
 
-        if new_device is None or not new_device.confirmed:
-            new_device = utils.create_device(user, new_method)
-            new_device.save()
-            setattr(user, f"{new_method}_device", new_device)
-            user.save()
+        if not new_device or not new_device.verify_token(code):
+            raise exceptions.InvalidTwoFaOrOtp()
 
-            response_data = {"status": "success"}
-            if new_method in ["email", "sms"]:
-                new_device.generate_challenge()
-                response_data["details"] = "An email has been sent." if new_method == "email" else "An SMS has been sent."
-            else:
-                response_data["provisioning_uri"] = new_device.config_url
+        new_device.confirmed = True
+        new_device.save()
 
-            return Response(response_data, status=status.HTTP_200_OK)
+        utils.remove_existing_2fa_devices(user, exclude_method=new_method)
 
         user.preferred_2fa = new_method
         user.save()
 
+        # Generate new backup codes
+        BackupCode.objects.filter(user=user).delete()
+        codes = utils.generate_backup_codes()
+        backup_codes = [BackupCode(user=user, code=code) for code in codes]
+        BackupCode.objects.bulk_create(backup_codes)
+        backup_code_serializer = BackupCodeSerializer(backup_codes, many=True)
+
         return Response(
             {
                 "status": "success",
-                "details": "2FA method updated successfully.",
+                "details": "2FA method has been updated successfully.",
+                "backup_codes": backup_code_serializer.data,
             },
             status=status.HTTP_200_OK,
         )
@@ -417,16 +444,15 @@ class Disable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
 
+    @transaction.atomic
     def post(self, request):
         user = request.user
         if not user.preferred_2fa:
             raise exceptions.No2FASetUp()
 
-        if user.preferred_2fa == "totp":
+        if user.preferred_2fa == "totp": # no need to generate challenge
             return Response(
-                {
-                    "status": "verification_required",
-                },
+                {"status": "verification_required"},
                 status=status.HTTP_202_ACCEPTED,
             )
 
@@ -435,18 +461,18 @@ class Disable2FAView(APIView):
         if device:
             device.generate_challenge()
             return Response(
-                {
-                    "status": "verification_required",
-                },
+                {"status": "verification_required"},
                 status=status.HTTP_202_ACCEPTED,
             )
 
         raise exceptions.UnknownError()
 
+
 class CompleteDisable2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
     throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
 
+    @transaction.atomic
     def post(self, request):
         user = request.user
         if not user.preferred_2fa:
@@ -460,15 +486,15 @@ class CompleteDisable2FAView(APIView):
             raise exceptions.InvalidTwoFaOrOtp()
 
         method = user.preferred_2fa
-        device = getattr(user, f"{user.preferred_2fa}_device", None)
+        device = getattr(user, f"{method}_device", None)
 
         if device:
-            with transaction.atomic():
-                device.delete()
-                setattr(user, f"{method}_device", None)
-                user.preferred_2fa = None
-                user.save()
-                BackupCode.objects.filter(user=user).delete()
+            user.preferred_2fa = None
+            device.delete()
+            setattr(user, f"{method}_device", None)
+            user.save()
+
+        BackupCode.objects.filter(user=user).delete()
 
         return Response(
             {"status": "success", "details": "2FA has been disabled."},

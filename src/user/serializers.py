@@ -407,4 +407,8 @@ class CompleteDisable2FASerializer(serializers.Serializer):
 class Change2FAMethodSerializer(serializers.Serializer):
     new_method = serializers.ChoiceField(choices=["email", "sms", "totp"])
 
+class CompleteChange2FAMethodSerializer(serializers.Serializer):
+    new_method = serializers.ChoiceField(choices=["email", "sms", "totp"])
+    code = serializers.CharField(min_length=6, max_length=10)
+
 # TODO: adjust code max and min

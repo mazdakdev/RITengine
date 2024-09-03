@@ -197,7 +197,7 @@ def get_user_stats():
     }
 
 
-def create_device(user, method):
+def create_2fa_device(user, method):
     if method == "email":
         return EmailDevice(user=user, confirmed=False)
     elif method == "sms":
@@ -208,3 +208,15 @@ def create_device(user, method):
         return TOTPDevice(user=user, step=60, confirmed=False)
     else:
         raise CustomAPIException("Invalid 2FA method.")
+
+
+def remove_existing_2fa_devices(user, exclude_method=""):
+    for method in ['email', 'sms', 'totp']:
+        if method == exclude_method:
+            continue
+
+        device = getattr(user, f"{method}_device", None)
+        if device:
+            device.delete()
+            setattr(user, f"{method}_device", None)
+            user.save()
