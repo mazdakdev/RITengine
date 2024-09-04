@@ -30,7 +30,7 @@ services:
 
     celery:
         build: ./src
-        command: celery -A RITengine worker -l info
+        command: celery -A RITengine worker -l warning --autoscale=8,2
         volumes:
             - static_volume:/app/staticfiles
             - media_volume:/app/mediafiles
@@ -43,7 +43,7 @@ services:
 
     celery-beat:
         build: ./src
-        command: celery -A RITengine beat -l info
+        command: celery -A RITengine beat -l warning
         volumes:
             - static_volume:/app/staticfiles
             - media_volume:/app/mediafiles

@@ -388,7 +388,6 @@ class EmailChangeSerializer(serializers.Serializer):
 
 
 class CompleteEmailorPhoneChangeSerializer(serializers.Serializer):
-    tmp_token = serializers.CharField()
     code = serializers.CharField(min_length=6, max_length=10)
 
 

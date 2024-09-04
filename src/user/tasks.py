@@ -14,4 +14,6 @@ def deactivate_inactive_users():
         is_staff=False,
         created_at__lte=one_week_ago
     )
-    inactive_users.update(is_active=False)
+    for user in inactive_users.iterator(chunk_size=1000):
+        user.is_active = False
+        user.save()

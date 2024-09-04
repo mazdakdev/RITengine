@@ -502,30 +502,31 @@ class CompleteDisable2FAView(APIView):
         )
 
 
-class UsernameChangeView(generics.UpdateAPIView):
-    permission_class = [IsAuthenticated, IsNotOAuthUser]
+class UsernameChangeView(APIView):
+    permission_classes = [IsAuthenticated, IsNotOAuthUser]
     serializer_class = UsernameChangeSerializer
 
-    def get_object(self):
-        return self.request.user
-
-    def perform_update(self, serializer):
-        user = self.get_object()
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data, context={'request':request})
+        serializer.is_valid(raise_exception=True)
         new_username = serializer.validated_data.get("username")
+        user = request.user
+
         user.username = new_username
         user.username_change_count += 1
         user.save()
 
-        return user
-
-    def update(self, request, *args, **kwargs):
-        response = super().update(request, *args, **kwargs)
-        user = self.get_object()
         remaining_changes = (
             settings.MAXIMUM_ALLOWED_USERNAME_CHANGE - user.username_change_count
         )
-        response.data["remaining_changes"] = remaining_changes
-        return response
+
+        response_data = {
+            "status": "success",
+            "username": user.username,
+            "remaining_changes": remaining_changes
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class EmailChangeView(APIView):
@@ -538,13 +539,12 @@ class EmailChangeView(APIView):
         new_email = serializer.validated_data.get("new_email")
         user = request.user
 
-        utils.generate_and_send_otp(user)
+        utils.generate_and_send_otp(user) #TODO: must be send to the new email
 
-        tmp_token = utils.generate_tmp_token(user, "email_change")
         cache.set(f"email_change_new_email_{user.id}", new_email, timeout=300)
 
         return Response(
-            {"status": "verification_required", "tmp_token": tmp_token},
+            {"status": "verification_required"},
             status=status.HTTP_202_ACCEPTED,
         )
 
@@ -556,13 +556,8 @@ class CompleteEmailChangeView(APIView):
         serializer = CompleteEmailorPhoneChangeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        tmp_token = serializer.validated_data.get("tmp_token")
         code = serializer.validated_data.get("code")
         user = request.user
-
-        cached_tmp_token = cache.get(f"email_change_tmp_token_{user.id}")
-        if cached_tmp_token != tmp_token:
-            raise exceptions.InvalidTmpToken()
 
         try:
             otp_secret = cache.get(f"otp_secret_{user.id}")
@@ -581,7 +576,6 @@ class CompleteEmailChangeView(APIView):
         user.save()
 
         cache.delete(f"otp_secret_{user.id}")
-        cache.delete(f"email_change_tmp_token_{user.id}")
         cache.delete(f"email_change_new_email_{user.id}")
 
         return Response({
@@ -610,12 +604,11 @@ class PhoneChangeView(APIView):
         sms_service = SMSService(get_sms_provider(settings.SMS_PROVIDER))
         otp = sms_service.send_otp(phone_number=new_phone)
 
-        tmp_token = utils.generate_tmp_token(user, "phone_change")
         cache.set(f"phone_change_otp_{user.id}", otp, timeout=300)
         cache.set(f"phone_change_new_phone_{user.id}", new_phone, timeout=300)
 
         return Response(
-            {"status": "verification_required", "tmp_token": tmp_token},
+            {"status": "verification_required"},
             status=status.HTTP_202_ACCEPTED,
         )
 
@@ -631,9 +624,6 @@ class CompletePhoneChangeView(APIView):
         code = serializer.validated_data.get("code")
         user = request.user
 
-        cached_tmp_token = cache.get(f"phone_change_tmp_token_{user.id}")
-        if cached_tmp_token != tmp_token:
-            raise exceptions.InvalidTmpToken()
         try:
             otp = cache.get(f"phone_change_otp_{user.id}")
         except Exception:
@@ -652,7 +642,6 @@ class CompletePhoneChangeView(APIView):
         user.save()
 
         cache.delete(f"phone_change_otp_{user.id}")
-        cache.delete(f"phone_change_tmp_token_{user.id}")
         cache.delete(f"phone_change_new_phone_{user.id}")
 
         return Response(
