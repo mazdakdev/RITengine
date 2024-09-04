@@ -11,8 +11,11 @@ from django.db.models import Count, F
 from django.db.models.functions import ExtractMonth, ExtractYear
 from django.utils.timezone import now
 from RITengine.exceptions import CustomAPIException
+from django_otp.conf import settings
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_email.models import EmailDevice
+from django.template.loader import render_to_string
+from django.core.mail import send_mail, EmailMessage
 from .models import SMSDevice
 from datetime import timedelta
 import json
@@ -24,20 +27,50 @@ import string
 User = get_user_model()
 
 
-def generate_and_send_otp(user):
+def generate_otp(user):
     """
-    Generates an otp, cache its secret and sends the e-mail.
+    Generate an otp, cache its secret and return it.
     """
     secret = pyotp.random_base32()
     otp = pyotp.TOTP(secret, interval=300)
     cache.set(f"otp_secret_{user.id}", secret, timeout=300)
 
-    user.send_email(
-            subject=f"RITengine: {otp.now()}",
-            template_name="emails/verification.html",
-            context={"token": otp.now()}
+    return otp.now()
+
+def send_otp_email(otp, user=None, recipient_email=None, subject="RITengine: OTP Verification", template_name="emails/verification.html"):
+    if not user and not recipient_email:
+        raise ValueError("Either a 'user' or 'recipient_email' must be provided.")
+
+    context = {"token": otp}
+
+    if user:
+        user.send_email(
+            subject=subject,
+            template_name=template_name,
+            context=context
         )
 
+    elif recipient_email:
+        html_message = render_to_string(template_name, context)
+        email = EmailMessage(
+            subject=subject,
+            body=html_message,
+            from_email=settings.EMAIL_FROM,
+            to=[recipient_email]
+        )
+        email.content_subtype = "html"
+        email.send(fail_silently=False)
+
+def verify_otp(user, otp):
+    try:
+        otp_secret = cache.get(f"otp_secret_{user.id}")
+        totp = pyotp.TOTP(otp_secret, interval=300)
+    except Exception:
+        raise exceptions.UnknownError()
+
+    if not totp.verify(otp):
+        return False
+    return True
 
 def get_jwt_token(user):
     refresh = RefreshToken.for_user(user)

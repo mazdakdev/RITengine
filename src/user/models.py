@@ -15,8 +15,8 @@ from otp_twilio.models import TwilioSMSDevice
 from django.core.validators import RegexValidator
 from django.db import models
 from datetime import timedelta
-from .providers import MeliPayamakProvider
-from .services import SMSService
+from .adapters import MeliPayamakAdapter
+from .factories import SMSAdapterFactory
 
 class SMSDevice(TwilioSMSDevice):
     class Meta:
@@ -31,9 +31,8 @@ class SMSDevice(TwilioSMSDevice):
                 Provider itself generates the challenge and delivers it.
             """
 
-            service = SMSService(MeliPayamakProvider())
-
-            code = service.send_otp(phone_number=self.number)
+            sms_service = SMSAdapterFactory.get_sms_adapter("melipayamak")
+            code = sms_service.send_otp(phone_number=self.number)
 
             self.token = str(code)
             self.valid_until = timezone.now() + timedelta(seconds=300)
@@ -100,15 +99,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return self.username
 
     def send_email(self, subject, template_name, context={}, from_email=settings.EMAIL_FROM):
-        """
-        Send an email using an HTML template.
-
-        :param subject: Subject of the email
-        :param template_name: Path to the HTML template
-        :param context: Context data to render the template with
-        :param from_email: Sender email address
-        """
-
         html_message = render_to_string(template_name, context)
 
         email = EmailMessage(

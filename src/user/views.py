@@ -14,8 +14,7 @@ from django.core.cache import cache
 from rest_framework.permissions import IsAuthenticated
 import pyotp
 from . import utils
-from .services import SMSService
-from .providers import get_sms_provider
+from .factories import SMSAdapterFactory
 from .permissions import IsNotOAuthUser
 from RITengine.exceptions import CustomAPIException
 from . import exceptions
@@ -31,6 +30,9 @@ from .serializers import (
 from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
 from rest_framework import generics
 from django.db.models import Q
+from django.core.mail import send_mail, EmailMessage
+from django_otp.plugins.otp_email.models import EmailDevice
+from django.template.loader import render_to_string
 
 
 User = get_user_model()
@@ -509,7 +511,7 @@ class UsernameChangeView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data, context={'request':request})
         serializer.is_valid(raise_exception=True)
-        new_username = serializer.validated_data.get("username")
+        new_username = serializer.validated_data.get("new_username")
         user = request.user
 
         user.username = new_username
@@ -522,7 +524,7 @@ class UsernameChangeView(APIView):
 
         response_data = {
             "status": "success",
-            "username": user.username,
+            "new_username": user.username,
             "remaining_changes": remaining_changes
         }
 
@@ -539,7 +541,8 @@ class EmailChangeView(APIView):
         new_email = serializer.validated_data.get("new_email")
         user = request.user
 
-        utils.generate_and_send_otp(user) #TODO: must be send to the new email
+        otp = utils.generate_otp(user)
+        utils.send_otp_email(otp, recipient_email=new_email)
 
         cache.set(f"email_change_new_email_{user.id}", new_email, timeout=300)
 
@@ -559,13 +562,7 @@ class CompleteEmailChangeView(APIView):
         code = serializer.validated_data.get("code")
         user = request.user
 
-        try:
-            otp_secret = cache.get(f"otp_secret_{user.id}")
-            totp = pyotp.TOTP(otp_secret, interval=300)
-        except Exception:
-            raise exceptions.UnknownError()
-
-        if not totp.verify(code):
+        if not utils.verify_otp(user, code):
             raise exceptions.InvalidTwoFaOrOtp()
 
         new_email = cache.get(f"email_change_new_email_{user.id}")
@@ -580,10 +577,9 @@ class CompleteEmailChangeView(APIView):
 
         return Response({
             "status": "success",
-            "email": new_email,
+            "new_email": new_email,
             }, status=status.HTTP_200_OK
         )
-
 
 class PhoneChangeView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
@@ -601,7 +597,7 @@ class PhoneChangeView(APIView):
                 status_code=400,
             )
 
-        sms_service = SMSService(get_sms_provider(settings.SMS_PROVIDER))
+        sms_service = SMSAdapterFactory.get_sms_adapter(settings.SMS_PROVIDER)
         otp = sms_service.send_otp(phone_number=new_phone)
 
         cache.set(f"phone_change_otp_{user.id}", otp, timeout=300)
@@ -620,7 +616,6 @@ class CompletePhoneChangeView(APIView):
         serializer = CompleteEmailorPhoneChangeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        tmp_token = serializer.validated_data.get("tmp_token")
         code = serializer.validated_data.get("code")
         user = request.user
 
@@ -645,7 +640,10 @@ class CompletePhoneChangeView(APIView):
         cache.delete(f"phone_change_new_phone_{user.id}")
 
         return Response(
-            {"status": "success", "phone": str(new_phone)}, status=status.HTTP_200_OK
+            {
+                "status": "success",
+                "new_phone": str(new_phone)
+            }, status=status.HTTP_200_OK
         )
 
 

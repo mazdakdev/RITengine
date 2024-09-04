@@ -9,8 +9,9 @@ from .models import BackupCode
 from rest_framework import serializers, status
 import pyotp
 from .utils import (
-        generate_2fa_challenge, generate_and_send_otp, get_user_by_identifier, validate_otp,
-        validate_two_fa, validate_backup_code
+        generate_2fa_challenge, generate_otp,
+        get_user_by_identifier, validate_otp, verify_otp,
+        validate_two_fa, validate_backup_code, send_otp_email
     )
 
 
@@ -61,11 +62,13 @@ class RegistrationSerializer(serializers.Serializer):
         if created:
             user.set_password(password)  # Hash the password before saving
             user.save()
-            generate_and_send_otp(user)
+            otp = generate_otp(user)
+            send_otp_email(otp, user=user)
 
         else:
             if not user.is_email_verified:
-                generate_and_send_otp(user)
+                otp = generate_otp(user)
+                send_otp_email(otp, user=user)
 
             else:
                 raise ValidationError("User is already completed the registeration process.")
@@ -85,21 +88,14 @@ class CompleteRegisterationSerializer(serializers.Serializer):
         except User.DoesNotExist:
             raise exceptions.InvalidCredentials()
 
-        otp_secret = cache.get(f"otp_secret_{user.id}")
-
         if user.is_email_verified:
             raise ValidationError("You don't need to complete your register.")
 
-        if otp_secret is not None:
-            totp = pyotp.TOTP(otp_secret, interval=300)
-
-            if not totp.verify(otp):
-                raise exceptions.InvalidTwoFaOrOtp()
-
-            attrs['user'] = user
-            return attrs
-        else:
+        if not verify_otp(user, otp):
             raise exceptions.InvalidTwoFaOrOtp()
+
+        attrs['user'] = user
+        return attrs
 
     def save(self):
         user = self.validated_data['user']
@@ -218,7 +214,9 @@ class PasswordResetSerializer(serializers.Serializer):
             raise exceptions.EmailNotVerified()
 
         if not user.preferred_2fa:
-            generate_and_send_otp(user)
+            otp = generate_otp(user)
+            send_otp_email(otp, user=user)
+
         else:
             generate_2fa_challenge(user)
 
@@ -278,7 +276,8 @@ class PasswordChangeSerializer(serializers.Serializer):
             raise ValidationError("Your current password is incorrect.")
 
         if not user.preferred_2fa:
-            generate_and_send_otp(user)
+            otp = generate_otp(user)
+            send_otp_email(otp, user=user)
 
         else:
            generate_2fa_challenge(user)
@@ -300,12 +299,7 @@ class CompletePasswordChangeSerializer(serializers.Serializer):
             raise ValidationError("New passwords do not match.")
 
         if not user.preferred_2fa:
-            otp_secret = cache.get(f"otp_secret_{user.id}")
-            if otp_secret is None:
-                raise exceptions.InvalidTwoFaOrOtp()
-
-            totp = pyotp.TOTP(otp_secret, interval=300)
-            if not totp.verify(code):
+            if not verify_otp(user, code):
                 raise exceptions.InvalidTwoFaOrOtp()
 
         else:
@@ -362,10 +356,8 @@ class BackupCodeSerializer(serializers.ModelSerializer):
         fields = ["code", "is_used"]
 
 
-class UsernameChangeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ["username"]
+class UsernameChangeSerializer(serializers.Serializer):
+    new_username = serializers.CharField()
 
     def validate(self, attrs):
         user = self.context["request"].user
