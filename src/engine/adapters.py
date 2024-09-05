@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from django.conf import settings
-import requests
+import httpx
 
 class ExternalServiceAdapter(ABC):
     @abstractmethod
@@ -27,13 +27,14 @@ class DarkobAdapter(ExternalServiceAdapter):
             "fields[2]": "inventor",
             "values[2]": "",
         }
-        response = requests.get(self.BASE_URL, headers=self.HEADERS, params=params)
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(self.BASE_URL, headers=self.HEADERS, params=params)
 
         if response.status_code == 200:
             try:
                 response_data = response.json()
                 return {"patents_data": [item['kholaseh_ekhterah'] for item in response_data['data']['aghahi']['data']]}
             except Exception:
-                return ["something wen't wrong the patents data couldn't be retrieved."]
-
-        return ["something wen't wrong the patents data couldn't be retrieved."]
+                return ["Something went wrong, the patents data couldn't be retrieved."]
+        return ["Something went wrong, the patents data couldn't be retrieved."]
