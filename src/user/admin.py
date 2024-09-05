@@ -36,16 +36,11 @@ class CustomUserAdmin(BaseUserAdmin):
 
     def save_model(self, request, obj, form, change):
         """
-        Override the save_model method to ensure password is hashed
-        and is_email_verified is set to True by default.
+        Override the save_model method to ensure
+        is_email_verified is set to True by default.
         """
         if not change:
-            # only when newely created
-            obj.set_password(form.cleaned_data.get('password'))
             obj.is_email_verified = True
-        elif form.cleaned_data.get('password') and 'password' in form.changed_data:
-            obj.set_password(form.cleaned_data['password'])
-
         super().save_model(request, obj, form, change)
 
 admin.site.register(User, CustomUserAdmin)
