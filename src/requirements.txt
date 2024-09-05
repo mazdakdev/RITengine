@@ -27,7 +27,7 @@ daphne==4.1.2
 distro==1.8.0
 dj-database-url==2.2.0
 dj-rest-auth==6.0.0
-Django==4.2.13
+Django==4.2.15
 django-allauth==0.63.3
 django-celery-beat==2.7.0
 django-cors-headers==4.4.0
