@@ -2,11 +2,9 @@ from django.contrib import admin
 from django.urls import path
 from django.template.response import TemplateResponse
 from stats.utils import get_engine_performance, get_engine_performance_over_time
-from django.contrib.admin.views.decorators import staff_member_required
-from django.utils.decorators import method_decorator
 from django.core.serializers.json import DjangoJSONEncoder
 import json
-from user.utils import get_user_stats
+from user.utils.general import get_users_stats
 
 class CustomAdminSite(admin.AdminSite):
     def get_urls(self):
@@ -19,7 +17,7 @@ class CustomAdminSite(admin.AdminSite):
     def statstics_view(self, request):
         engine_performance = get_engine_performance()
         engine_popularity = get_engine_performance_over_time()
-        user_stats = get_user_stats()
+        user_stats = get_users_stats()
         print(engine_popularity)
 
         context = {

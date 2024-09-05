@@ -1,19 +1,18 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from rest_framework.exceptions import ValidationError, APIException
+from rest_framework.exceptions import ValidationError
 from RITengine.exceptions import CustomAPIException
 from . import exceptions
 from phonenumber_field.serializerfields import PhoneNumberField
 from .models import BackupCode
-from rest_framework import serializers, status
-import pyotp
-from .utils import (
+from rest_framework import serializers
+from .utils.auth import (
         generate_2fa_challenge, generate_otp,
-        get_user_by_identifier, validate_otp, verify_otp,
-        validate_two_fa, validate_backup_code, send_otp_email
+        validate_otp, validate_two_fa,
+        send_otp_email
     )
-
+from .utils.general import get_user_by_identifier
 
 User = get_user_model()
 
@@ -91,7 +90,7 @@ class CompleteRegisterationSerializer(serializers.Serializer):
         if user.is_email_verified:
             raise ValidationError("You don't need to complete your register.")
 
-        if not verify_otp(user, otp):
+        if not validate_otp(user, otp):
             raise exceptions.InvalidTwoFaOrOtp()
 
         attrs['user'] = user
@@ -114,8 +113,8 @@ class LoginSerializer(serializers.Serializer):
 
         user = get_user_by_identifier(identifier)
 
-        if user is None:
-            raise exceptions.InvalidCredentials()
+        if not user:
+            raise  exceptions.InvalidCredentials()
 
         username = user.username
 
@@ -203,12 +202,16 @@ class UserDetailsSerializer(serializers.ModelSerializer):
         read_only_fields = ["username", "email", "phone_number", "preferred_2fa", "last_login"]
 
 
+
 class PasswordResetSerializer(serializers.Serializer):
     identifier = serializers.CharField()
 
     def validate(self, attrs):
         identifier = attrs.get("identifier")
         user = get_user_by_identifier(identifier)
+
+        if not user:
+            raise exceptions.InvalidCredentials()
 
         if not user.is_email_verified:
             raise exceptions.EmailNotVerified()
@@ -243,6 +246,9 @@ class CompletePasswordResetSerializer(serializers.Serializer):
             raise ValidationError("New passwords must match.")
 
         user = get_user_by_identifier(identifier)
+
+        if not user:
+            raise exceptions.InvalidCredentials()
 
         if not user.is_email_verified:
             raise CustomAPIException("Email is not verified.")
@@ -280,7 +286,7 @@ class PasswordChangeSerializer(serializers.Serializer):
             send_otp_email(otp, user=user)
 
         else:
-           generate_2fa_challenge(user)
+            generate_2fa_challenge(user)
 
         return attrs
 
@@ -299,7 +305,7 @@ class CompletePasswordChangeSerializer(serializers.Serializer):
             raise ValidationError("New passwords do not match.")
 
         if not user.preferred_2fa:
-            if not verify_otp(user, code):
+            if not validate_otp(user, code):
                 raise exceptions.InvalidTwoFaOrOtp()
 
         else:
@@ -322,7 +328,7 @@ class Request2FASerializer(serializers.Serializer):
     def validate(self, attrs):
         identifier = attrs.get("identifier")
         user = get_user_by_identifier(identifier)
-        if user is None:
+        if not user:
             raise exceptions.InvalidCredentials()
 
         attrs["user"] = user

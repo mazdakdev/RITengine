@@ -12,8 +12,8 @@ from django.db import transaction
 from .models import BackupCode
 from django.core.cache import cache
 from rest_framework.permissions import IsAuthenticated
-import pyotp
-from . import utils
+from .utils import auth as auth_utils
+from .utils import general as general_utils
 from .factories import SMSAdapterFactory
 from .permissions import IsNotOAuthUser
 from RITengine.exceptions import CustomAPIException
@@ -30,13 +30,8 @@ from .serializers import (
 from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
 from rest_framework import generics
 from django.db.models import Q
-from django.core.mail import send_mail, EmailMessage
-from django_otp.plugins.otp_email.models import EmailDevice
-from django.template.loader import render_to_string
-
 
 User = get_user_model()
-
 
 class GitHubLoginView(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
@@ -52,7 +47,7 @@ class GitHubLoginView(SocialLoginView):
     def get_response(self):
         user = self.request.user
         serializer = UserSerializer(user)
-        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+        access, refresh, access_exp, refresh_exp = auth_utils.get_jwt_token(user)
 
         return Response(
             {
@@ -80,7 +75,7 @@ class GoogleLoginView(SocialLoginView):
     def get_response(self):
         user = self.request.user
         serializer = UserSerializer(user)
-        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+        access, refresh, access_exp, refresh_exp = auth_utils.get_jwt_token(user)
 
         return Response(
             {
@@ -121,7 +116,7 @@ class CompleteRegistrationView(APIView):
                 template_name="emails/welcome.html",
             )
 
-        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+        access, refresh, access_exp, refresh_exp = auth_utils.get_jwt_token(user)
         user_serializer = UserSerializer(user)
 
         return Response(
@@ -146,7 +141,7 @@ class CustomLoginView(APIView):
         user = serializer.validated_data["user"]
 
         if user.preferred_2fa:
-            tmp_token = utils.generate_tmp_token(user, "2fa")
+            tmp_token = auth_utils.generate_tmp_token(user, "2fa")
             utils.generate_2fa_challenge(user)
 
             return Response(
@@ -156,7 +151,7 @@ class CustomLoginView(APIView):
 
         user.last_login = timezone.now()
         user.save()
-        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+        access, refresh, access_exp, refresh_exp = auth_utils.get_jwt_token(user)
         user_serializer = UserSerializer(user)
 
         return Response(
@@ -179,7 +174,7 @@ class CompleteLoginView(APIView):
         user = serializer.validated_data["user"]
         user.last_login = timezone.now()
         user.save()
-        access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+        access, refresh, access_exp, refresh_exp = auth_utils.get_jwt_token(user)
         user_serializer = UserSerializer(user)
 
         return Response(
@@ -240,7 +235,7 @@ class PasswordResetView(APIView):
         user = serializer.validated_data["user"]
 
         # Generate temporary token and bind it to the user ID
-        tmp_token = utils.generate_tmp_token(user, "passwd")
+        tmp_token = auth_utils.generate_tmp_token(user, "passwd")
 
         return Response(
             {
@@ -313,11 +308,11 @@ class Enable2FAView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        utils.remove_existing_2fa_devices(user)
+        auth_utils.remove_existing_2fa_devices(user)
         user.preferred_2fa = None
         user.save()
 
-        device = utils.create_2fa_device(user, method)
+        device = auth_utils.create_2fa_device(user, method)
         device.save()
         setattr(user, f"{method}_device", device)
         user.save()
@@ -353,7 +348,7 @@ class Verify2FASetupView(APIView):
             user.save()
 
             # Generate backup codes
-            codes = utils.generate_backup_codes()
+            codes = auth_utils.generate_backup_codes()
             backup_codes = [BackupCode(user=user, code=code) for code in codes]
             BackupCode.objects.bulk_create(backup_codes)
             backup_code_serializer = BackupCodeSerializer(backup_codes, many=True)
@@ -388,7 +383,7 @@ class Change2FAMethodView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        new_device = utils.create_2fa_device(user, new_method)
+        new_device = auth_utils.create_2fa_device(user, new_method)
         new_device.save()
         setattr(user, f"{new_method}_device", new_device)
         user.save()
@@ -423,14 +418,14 @@ class CompleteChange2FAView(APIView):
         new_device.confirmed = True
         new_device.save()
 
-        utils.remove_existing_2fa_devices(user, exclude_method=new_method)
+        auth_utils.remove_existing_2fa_devices(user, exclude_method=new_method)
 
         user.preferred_2fa = new_method
         user.save()
 
         # Generate new backup codes
         BackupCode.objects.filter(user=user).delete()
-        codes = utils.generate_backup_codes()
+        codes = auth_utils.generate_backup_codes()
         backup_codes = [BackupCode(user=user, code=code) for code in codes]
         BackupCode.objects.bulk_create(backup_codes)
         backup_code_serializer = BackupCodeSerializer(backup_codes, many=True)
@@ -486,7 +481,7 @@ class CompleteDisable2FAView(APIView):
         serializer.is_valid(raise_exception=True)
         code = serializer.validated_data["code"]
 
-        if not utils.validate_two_fa(user, code):
+        if not auth_utils.validate_two_fa(user, code):
             raise exceptions.InvalidTwoFaOrOtp()
 
         method = user.preferred_2fa
@@ -543,8 +538,8 @@ class EmailChangeView(APIView):
         new_email = serializer.validated_data.get("new_email")
         user = request.user
 
-        otp = utils.generate_otp(user)
-        utils.send_otp_email(otp, recipient_email=new_email)
+        otp = auth_utils.generate_otp(user)
+        auth_utils.send_otp_email(otp, recipient_email=new_email)
 
         cache.set(f"email_change_new_email_{user.id}", new_email, timeout=300)
 
@@ -564,7 +559,7 @@ class CompleteEmailChangeView(APIView):
         code = serializer.validated_data.get("code")
         user = request.user
 
-        if not utils.verify_otp(user, code):
+        if not auth_utils.validate_otp(user, code):
             raise exceptions.InvalidTwoFaOrOtp()
 
         new_email = cache.get(f"email_change_new_email_{user.id}")
@@ -657,20 +652,9 @@ class UserGetView(APIView):
         identifier = request.query_params.get('identifier', '').strip()
 
         if identifier:
-            User = get_user_model()
-
-            try:
-                user = User.objects.get(
-                    Q(email__iexact=identifier) |
-                    Q(username__iexact=identifier) |
-                    Q(phone_number__iexact=identifier)
-                )
-
-                serializer = UserSerializer(user)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-
-            except User.DoesNotExist:
-                raise CustomAPIException("No user found with the given identifier.", status_code=status.HTTP_404_NOT_FOUND)
+            user = general_utils.get_user_by_identifier(identifier, case_sensitive=False)
+            serializer = UserSerializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         raise CustomAPIException("Identifier is required.", status_code=status.HTTP_400_BAD_REQUEST)
 
