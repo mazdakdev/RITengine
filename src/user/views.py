@@ -49,10 +49,11 @@ class GitHubLoginView(SocialLoginView):
         self.request.user.is_oauth_based = True
         self.request.user.save()
 
-    def post(self, request, *args, **kwargs):
-        user = request.user
+    def get_response(self):
+        user = self.request.user
         serializer = UserSerializer(user)
         access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+
         return Response(
             {
                 "access": str(access),
@@ -76,10 +77,11 @@ class GoogleLoginView(SocialLoginView):
         self.request.user.is_oauth_based = True
         self.request.user.save()
 
-    def post(self, request, *args, **kwargs):
-        user = request.user
+    def get_response(self):
+        user = self.request.user
         serializer = UserSerializer(user)
         access, refresh, access_exp, refresh_exp = utils.get_jwt_token(user)
+
         return Response(
             {
                 "access": str(access),

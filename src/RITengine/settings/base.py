@@ -28,7 +28,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.sites",
     "rest_framework",
-    "rest_framework.authtoken",
     "dj_rest_auth",
     "allauth",
     "allauth.account",
@@ -113,13 +112,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-REST_AUTH = {
-    "SESSION_LOGIN": True,
-    "USE_JWT": True,
-    "JWT_AUTH_COOKIE": "auth",
-    "JWT_AUTH_HTTPONLY": True,
-}
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": parse_duration(
         os.getenv("ACCESS_TOKEN_LIFETIME", default="5m")
@@ -144,19 +136,11 @@ WSGI_APPLICATION = "RITengine.wsgi.application"
 ASGI_APPLICATION = "RITengine.asgi.application"
 
 
-SPECTACULAR_SETTINGS = {
-    "TITLE": "RITengine ENDPOINTs",
-    "DESCRIPTION": "API ENDPOINTs",
-    "VERSION": "1.0.0",
-    "SERVE_INCLUDE_SCHEMA": False,
-}
-
-
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework.authentication.TokenAuthentication",
-        "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    'TOKEN_MODEL': None,
     "DEFAULT_THROTTLE_CLASSES": [
         "RITengine.throttles.CustomAnonRateThrottle",
         "RITengine.throttles.CustomUserRateThrottle",
@@ -173,6 +157,8 @@ REST_FRAMEWORK = {
     "PAGE_SIZE_QUERY_PARAM": "page_size",
     "MAX_PAGE_SIZE": 100,
 }
+
+
 
 AUTH_USER_MODEL = "user.CustomUser"
 
@@ -200,6 +186,11 @@ SOCIALACCOUNT_PROVIDERS = {
                 'access_type': 'online',
             }
         }
+}
+
+REST_AUTH = {
+    "USE_JWT": True,
+    "TOKEN_MODEL": None,
 }
 
 # Internationalization

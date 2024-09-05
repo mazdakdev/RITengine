@@ -77,8 +77,8 @@ def get_jwt_token(user):
     access_token = refresh.access_token
     current_time = datetime.now(timezone.utc).timestamp()
 
-    access_exp = access_token["exp"]
-    refresh_exp = refresh["exp"]
+    access_exp = access_token.get("exp", current_time) #using current_time as a fallback
+    refresh_exp = refresh.get("exp", current_time)
 
     access_exp_remaining = max(0, round(access_exp - current_time))
     refresh_exp_remaining = max(0, round(refresh_exp - current_time))
