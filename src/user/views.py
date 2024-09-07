@@ -142,7 +142,7 @@ class CustomLoginView(APIView):
 
         if user.preferred_2fa:
             tmp_token = auth_utils.generate_tmp_token(user, "2fa")
-            utils.generate_2fa_challenge(user)
+            auth_utils.generate_2fa_challenge(user)
 
             return Response(
                 {"status": "2fa_required", "tmp_token": tmp_token},

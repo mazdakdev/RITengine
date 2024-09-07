@@ -5,14 +5,22 @@ from openai import AsyncOpenAI
 from .models import Chat, Message
 from .utils import save_message, authenticate_user, get_prompts, load_chat_history
 import json
+import asyncio
 
 class ChatConsumer(AsyncWebsocketConsumer):
+    TIMEOUT = 300
+
     async def connect(self):
+        self.last_activity = asyncio.get_event_loop().time()
         self.messages = []
         self.slug = self.scope['url_route']['kwargs'].get('slug')
+
+        self.timeout_task = asyncio.create_task(self.timeout_check())
+
         await self.accept()
 
     async def receive(self, text_data):
+        self.last_activity = asyncio.get_event_loop().time()
         data = json.loads(text_data)
         message_text = data.get("message")
         engines_list = data.get("engines_list")
@@ -102,3 +110,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
         }))
 
         self.messages.append({"role": "system", "content": final_response})
+
+    async def timeout_check(self):
+        while True:
+            await asyncio.sleep(self.TIMEOUT)
+            current_time = asyncio.get_event_loop().time()
+            if current_time - self.last_activity > self.TIMEOUT:
+                await self.close(code=4001, reason="closed due to inactivity.")
+                break
+
+    async def disconnect(self, close_code):
+        self.messages = []
+        # Cancel the timeout check task if it's running
+        if hasattr(self, 'timeout_task'):
+            self.timeout_task.cancel()
+            try:
+                await self.timeout_task
+            except asyncio.CancelledError:
+                pass

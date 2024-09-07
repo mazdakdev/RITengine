@@ -5,15 +5,15 @@ from datetime import timedelta
 
 User = get_user_model()
 
-@shared_task
-def deactivate_inactive_users():
-    one_week_ago = timezone.now() - timedelta(weeks=1)
-    inactive_users = User.objects.filter(
-        is_active=True,
-        is_superuser=False,
-        is_staff=False,
-        created_at__lte=one_week_ago
-    )
-    for user in inactive_users.iterator(chunk_size=1000):
-        user.is_active = False
-        user.save()
+# @shared_task
+# def deactivate_inactive_users():
+#     one_week_ago = timezone.now() - timedelta(weeks=1)
+#     inactive_users = User.objects.filter(
+#         is_active=True,
+#         is_superuser=False,
+#         is_staff=False,
+#         created_at__lte=one_week_ago
+#     )
+#     for user in inactive_users.iterator(chunk_size=1000):
+#         user.is_active = False
+#         user.save()
