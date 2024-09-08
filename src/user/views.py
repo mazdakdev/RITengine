@@ -100,7 +100,7 @@ class CustomRegisterView(APIView):
         serializer.save(request)
 
         return Response(
-            {"status": "success", "details": "Verification code sent successfully."},
+            {"status": "success", "detail": "Verification code sent successfully."},
             status=status.HTTP_200_OK,
         )
 
@@ -286,7 +286,7 @@ class CompletePasswordChangeView(APIView):
         return Response(
             {
                 "status": "success",
-                "details":"Password changed successfully"
+                "detail":"Password changed successfully"
             },
             status=status.HTTP_200_OK,
         )
@@ -305,7 +305,7 @@ class Enable2FAView(APIView):
 
         if user.preferred_2fa:
             return Response(
-                {"status": "error", "details": "2FA is already enabled."},
+                {"status": "error", "detail": "2FA is already enabled."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -321,7 +321,7 @@ class Enable2FAView(APIView):
         response_data = {"status": "success"}
         if method in ["email", "sms"]:
             device.generate_challenge()
-            response_data["details"] = "An email has been sent." if method == "email" else "An SMS has been sent."
+            response_data["detail"] = "An email has been sent." if method == "email" else "An SMS has been sent."
         else:
             response_data["provisioning_uri"] = device.config_url
 
@@ -330,6 +330,7 @@ class Enable2FAView(APIView):
 
 class Verify2FASetupView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
+    throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
 
     @transaction.atomic
     def post(self, request, *args, **kwargs):
@@ -357,7 +358,7 @@ class Verify2FASetupView(APIView):
             return Response(
                 {
                     "status": "success",
-                    "details": "2FA setup completed.",
+                    "detail": "2FA setup completed.",
                     "backup_codes": backup_code_serializer.data,
                 },
                 status=status.HTTP_200_OK,
@@ -380,7 +381,7 @@ class Change2FAMethodView(APIView):
 
         if user.preferred_2fa == new_method:
             return Response(
-                {"status": "error", "details": "This method is already your active 2FA method."},
+                {"status": "error", "detail": "This method is already your active 2FA method."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -392,7 +393,7 @@ class Change2FAMethodView(APIView):
         response_data = {"status": "success"}
         if new_method in ["email", "sms"]:
             new_device.generate_challenge()
-            response_data["details"] = "An email has been sent." if new_method == "email" else "An SMS has been sent."
+            response_data["detail"] = "An email has been sent." if new_method == "email" else "An SMS has been sent."
         else:
             response_data["provisioning_uri"] = new_device.config_url
 
@@ -401,6 +402,7 @@ class Change2FAMethodView(APIView):
 
 class CompleteChange2FAView(APIView):
     permission_classes = [IsAuthenticated, IsNotOAuthUser]
+    throttle_classes = [TwoFAAnonRateThrottle, TwoFAUserRateThrottle]
 
     @transaction.atomic
     def post(self, request, *args, **kwargs):
@@ -434,7 +436,7 @@ class CompleteChange2FAView(APIView):
         return Response(
             {
                 "status": "success",
-                "details": "2FA method has been updated successfully.",
+                "detail": "2FA method has been updated successfully.",
                 "backup_codes": backup_code_serializer.data,
             },
             status=status.HTTP_200_OK,
@@ -497,7 +499,7 @@ class CompleteDisable2FAView(APIView):
         BackupCode.objects.filter(user=user).delete()
 
         return Response(
-            {"status": "success", "details": "2FA has been disabled."},
+            {"status": "success", "detail": "2FA has been disabled."},
             status=status.HTTP_200_OK,
         )
 

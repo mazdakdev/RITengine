@@ -7,12 +7,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Bookmark
 from engine.models import Message
-from .filters import BookmarkFilter
 from engine.serializers import MessageSerializer
-from collections import defaultdict
 from RITengine.exceptions import CustomAPIException
 from rest_framework.views import APIView
-from user.serializers import UserSerializer
 from django.db.models import Q
 from share.permissions import IsOwnerOrViewer
 

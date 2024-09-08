@@ -5,9 +5,8 @@ from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework.views import APIView
 from share.views import GenerateShareableLinkView, BaseViewersListView
-from user.serializers import UserSerializer
 from .models import Project, Message
-from .serializers import ProjectSerializer, MessageProjectAssociationSerializer
+from .serializers import ProjectSerializer
 from engine.serializers import MessageSerializer
 from django_filters import rest_framework as filters
 from user.exceptions import CustomAPIException

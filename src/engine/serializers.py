@@ -7,7 +7,6 @@ from .models import (
     Assist,
     EngineCategory
 )
-from collections import defaultdict
 
 class StreamGeneratorSerializer(serializers.Serializer):
     engine_id = serializers.IntegerField()

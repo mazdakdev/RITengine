@@ -19,7 +19,7 @@ class LegalDocumentViewSet(ModelViewSet):
         if isinstance(exc, NotFound):
             return Response({
                 'status': 'error',
-                'details': 'Legal Document Not Found',
+                'detail': 'Legal Document Not Found',
                 'error_code': 'document_not_found'
             }, status=status.HTTP_404_NOT_FOUND)
 
@@ -41,7 +41,7 @@ class FaqDocumentView(generics.ListCreateAPIView):
         if not request.user.is_staff:
             return Response({
                 'status': 'error',
-                'details': 'You do not have permission to perform this action.'
+                'detail': 'You do not have permission to perform this action.'
             }, status=status.HTTP_403_FORBIDDEN)
 
         return super().post(request, *args, **kwargs)

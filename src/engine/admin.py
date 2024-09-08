@@ -1,8 +1,8 @@
 from django.contrib import admin
 from .models import Engine, Message, Chat, EngineCategory, Assist
-from django.db.models import Count, Case, When, IntegerField
-from stats.models import Vote
-from stats.utils import get_engine_performance, get_engine_performance_over_time
+# from django.db.models import Count, Case, When, IntegerField
+# from stats.models import Vote
+# from stats.utils import get_engine_performance, get_engine_performance_over_time
 
 # @admin.register(Engine)
 # class EngineAdmin(admin.ModelAdmin):

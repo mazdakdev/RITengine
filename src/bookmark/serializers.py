@@ -1,9 +1,7 @@
 from rest_framework import serializers
-from engine.models import Message
 from .models import Bookmark
 from engine.serializers import MessageSerializer
 from collections import defaultdict
-from datetime import datetime
 
 class BookmarkSerializer(serializers.ModelSerializer):
     messages = MessageSerializer(many=True, read_only=True)

@@ -2,7 +2,7 @@ from channels.db import database_sync_to_async
 from django.utils import timezone
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .models import Chat, Message, Engine, EngineCategory
+from .models import Message, Engine, EngineCategory
 
 @database_sync_to_async
 def save_message(chat, text, sender, engine_ids, reply_to=None):

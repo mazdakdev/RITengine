@@ -1,6 +1,5 @@
 from django.db import models
 from share.models import ShareableModel
-from rest_framework.validators import ValidationError
 from RITengine.exceptions import CustomAPIException
 
 class Bookmark(ShareableModel):
