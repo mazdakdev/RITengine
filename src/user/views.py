@@ -594,7 +594,7 @@ class PhoneChangeView(APIView):
                 "Your previous phone number can't be same with the new one.",
                 status_code=400,
             )
-        send_sms_otp_task.delay(new_phone, user, is_2fa=False)
+        send_sms_otp_task.delay(str(new_phone), user.id, is_2fa=False)
 
         cache.set(f"phone_change_new_phone_{user.id}", new_phone, timeout=300)
 

@@ -56,7 +56,7 @@ class EmailDevice(_EmailDevice):
         send_email.delay(
             subject="2FA code",
             template_name="emails/verification.html",
-            recipient_email=[self.email or self.user.email],
+            recipient_email=self.email or self.user.email,
             context=context
         )
 

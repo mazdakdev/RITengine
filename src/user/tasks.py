@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task(bind=True)
 @retry(wait=wait_exponential(min=1, max=10), stop=stop_after_attempt(3))
-def send_sms_otp_task(phone_number, user=None, device_id=None, is_2fa=True):
+def send_sms_otp_task(phone_number, user_id=None, device_id=None, is_2fa=True):
     try:
         adapter = SMSAdapterFactory.get_sms_adapter(settings.SMS_PROVIDER)
         code = adapter.send_otp(phone_number)
@@ -27,7 +27,7 @@ def send_sms_otp_task(phone_number, user=None, device_id=None, is_2fa=True):
             device.save()
 
         else:
-            cache.set(f"phone_change_otp_{user.id}", code, timeout=300)
+            cache.set(f"phone_change_otp_{user_id}", code, timeout=300)
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Request error: {e}")

@@ -59,7 +59,7 @@ def send_otp_email(otp: str, user: Optional[User] = None, recipient_email: Optio
         )
 
     elif recipient_email:
-        send_email.delay(subject, template_name, [recipient_email], context)
+        send_email.delay(subject, template_name, recipient_email, context)
 
 
 def validate_two_fa(user: User, otp: str) -> bool:
