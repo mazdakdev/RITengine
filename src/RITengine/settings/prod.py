@@ -25,7 +25,7 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 # }
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+# CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 

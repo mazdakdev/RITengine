@@ -44,7 +44,6 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_totp",
     "channels",
     "django_filters",
-    'django_celery_beat',
 ]
 
 INSTALLED_APPS += [

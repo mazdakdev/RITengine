@@ -122,11 +122,14 @@ def remove_existing_2fa_devices(user: User, exclude_method: str = "") -> None:
     for method in ['email', 'sms', 'totp']:
         if method == exclude_method:
             continue
-        device = getattr(user, f"{method}_device", None)
-        if device:
-            device.delete()
-            setattr(user, f"{method}_device", None)
-            user.save()
+
+        if hasattr(user, f"{method}_device"):
+            device = getattr(user, f"{method}_device", None)
+            if device:
+                device.delete()
+                setattr(user, f"{method}_device", None)
+                user.save()
+
 
 def get_jwt_token(user: User) -> tuple[RefreshToken, RefreshToken, int, int]:
     refresh = RefreshToken.for_user(user)
