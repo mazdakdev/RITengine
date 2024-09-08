@@ -42,8 +42,6 @@ INSTALLED_APPS = [
     "django_otp",
     "django_otp.plugins.otp_email",
     "django_otp.plugins.otp_totp",
-    "django_twilio",
-    "otp_twilio",
     "channels",
     "django_filters",
     'django_celery_beat',

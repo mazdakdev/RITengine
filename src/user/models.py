@@ -1,43 +1,12 @@
 from django.conf import settings
-from django.contrib.auth.models import (
-    AbstractBaseUser,
-    BaseUserManager,
-    PermissionsMixin,
-)
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from .managers import UserManager
-from django.core.mail import send_mail, EmailMessage
-from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
 from django_otp.plugins.otp_totp.models import TOTPDevice
-from django_otp.plugins.otp_email.models import EmailDevice
-from django.template.loader import render_to_string
-from otp_twilio.models import TwilioSMSDevice
 from django.core.validators import RegexValidator
 from django.db import models
-from datetime import timedelta
-from .adapters import MeliPayamakAdapter
-from .factories import SMSAdapterFactory
-
-class SMSDevice(TwilioSMSDevice):
-    class Meta:
-        proxy = True
-
-    def generate_challenge(self):
-        if settings.SMS_PROVIDER == "twilio":
-            super().generate_challenge(self)
-
-        elif settings.SMS_PROVIDER == "melipayamak":
-            """
-                Provider itself generates the challenge and delivers it.
-            """
-
-            sms_service = SMSAdapterFactory.get_sms_adapter("melipayamak")
-            code = sms_service.send_otp(phone_number=self.number)
-
-            self.token = str(code)
-            self.valid_until = timezone.now() + timedelta(seconds=300)
-            self.save()
-
+from .tasks import send_email, send_text_email
+from .otp_devices import SMSDevice, EmailDevice
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username_regex = RegexValidator(
@@ -99,27 +68,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return self.username
 
     def send_email(self, subject, template_name, context={}, from_email=settings.EMAIL_FROM):
-        html_message = render_to_string(template_name, context)
-
-        email = EmailMessage(
-            subject,
-            html_message,
-            from_email,
-            [self.email]
-        )
-
-        email.content_subtype = "html"
-        email.send(fail_silently=False)
-
+        send_email.delay(subject, template_name, self.email, context, from_email)
 
     def send_text_email(self, subject, message, from_email=settings.EMAIL_FROM):
-          email = EmailMessage(
-              subject,
-              message,
-              from_email,
-              [self.email]
-          )
-          email.send(fail_silently=False)
+        send_text_email.delay(subject, message, self.email, from_email)
 
     # def send_sms(self, message):
     #     sms_service = SMSService(get_sms_provider(settings.SMS_PROVIDER))

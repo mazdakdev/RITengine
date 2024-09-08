@@ -8,10 +8,11 @@ from user import exceptions
 from RITengine.exceptions import CustomAPIException
 from django_otp.conf import settings
 from django_otp.plugins.otp_totp.models import TOTPDevice
-from django_otp.plugins.otp_email.models import EmailDevice
+from user.otp_devices import EmailDevice
+from user.otp_devices import SMSDevice
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
-from user.models import SMSDevice, BackupCode
+from user.models import BackupCode
 from django.contrib.auth import get_user_model
 import pyotp
 import uuid

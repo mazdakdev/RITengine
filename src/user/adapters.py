@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from abc import ABC, abstractmethod
 from django.conf import settings
-from rest_framework.exceptions import APIException
+from RITengine.exceptions import CustomAPIException
 import logging
 import requests
 
@@ -73,20 +73,33 @@ class TwilioAdapter(SMSAdapter):
     def send_otp(self, phone_number):
        raise NotImplementedError()
 
+    def send_message(self, phone_number, message):
+        raise NotImplementedError()
+
 class MeliPayamakAdapter(SMSAdapter):
     def send_otp(self, phone_number):
         data = {"to": str(phone_number)}
-        response = requests.post(
-            'https://console.melipayamak.com/api/send/otp/' + settings.MELI_PAYAMAK_KEY
-            , json=data
-        )
 
-        if response.status_code == 200:
-            return response.json()['code']
+        try:
+            response = requests.post(
+                f'https://console.melipayamak.com/api/send/otp/{settings.MELI_PAYAMAK_KEY}',
+                json=data
+            )
+            response.raise_for_status()
 
-        else:
-            logger.error('Error sending token by : {0}'.format(str(response.json()['status'])))
-            raise APIException(detail="Error sending OTP by the provider, Please try again later.")
+            response_data = response.json()
+            if 'code' in response_data:
+                return response_data['code']
+            else:
+                logger.error(f"Unexpected response format: {response_data}")
+                raise CustomAPIException(detail="Unexpected response format from OTP provider.", status_code=502)
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request error: {e}")
+            raise CustomAPIException(detail="Error sending OTP by the provider, Please try again later.", status_code=502)
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            raise CustomAPIException(detail="Something went wrong while sending the OTP. Please try again later.", status_code=502)
 
     def send_message(self, phone_number, message):
         raise NotImplementedError()
