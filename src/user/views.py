@@ -30,6 +30,7 @@ from .serializers import (
 from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
 from rest_framework import generics
 from django.db.models import Q
+from .tasks import send_sms_otp_task
 
 User = get_user_model()
 
@@ -593,11 +594,8 @@ class PhoneChangeView(APIView):
                 "Your previous phone number can't be same with the new one.",
                 status_code=400,
             )
+        send_sms_otp_task.delay(new_phone, user, is_2fa=False)
 
-        sms_service = SMSAdapterFactory.get_sms_adapter(settings.SMS_PROVIDER)
-        otp = sms_service.send_otp(phone_number=new_phone)
-
-        cache.set(f"phone_change_otp_{user.id}", otp, timeout=300)
         cache.set(f"phone_change_new_phone_{user.id}", new_phone, timeout=300)
 
         return Response(

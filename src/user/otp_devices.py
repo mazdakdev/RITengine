@@ -26,7 +26,7 @@ class SMSDevice(ThrottlingMixin, SideChannelDevice):
         self.generate_token(valid_secs=getattr(settings, 'OTP_TWILIO_TOKEN_VALIDITY', 300))
 
         from .tasks import send_sms_otp_task
-        send_sms_otp_task.delay(self.id, str(self.number))
+        send_sms_otp_task.delay(str(self.number), device_id=self.id)
 
         return "otp sent"
 

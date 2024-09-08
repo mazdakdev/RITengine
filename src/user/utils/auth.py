@@ -14,6 +14,7 @@ from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
 from user.models import BackupCode
 from django.contrib.auth import get_user_model
+from user.tasks import send_email
 import pyotp
 import uuid
 import random
@@ -58,15 +59,8 @@ def send_otp_email(otp: str, user: Optional[User] = None, recipient_email: Optio
         )
 
     elif recipient_email:
-        html_message = render_to_string(template_name, context)
-        email = EmailMessage(
-            subject=subject,
-            body=html_message,
-            from_email=settings.EMAIL_FROM,
-            to=[recipient_email]
-        )
-        email.content_subtype = "html"
-        email.send(fail_silently=False)
+        send_email.delay(subject, template_name, [recipient_email], context)
+
 
 def validate_two_fa(user: User, otp: str) -> bool:
     """
