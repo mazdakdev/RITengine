@@ -653,7 +653,7 @@ class UserGetView(APIView):
 
         if identifier:
             user = general_utils.get_user_by_identifier(identifier, case_sensitive=False)
-            serializer = UserSerializer(user)
+            serializer = UserSerializer(user, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         raise CustomAPIException("Identifier is required.", status_code=status.HTTP_400_BAD_REQUEST)

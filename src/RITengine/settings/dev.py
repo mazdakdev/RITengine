@@ -44,23 +44,13 @@ CACHES = {
     }
 }
 
-# CELERY_BROKER_URL = 'redis://localhost:6379/0'
-# CELERY_RESULT_BACKEND = CELERY_BROKER_URL
-# CELERY_BEAT_SCHEDULE = {
-#     'deactivate_inactive_users_every_day': {
-#         'task': 'user.tasks.deactivate_inactive_users',
-#         'schedule': crontab(hour=0, minute=0),  # Runs every day at midnight
-#     },
+
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django.core.cache.backends.redis.RedisCache",
+#         "LOCATION": 'redis://localhost:6380/1',
+#     }
 # }
-#
-
-
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": 'redis://localhost:6380/1',
-    }
-}
 CELERY_BROKER_URL = 'redis://localhost:6380/0'  #TODO: .env
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 # CELERY_BEAT_SCHEDULE = {
@@ -71,6 +61,6 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 # }
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+# CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
