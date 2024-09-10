@@ -5,8 +5,6 @@ services:
         volumes:
             - static_volume:/app/staticfiles
             - media_volume:/app/mediafiles
-        expose:
-            - 8000
         depends_on:
             - redis
             - db
@@ -47,8 +45,6 @@ services:
     redis:
         image: redis:latest
         restart: unless-stopped
-        ports:
-            - "6379:6379"
 
     db:
         image: postgres:latest
@@ -57,8 +53,6 @@ services:
             - postgres_data:/var/lib/postgresql/data/
         env_file:
             - .env.prod
-        ports:
-            - "5432:5432"
 
 volumes:
     static_volume:

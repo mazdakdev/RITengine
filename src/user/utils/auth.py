@@ -2,16 +2,12 @@ from typing import Optional, Union
 from rest_framework.generics import get_object_or_404
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.cache import cache
-from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, timezone
 from user import exceptions
 from RITengine.exceptions import CustomAPIException
-from django_otp.conf import settings
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from user.otp_devices import EmailDevice
 from user.otp_devices import SMSDevice
-from django.template.loader import render_to_string
-from django.core.mail import EmailMessage
 from user.models import BackupCode
 from django.contrib.auth import get_user_model
 from user.tasks import send_email
