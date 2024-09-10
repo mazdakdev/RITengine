@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.auth import get_user_model
+from .models import EmailDevice, SMSDevice
 
 User = get_user_model()
 
@@ -44,3 +45,4 @@ class CustomUserAdmin(BaseUserAdmin):
         super().save_model(request, obj, form, change)
 
 admin.site.register(User, CustomUserAdmin)
+admin.site.register(SMSDevice)

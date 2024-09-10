@@ -130,7 +130,6 @@ def remove_existing_2fa_devices(user: User, exclude_method: str = "") -> None:
                 setattr(user, f"{method}_device", None)
                 user.save()
 
-
 def get_jwt_token(user: User) -> tuple[RefreshToken, RefreshToken, int, int]:
     refresh = RefreshToken.for_user(user)
     access_token = refresh.access_token

@@ -322,18 +322,6 @@ class CompletePasswordChangeSerializer(serializers.Serializer):
         return user
 
 
-class Request2FASerializer(serializers.Serializer):
-    identifier = serializers.CharField()
-
-    def validate(self, attrs):
-        identifier = attrs.get("identifier")
-        user = get_user_by_identifier(identifier)
-        if not user:
-            raise exceptions.InvalidCredentials()
-
-        attrs["user"] = user
-        return attrs
-
 
 class Enable2FASerializer(serializers.Serializer):
     method = serializers.ChoiceField(

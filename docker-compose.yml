@@ -1,6 +1,7 @@
 services:
     web:
         build: ./src
+        restart: unless-stopped
         volumes:
             - static_volume:/app/staticfiles
             - media_volume:/app/mediafiles
@@ -14,6 +15,7 @@ services:
 
     nginx:
         build: ./nginx
+        restart: unless-stopped
         ports:
             - "80:80"
             - "443:443"
@@ -30,20 +32,8 @@ services:
 
     celery:
         build: ./src
-        command: celery -A RITengine worker -l warning --autoscale=8,2
-        volumes:
-            - static_volume:/app/staticfiles
-            - media_volume:/app/mediafiles
-        depends_on:
-            - redis
-            - db
-            - web
-        env_file:
-            - .env.prod
-
-    celery-beat:
-        build: ./src
-        command: celery -A RITengine beat -l warning
+        restart: unless-stopped
+        command: celery -A RITengine worker -l warning --autoscale=4,2
         volumes:
             - static_volume:/app/staticfiles
             - media_volume:/app/mediafiles
@@ -56,11 +46,13 @@ services:
 
     redis:
         image: redis:latest
+        restart: unless-stopped
         ports:
             - "6379:6379"
 
     db:
-        image: postgres:14 #temproray
+        image: postgres:latest
+        restart: unless-stopped
         volumes:
             - postgres_data:/var/lib/postgresql/data/
         env_file:

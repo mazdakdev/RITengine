@@ -1,7 +1,5 @@
-from RITengine.settings.prod import ALLOWED_HOSTS
 from .base import *
 from dotenv import load_dotenv
-from celery.schedules import crontab
 
 SECRET_KEY = "NOT-SECURE-SECRET-KEY"
 
@@ -18,17 +16,15 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-EMAIL_HOST = os.getenv('EMAIL_HOST')
-EMAIL_PORT = os.getenv('EMAIL_PORT', default=587)
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', default=True)
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+# EMAIL_HOST = os.getenv('EMAIL_HOST')
+# EMAIL_PORT = os.getenv('EMAIL_PORT', default=587)
+# EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', default=True)
+# EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+# EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 EMAIL_FROM = os.getenv("EMAIL_FROM")
-OTP_EMAIL_SENDER = EMAIL_FROM
-OTP_EMAIL_SUBJECT = "RITengine: Your 2FA Code"
-OTP_EMAIL_BODY_HTML_TEMPLATE_PATH = "emails/verification.html"
+# OTP_EMAIL_SENDER = EMAIL_FROM
 
 DATABASES = {
     "default": {
@@ -44,23 +40,6 @@ CACHES = {
     }
 }
 
-
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-#         "LOCATION": 'redis://localhost:6380/1',
-#     }
-# }
-CELERY_BROKER_URL = 'redis://localhost:6380/0'  #TODO: .env
-CELERY_RESULT_BACKEND = CELERY_BROKER_URL
-# CELERY_BEAT_SCHEDULE = {
-#     'deactivate_inactive_users_every_day': {
-#         'task': 'user.tasks.deactivate_inactive_users',
-#         'schedule': crontab(hour=0, minute=0),  # Runs every day at midnight
-#     },
-# }
+CELERY_BROKER_URL = 'redis://localhost:6380/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
-# CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
-
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
