@@ -210,9 +210,10 @@ class BaseViewersListView(generics.GenericAPIView):
 
         users = User.objects.filter(id__in=user_ids)
 
-        existing_viewers = obj.viewers.filter(id__in=user_ids).values_list('id', flat=True)
+        existing_viewers = obj.viewers.filter(id__in=user_ids).values_list('username', flat=True)
         if existing_viewers:
-            raise CustomAPIException(f"Some users are already viewers: {list(existing_viewers)}")
+            viewers_list = ', '.join(existing_viewers)
+            raise CustomAPIException(f"The following users are already viewers: {viewers_list}")
 
         obj.viewers.add(*users)
 

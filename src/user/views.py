@@ -14,8 +14,7 @@ from django.core.cache import cache
 from rest_framework.permissions import IsAuthenticated
 from .utils import auth as auth_utils
 from .utils import general as general_utils
-from .factories import SMSAdapterFactory
-from .permissions import IsNotOAuthUser
+from .permissions import IsNotOAuthUser, CanChangeEmail, CanChangePhone
 from RITengine.exceptions import CustomAPIException
 from . import exceptions
 from .serializers import (
@@ -532,7 +531,7 @@ class UsernameChangeView(APIView):
 
 
 class EmailChangeView(APIView):
-    permission_classes = [IsAuthenticated, IsNotOAuthUser]
+    permission_classes = [IsAuthenticated, IsNotOAuthUser, CanChangeEmail]
 
     def post(self, request, *args, **kwargs):
         serializer = EmailChangeSerializer(data=request.data)
@@ -553,7 +552,7 @@ class EmailChangeView(APIView):
 
 
 class CompleteEmailChangeView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsNotOAuthUser, CanChangeEmail]
 
     def post(self, request, *args, **kwargs):
         serializer = CompleteEmailorPhoneChangeSerializer(data=request.data)
@@ -582,7 +581,7 @@ class CompleteEmailChangeView(APIView):
         )
 
 class PhoneChangeView(APIView):
-    permission_classes = [IsAuthenticated, IsNotOAuthUser]
+    permission_classes = [IsAuthenticated, IsNotOAuthUser, CanChangePhone]
 
     def post(self, request, *args, **kwargs):
         serializer = PhoneChangeSerializer(data=request.data)
@@ -607,7 +606,7 @@ class PhoneChangeView(APIView):
 
 
 class CompletePhoneChangeView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsNotOAuthUser, CanChangePhone]
 
     def post(self, request, *args, **kwargs):
         serializer = CompleteEmailorPhoneChangeSerializer(data=request.data)

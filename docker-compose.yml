@@ -1,6 +1,6 @@
 services:
     web:
-        build: ./src
+        build: .
         restart: unless-stopped
         volumes:
             - static_volume:/app/staticfiles
@@ -29,7 +29,7 @@ services:
             - web
 
     celery:
-        build: ./src
+        build: .
         restart: unless-stopped
         command: celery -A RITengine worker -l warning --autoscale=4,2
         volumes:
