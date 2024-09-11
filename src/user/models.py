@@ -72,6 +72,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def send_text_email(self, subject, message, from_email=settings.EMAIL_FROM):
         send_text_email.delay(subject, message, self.email, from_email)
+        if settings.DEBUG:
+            print(message)
 
     # def send_sms(self, message):
     #     sms_service = SMSService(get_sms_provider(settings.SMS_PROVIDER))

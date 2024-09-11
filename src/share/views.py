@@ -18,6 +18,8 @@ from share.models import AccessRequest
 from .serializers import GenerateShareableLinkSerializer
 from user.serializers import UserSerializer
 from rest_framework.pagination import PageNumberPagination
+from django.conf import settings
+
 
 User = get_user_model()
 
@@ -58,7 +60,6 @@ class GenerateShareableLinkView(generics.GenericAPIView):
         subject = "You have been granted access to shared content"
         message = f"You have been granted access to {obj.user.first_name}'s {obj.__name__} called ob."
         user.send_text_email(subject, message)
-        print(subject, message) #TODO:
 
     def get_object(self):
         raise NotImplementedError("Subclasses should implement this method.")
@@ -106,8 +107,7 @@ class AccessSharedContentView(generics.GenericAPIView):
         subject = "New Access Request"
         approval_link = f"{settings.FRONTEND_URL}/approve-access/{access_request.approval_uuid}/"
         message = f"A user has requested access to your content. Approve the request using the following link: {approval_link}"
-        # owner.send_text_email(subject, message)
-        print(message)
+        owner.send_text_email(subject, message)
 
     def create_access_request(self, user, obj):
         content_type = ContentType.objects.get_for_model(obj)
@@ -142,7 +142,7 @@ class AccessSharedContentView(generics.GenericAPIView):
 
 
 class ApproveAccessRequestView(APIView):
-    def get(self, request, approval_uuid):
+    def post(self, request, approval_uuid):
         access_request = get_object_or_404(AccessRequest, approval_uuid=approval_uuid)
 
         if access_request.is_approved:
@@ -254,7 +254,6 @@ class BaseViewersListView(generics.GenericAPIView):
     def notify_user(self, user, obj):
         subject = "You've been added as a viewer"
         message = f"You've been added as a viewer to the {obj.__class__.__name__.lower()} of {user.first_name}."
-        # Send an email or notification here
         user.send_text_email(subject, message)
 
 
