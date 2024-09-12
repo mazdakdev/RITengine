@@ -147,7 +147,7 @@ class ApproveAccessRequestView(APIView):
 
         if access_request.is_approved:
             return Response({
-                "status":"error",
+                "status": "error",
                 "detail": "This request has already been approved."
             }, status=status.HTTP_400_BAD_REQUEST)
 
