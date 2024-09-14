@@ -647,7 +647,9 @@ class UserGetView(APIView):
     """
     Retrieve a user based on their exact identifier (email, username, or phone number).
     """
-    def get(self, request, *args, **kwargs):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
         identifier = request.query_params.get('identifier', '').strip()
 
         if identifier:
