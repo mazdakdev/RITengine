@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from .filters import ChatFilter, MessageFilter
 from collections import defaultdict
 from share.permissions import IsOwnerOrViewer
+from django.db.models import Max
 from .serializers import (
     EngineSerializer,
     ChatSerializer,
@@ -55,7 +56,11 @@ class UserChatsListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Chat.objects.filter(user=user)
+        chats = Chat.objects.filter(user=user).annotate(
+            last_message_time=Max("messages__timestamp")
+        ).order_by("-last_message_time")
+
+        return chats
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
