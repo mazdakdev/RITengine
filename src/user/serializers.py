@@ -350,18 +350,23 @@ class BackupCodeSerializer(serializers.ModelSerializer):
         fields = ["code", "is_used"]
 
 
-class UsernameChangeSerializer(serializers.Serializer):
-    new_username = serializers.CharField()
+class UsernameChangeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username']
 
-    def validate(self, attrs):
+    def validate_username(self, value):
         user = self.context["request"].user
 
         if user.username_change_count >= 3:
-            raise CustomAPIException(
-                "You can't change your username more than 3 times.", status_code=400
-            )
+            raise CustomAPIException("You can't change your username more than 3 times.")
+        return value
 
-        return super().validate(attrs)
+    def update(self, instance, validated_data):
+        instance.username = validated_data['username']
+        instance.username_change_count += 1
+        instance.save()
+        return instance
 
 
 class EmailChangeSerializer(serializers.Serializer):
@@ -375,7 +380,6 @@ class EmailChangeSerializer(serializers.Serializer):
 
 class CompleteEmailorPhoneChangeSerializer(serializers.Serializer):
     code = serializers.CharField(min_length=6, max_length=10)
-
 
 class PhoneChangeSerializer(serializers.Serializer):
     new_phone = PhoneNumberField()
@@ -397,3 +401,4 @@ class CompleteChange2FAMethodSerializer(serializers.Serializer):
     code = serializers.CharField(min_length=6, max_length=10)
 
 # TODO: adjust code max and min
+# TODO: cleanese these

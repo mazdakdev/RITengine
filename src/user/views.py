@@ -510,12 +510,9 @@ class UsernameChangeView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data, context={'request':request})
         serializer.is_valid(raise_exception=True)
-        new_username = serializer.validated_data.get("new_username")
-        user = request.user
 
-        user.username = new_username
-        user.username_change_count += 1
-        user.save()
+        user = request.user
+        serializer.update(user, serializer.validated_data)
 
         remaining_changes = (
             settings.MAXIMUM_ALLOWED_USERNAME_CHANGE - user.username_change_count

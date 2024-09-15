@@ -11,11 +11,11 @@ from .otp_devices import SMSDevice, EmailDevice
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username_regex = RegexValidator(
         regex=r"^(?!\d)[^\@]*$",
-        message="username must not start with numeric values nor contains @",
+        message="username must not start with numeric values nor contains any special chars other than _",
     )
     username = models.CharField(
         unique=True,
-        max_length=15,
+        max_length=30,
         validators=[username_regex],
         error_messages={
             "unique": "This username is already taken. Please choose a different one.",
