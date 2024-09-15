@@ -75,7 +75,6 @@ class GenerateShareableLinkView(generics.GenericAPIView):
         subject = "You have been granted access to shared content"
         message = f"You have been granted access to {obj.user.first_name}'s {obj.__class__.__name__.lower()} called X."
         user.send_text_email(subject, message)
-        print(message)
 
     def get_object(self):
         raise NotImplementedError("Subclasses should implement this method.")
