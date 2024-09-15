@@ -1,3 +1,4 @@
+from rest_framework.pagination import NotFound
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
@@ -13,7 +14,6 @@ from .models import BackupCode
 from django.core.cache import cache
 from rest_framework.permissions import IsAuthenticated
 from .utils import auth as auth_utils
-from .utils import general as general_utils
 from .permissions import IsNotOAuthUser, CanChangeEmail, CanChangePhone
 from RITengine.exceptions import CustomAPIException
 from . import exceptions
@@ -645,23 +645,26 @@ class CompletePhoneChangeView(APIView):
 
 class UserGetView(APIView):
     """
-    Retrieve a user based on their exact identifier (email, username, or phone number).
+    Retrieve a user based on their exact username.
     """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        identifier = request.query_params.get('identifier', '').strip()
+        username = request.query_params.get('username', '').strip()
 
-        if identifier:
-            user = general_utils.get_user_by_identifier(identifier, case_sensitive=False)
-            serializer = UserSerializer(user, context={"request": request})
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        if username:
+            # user = general_utils.get_user_by_identifier(identifier, case_sensitive=False)
+            try:
+                user = User.objects.get(username=username)
+                serializer = UserSerializer(user, context={"request": request})
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            except User.DoesNotExist:
+                raise NotFound("No User found with that username")
 
-        raise CustomAPIException("Identifier is required.", status_code=status.HTTP_400_BAD_REQUEST)
+        raise CustomAPIException("Username is required.", status_code=status.HTTP_400_BAD_REQUEST)
 
-# make 2fa change verify endpoint better
 # TODO: other social auths
 # TODO: generate new sets backup codes & complete
 # TODO: make all error messages better
 # TODO: make otp/2fa expiration time dynamic
-# TODO: deactive unverified email after ...
+# TODO: deactivate unverified email after ...

@@ -4,14 +4,14 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class GenerateShareableLinkSerializer(serializers.Serializer):
-    user_ids = serializers.ListField(
-        child=serializers.IntegerField(),
+    usernames = serializers.ListField(
+        child=serializers.CharField(),
         required=False,
         allow_empty=True
     )
 
-    def validate_user_ids(self, value):
-        users = User.objects.filter(id__in=value)
+    def validate_usernames(self, value):
+        users = User.objects.filter(username__in=value)
         if len(users) != len(value):
-            raise serializers.ValidationError("One or more user IDs are invalid.")
+            raise serializers.ValidationError("One or more usernames are invalid.")
         return value

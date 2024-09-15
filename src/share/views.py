@@ -18,8 +18,6 @@ from share.models import AccessRequest
 from .serializers import GenerateShareableLinkSerializer
 from user.serializers import UserSerializer
 from rest_framework.pagination import PageNumberPagination
-from django.conf import settings
-
 
 User = get_user_model()
 
@@ -39,9 +37,9 @@ class GenerateShareableLinkView(generics.GenericAPIView):
             obj.shareable_key = obj.generate_shareable_key()
             obj.save()
 
-        user_ids = serializer.validated_data.get('user_ids', [])
-        if user_ids:
-            self.add_viewers(user_ids, obj)
+        usernames = serializer.validated_data.get('usernames', [])
+        if usernames:
+            self.add_viewers(usernames, obj)
 
         share_link = f"{settings.FRONTEND_URL}/access/{obj.shareable_key}"
         return Response({
@@ -49,17 +47,35 @@ class GenerateShareableLinkView(generics.GenericAPIView):
             'shareable_key': share_link
         }, status=200)
 
-    def add_viewers(self, user_ids, obj):
-        users = User.objects.filter(id__in=user_ids)
-        for user in users:
-            if user not in obj.viewers.all():
-                obj.viewers.add(user)
-                self.notify_user(user, obj)
+    def add_viewers(self, usernames, obj):
+        if obj.user.username in usernames:
+            raise CustomAPIException("The owner cannot be added as a viewer.")
+
+        users = User.objects.filter(username__in=usernames).exclude(username=obj.user.username)
+        existing_usernames = set(users.values_list('username', flat=True))
+        non_existing_usernames = set(usernames) - existing_usernames
+
+        if non_existing_usernames:
+            non_existing_list = ', '.join(non_existing_usernames)
+            raise CustomAPIException(f"The following usernames do not exist: {non_existing_list}")
+
+        existing_viewers = set(obj.viewers.values_list('username', flat=True))
+        new_viewers = set(usernames) - existing_viewers
+
+        if existing_viewers:
+            viewers_list = ', '.join(existing_viewers)
+            raise CustomAPIException(f"The following users are already viewers: {viewers_list}")
+
+        for username in new_viewers:
+            user = User.objects.get(username=username)
+            obj.viewers.add(user)
+            self.notify_user(user, obj)
 
     def notify_user(self, user, obj):
         subject = "You have been granted access to shared content"
-        message = f"You have been granted access to {obj.user.first_name}'s {obj.__name__} called ob."
+        message = f"You have been granted access to {obj.user.first_name}'s {obj.__class__.__name__.lower()} called X."
         user.send_text_email(subject, message)
+        print(message)
 
     def get_object(self):
         raise NotImplementedError("Subclasses should implement this method.")
@@ -204,17 +220,29 @@ class BaseViewersListView(generics.GenericAPIView):
         if obj.user != request.user:
             raise CustomAPIException("Item not found", status_code=status.HTTP_404_NOT_FOUND)
 
-        user_ids = request.data.get('user_ids', [])
-        if not isinstance(user_ids, list):
-            raise CustomAPIException("user_ids must be a list.")
+        usernames = request.data.get('usernames', [])
+        if not isinstance(usernames, list):
+            raise CustomAPIException("usernames must be a list.")
 
-        users = User.objects.filter(id__in=user_ids)
+        users = User.objects.filter(username__in=usernames)
+        usernames_set = set(usernames)
 
-        existing_viewers = obj.viewers.filter(id__in=user_ids).values_list('username', flat=True)
+        if obj.user.username in usernames_set:
+            raise CustomAPIException("The owner cannot be added as a viewer.")
+
+        existing_usernames = set(users.values_list('username', flat=True))
+        non_existing_usernames = usernames_set - existing_usernames
+
+        if non_existing_usernames:
+            non_existing_list = ', '.join(non_existing_usernames)
+            raise CustomAPIException(f"The following usernames do not exist: {non_existing_list}")
+
+        existing_viewers = obj.viewers.filter(username__in=usernames).values_list('username', flat=True)
         if existing_viewers:
             viewers_list = ', '.join(existing_viewers)
             raise CustomAPIException(f"The following users are already viewers: {viewers_list}")
 
+        users = users.exclude(username=obj.user.username)
         obj.viewers.add(*users)
 
         for user in users:
@@ -231,13 +259,13 @@ class BaseViewersListView(generics.GenericAPIView):
         if obj.user != request.user:
             raise CustomAPIException("Item not found", status_code=status.HTTP_404_NOT_FOUND)
 
-        user_ids = request.data.get('user_ids', [])
-        if not isinstance(user_ids, list):
-            raise CustomAPIException("user_ids must be a list.")
+        usernames = request.data.get('usernames', [])
+        if not isinstance(usernames, list):
+            raise CustomAPIException("usernames must be a list.")
 
-        users = User.objects.filter(id__in=user_ids)
+        users = User.objects.filter(username__in=usernames)
 
-        non_existing_viewers = set(user_ids) - set(obj.viewers.values_list('id', flat=True))
+        non_existing_viewers = set(usernames) - set(obj.viewers.values_list('username', flat=True))
         if non_existing_viewers:
             raise CustomAPIException(f"Some users are not viewers: {list(non_existing_viewers)}")
 

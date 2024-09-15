@@ -83,7 +83,7 @@ class UserChatsDetailView(generics.RetrieveUpdateDestroyAPIView):
 class ChatsMessagesListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, ]
     serializer_class = MessageSerializer
-    pagination_class = PageNumberPagination
+    # pagination_class = PageNumberPagination
     filterset_class = MessageFilter
     lookup_field = 'slug'
 

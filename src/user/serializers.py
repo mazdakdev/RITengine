@@ -169,7 +169,7 @@ class CompleteLoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "email", "first_name", "last_name", "image"]
+        fields = ["username", "email", "first_name", "last_name", "image"]
 
         def __init__(self, *args, **kwargs):
             super(UserSerializer, self).__init__(*args, **kwargs)
