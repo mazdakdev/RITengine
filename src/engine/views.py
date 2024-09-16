@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from .filters import ChatFilter, MessageFilter
 from collections import defaultdict
 from share.permissions import IsOwnerOrViewer
+from .pagination import MessageCursorPagination
 from django.db.models import Max
 from .serializers import (
     EngineSerializer,
@@ -88,7 +89,7 @@ class UserChatsDetailView(generics.RetrieveUpdateDestroyAPIView):
 class ChatsMessagesListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, ]
     serializer_class = MessageSerializer
-    # pagination_class = PageNumberPagination
+    pagination_class = MessageCursorPagination
     filterset_class = MessageFilter
     lookup_field = 'slug'
 
@@ -97,7 +98,7 @@ class ChatsMessagesListView(generics.ListAPIView):
         chat = get_object_or_404(Chat, slug=chat_slug)
 
         if self.request.user != chat.user:
-            return []
+            return Message.objects.none()
 
         return Message.objects.filter(chat=chat).order_by('timestamp')
 
