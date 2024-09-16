@@ -17,11 +17,13 @@ from .utils.general import get_user_by_identifier
 User = get_user_model()
 
 
-class RegistrationSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    username = serializers.CharField()
-    password1 = serializers.CharField(style={"input_type": "password"})
-    password2 = serializers.CharField(style={"input_type": "password"})
+class RegistrationSerializer(serializers.ModelSerializer):
+    password1 = serializers.CharField(write_only=True, style={"input_type": "password"})
+    password2 = serializers.CharField(write_only=True, style={"input_type": "password"})
+
+    class Meta:
+        model = User
+        fields = ['email', 'username', 'password1', 'password2']
 
     def validate(self, attrs):
         email = attrs.get('email')
@@ -48,15 +50,15 @@ class RegistrationSerializer(serializers.Serializer):
 
         return attrs
 
-    def save(self, request):
-        email = self.validated_data['email']
-        username = self.validated_data['username']
-        password = self.validated_data['password1']
+    def create(self, validated_data):
+        email = validated_data['email']
+        username = validated_data['username']
+        password = validated_data['password1']
 
         user, created = User.objects.get_or_create(email=email, defaults={
-                'username': username,
-                'password': password,
-            })
+            'username': username,
+            'password': password,
+        })
 
         if created:
             user.set_password(password)  # Hash the password before saving
@@ -68,9 +70,8 @@ class RegistrationSerializer(serializers.Serializer):
             if not user.is_email_verified:
                 otp = generate_otp(user)
                 send_otp_email(otp, user=user)
-
             else:
-                raise ValidationError("User is already completed the registeration process.")
+                raise serializers.ValidationError("User has already completed the registration process.")
 
         return user
 
@@ -357,6 +358,10 @@ class UsernameChangeSerializer(serializers.ModelSerializer):
 
     def validate_username(self, value):
         user = self.context["request"].user
+
+        if " " in value:
+            raise serializers.ValidationError("Username must not contain spaces.")
+
 
         if user.username_change_count >= 3:
             raise CustomAPIException("You can't change your username more than 3 times.")

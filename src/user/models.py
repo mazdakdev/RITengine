@@ -3,20 +3,17 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from .managers import UserManager
 from phonenumber_field.modelfields import PhoneNumberField
 from django_otp.plugins.otp_totp.models import TOTPDevice
-from django.core.validators import RegexValidator
 from django.db import models
 from .tasks import send_email, send_text_email
 from .otp_devices import SMSDevice, EmailDevice
+from .validators import no_spaces_validator, username_regex
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
-    username_regex = RegexValidator(
-        regex=r"^(?!\d)[^\@]*$",
-        message="username must not start with numeric values nor contains any special chars other than _",
-    )
+
     username = models.CharField(
         unique=True,
         max_length=30,
-        validators=[username_regex],
+        validators=[username_regex, no_spaces_validator],
         error_messages={
             "unique": "This username is already taken. Please choose a different one.",
         },

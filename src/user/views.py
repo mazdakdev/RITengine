@@ -96,7 +96,7 @@ class CustomRegisterView(APIView):
     def post(self, request):
         serializer = RegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(request)
+        serializer.save()
 
         return Response(
             {"status": "success", "detail": "Verification code sent successfully."},
