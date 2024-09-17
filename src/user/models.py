@@ -7,6 +7,8 @@ from django.db import models
 from .tasks import send_email, send_text_email
 from .otp_devices import SMSDevice, EmailDevice
 from .validators import no_spaces_validator, username_regex
+from django.utils import timezone
+from datetime import timedelta
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
 
@@ -50,6 +52,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         blank=True,
     )
 
+    trial_start_date = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    has_active_subscription = models.BooleanField(default=False)
+    stripeCustomerId = models.CharField(max_length=255, null=True, blank=True)
+    stripeSubscriptionId = models.CharField(max_length=255, null=True, blank=True)
+
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -72,6 +79,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
             print(message)
         else:
             send_text_email.delay(subject, message, self.email, from_email)
+
+    @property
+    def is_trial_active(self):
+        if not self.trial_start_date:
+            return False
+        return timezone.now() < self.trial_start_date + timedelta(days=3)
 
 
     # def send_sms(self, message):

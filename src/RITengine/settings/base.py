@@ -2,7 +2,7 @@ from pathlib import Path
 from datetime import timedelta
 from RITengine.utils import parse_duration
 import os
-
+import stripe
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -53,7 +53,8 @@ INSTALLED_APPS += [
     "project",
     "bookmark",
     "share",
-    "stats"
+    "stats",
+    "payment"
 ]
 
 SITE_ID = 1
@@ -67,6 +68,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "payment.middleware.PaymentRequiredMiddleware"
 ]
 
 ROOT_URLCONF = "RITengine.urls"
@@ -238,6 +240,7 @@ TWO_FA_USER_RATELIMIT = os.getenv("TWO_FA_USER_RATELIMIT")
 
 DARKOB_SECRET = os.getenv("DARKOB_SECRET")
 DARKOB_XFP = os.getenv("DARKOB_XFP")
+stripe.api_key = os.getenv("STRIPE_API_KEY")
 
 # TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
 # TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
