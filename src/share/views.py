@@ -81,6 +81,7 @@ class GenerateShareableLinkView(generics.GenericAPIView):
 
 
 class AccessSharedContentView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated,]
     def get(self, request, *args, **kwargs):
         shareable_key = kwargs.get('shareable_key')
         if not shareable_key:
@@ -157,6 +158,7 @@ class AccessSharedContentView(generics.GenericAPIView):
 
 
 class ApproveAccessRequestView(APIView):
+    permission_classes = [IsAuthenticated,]
     def post(self, request, approval_uuid):
         access_request = get_object_or_404(AccessRequest, approval_uuid=approval_uuid)
 

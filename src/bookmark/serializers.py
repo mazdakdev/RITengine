@@ -2,14 +2,15 @@ from rest_framework import serializers
 from .models import Bookmark
 from engine.serializers import MessageSerializer
 from collections import defaultdict
+from share.serializers import BaseShareableSerializer
 
-class BookmarkSerializer(serializers.ModelSerializer):
+class BookmarkSerializer(BaseShareableSerializer):
     messages = MessageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Bookmark
         fields = [
-            'id', 'user', 'messages',
+            'id', 'username', 'messages',
             'viewers', 'shareable_key',
             'created_at'
         ]
@@ -30,6 +31,7 @@ class BookmarkSerializer(serializers.ModelSerializer):
             grouped_messages[message_date].append(MessageSerializer(message).data)
 
         return grouped_messages
+
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)

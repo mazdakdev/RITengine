@@ -7,6 +7,7 @@ from .models import (
     Assist,
     EngineCategory
 )
+from share.serializers import BaseShareableSerializer
 
 class StreamGeneratorSerializer(serializers.Serializer):
     engine_id = serializers.IntegerField()
@@ -23,18 +24,19 @@ class EngineCategorySerializer(serializers.ModelSerializer):
         model = EngineCategory
         fields = "__all__"
 
-class ChatSerializer(serializers.ModelSerializer):
+class ChatSerializer(BaseShareableSerializer):
     excerpt = serializers.SerializerMethodField()
 
     class Meta:
         model = Chat
-        fields = ["id", "user", "title", "slug", "viewers", "excerpt", "shareable_key", "created_at", "updated_at"]
+        fields = ["id", "username", "title", "slug", "viewers", "excerpt", "shareable_key", "created_at", "updated_at"]
         read_only_fields = ["created_at", "id", "shareable_key", "viewers", "slug", "user"] #TODO: excerpt
 
     def get_excerpt(self, obj):
         if obj.messages.first():
             return obj.messages.first().text[:150].strip() + "..."
         return None
+
 
 class MessageSerializer(serializers.ModelSerializer):
     is_bookmarked = serializers.SerializerMethodField()

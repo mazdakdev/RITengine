@@ -1,12 +1,14 @@
 from rest_framework import serializers
 from engine.models import Message
 from .models import Project
+from share.serializers import BaseShareableSerializer
 
-class ProjectSerializer(serializers.ModelSerializer):
+class ProjectSerializer(BaseShareableSerializer):
     messages_in = serializers.SerializerMethodField()
+
     class Meta:
         model = Project
-        fields = ["id", "user", "title", "description", "image", "messages_in", "viewers", "shareable_key", "created_at", "updated_at"]
+        fields = ["id", "username", "title", "description", "image", "messages_in", "viewers", "shareable_key", "created_at", "updated_at"]
         read_only_fields = ['user',"created_at", "updated_at", "id"]
 
     def get_messages_in(self, obj):
@@ -19,6 +21,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         user = self.context.get("user")
         message_ids = obj.messages.filter(chat__user=user).values_list('id', flat=True)
         return list(message_ids)
+
 
 class MessageIDSerializer(serializers.Serializer):
     message_ids = serializers.ListField(

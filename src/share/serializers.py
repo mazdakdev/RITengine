@@ -15,3 +15,12 @@ class GenerateShareableLinkSerializer(serializers.Serializer):
         if len(users) != len(value):
             raise serializers.ValidationError("One or more usernames are invalid.")
         return value
+
+class BaseShareableSerializer(serializers.ModelSerializer):
+    username = serializers.SerializerMethodField()
+
+    class Meta:
+        abstract = True
+
+    def get_username(self, obj):
+        return obj.user.username
