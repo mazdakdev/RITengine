@@ -11,6 +11,7 @@ from collections import defaultdict
 from share.permissions import IsOwnerOrViewer
 from .pagination import MessageCursorPagination
 from django.db.models import Max
+from django.db.models import Q
 from .serializers import (
     EngineSerializer,
     ChatSerializer,
@@ -84,10 +85,10 @@ class UserChatsDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         user = self.request.user
         slug = self.kwargs['slug']
-        return Chat.objects.filter(user=user, slug=slug) | Chat.objects.filter(viewers=user, slug=slug)
+        return Chat.objects.filter(Q(slug=slug) & (Q(user=user) | Q(viewers=user)))
 
 class ChatsMessagesListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated, ]
+    permission_classes = [IsAuthenticated]
     serializer_class = MessageSerializer
     pagination_class = MessageCursorPagination
     filterset_class = MessageFilter
@@ -95,10 +96,8 @@ class ChatsMessagesListView(generics.ListAPIView):
 
     def get_queryset(self):
         chat_slug = self.kwargs['slug']
-        chat = get_object_or_404(Chat, slug=chat_slug)
-
-        if self.request.user != chat.user:
-            return Message.objects.none()
+        user = self.request.user
+        chat = get_object_or_404(Chat, Q(slug=chat_slug) & (Q(user=user) | Q(viewers=user)))
 
         return Message.objects.filter(chat=chat).order_by('timestamp')
 

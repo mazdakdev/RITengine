@@ -12,6 +12,7 @@ from django_filters import rest_framework as filters
 from user.exceptions import CustomAPIException
 from .filters import ProjectFilter
 from rest_framework.pagination import PageNumberPagination
+from django.db.models import Q
 from share.permissions import IsOwnerOrViewer
 
 
@@ -43,12 +44,12 @@ class GenerateProjectLinkView(GenerateShareableLinkView):
         return get_object_or_404(Project, id=self.kwargs.get('id'))
 
 class ProjectsInMessageView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrViewer]
     pagination_class = PageNumberPagination
 
     def post(self, request, message_id):
         user = request.user
-        message = get_object_or_404(Message, id=message_id, chat__user=user)
+        message = get_object_or_404(Message, Q(id=message_id) & (Q(chat__user=user) | Q(chat__viewers=user)))
         project_ids = request.data.get('project_ids', [])
 
         for project_id in project_ids:
@@ -78,11 +79,11 @@ class ProjectsInMessageView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
 class MessagesInProjectView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrViewer]
     pagination_class = PageNumberPagination
 
     def get(self, request, id):
-        project = get_object_or_404(Project, id=id, user=request.user)
+        project = get_object_or_404(Project, Q(id=id) & (Q(user=request.user) | Q(viewers=request.user)))
         messages = project.messages.all()
         serializer = MessageSerializer(messages, many=True, context={'request': request})
         return Response(serializer.data)
