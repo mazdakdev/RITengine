@@ -5,6 +5,7 @@ class LegalDocument(models.Model):
         ('privacy_policy', 'Privacy Policy'),
         ('user_guide', 'User Guide'),
         ('terms_of_use', 'Terms of Use'),
+        ('share_safety', 'Share Safety'),
         ('license', "License"),
     ]
 
