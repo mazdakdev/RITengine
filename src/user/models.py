@@ -52,11 +52,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         blank=True,
     )
 
-    trial_start_date = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-    has_active_subscription = models.BooleanField(default=False)
-    stripeCustomerId = models.CharField(max_length=255, null=True, blank=True)
-    stripeSubscriptionId = models.CharField(max_length=255, null=True, blank=True)
-
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -82,10 +77,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     @property
     def is_trial_active(self):
-        if not self.trial_start_date:
+        if not self.created_at:
             return False
-        return timezone.now() < self.trial_start_date + timedelta(days=3)
-
+        return timezone.now() < self.created_at + timedelta(days=settings.TRIAL_DAYS)
 
     # def send_sms(self, message):
     #     sms_service = SMSService(get_sms_provider(settings.SMS_PROVIDER))

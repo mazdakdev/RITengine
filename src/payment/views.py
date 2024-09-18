@@ -2,41 +2,56 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
 from rest_framework.permissions import IsAuthenticated
 from .serializers import SubscriptionSerializer
+from django.views.decorators.csrf import csrf_exempt
+from .models import Customer
+from RITengine.exceptions import CustomAPIException
+from django.http import JsonResponse
+from .utils import handle_subscription_created, handle_subscription_updated
 import stripe
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-class CreateCheckoutSessionView(APIView):
+class CheckoutSessionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = SubscriptionSerializer(data=request.data)
-        if serializer.is_valid():
-            price_id = serializer.get_price_id()
+        serializer.is_valid(raise_exception=True)
 
-            checkout_session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
+        price_id = serializer.get_price_id()
+        user = request.user
+
+        try:
+            customer, created = Customer.objects.get_or_create(user=user, defaults={
+                'source_id': stripe.Customer.create(email=user.email).id
+            })
+
+            # Check if user has an active subscription
+            current_subscription = customer.subscriptions.filter(status='active').last()
+            if current_subscription:
+                raise CustomAPIException("You already have an active subscription.")
+
+            # Create Stripe checkout session
+            session = stripe.checkout.Session.create(
+                line_items=[{'price': price_id, 'quantity': 1}],
                 mode='subscription',
-                line_items=[
-                    {
-                        'price': price_id,
-                        'quantity': 1,
-                    },
-                ],
-                success_url=f"https://{settings.FRONTEND_URL}/success?session_id={{CHECKOUT_SESSION_ID}}",
-                cancel_url=f"https://{settings.FRONTEND_URL}/cancel/",
-                metadata={
-                    'user_id': request.user.id,
-                }
+                success_url=f'http://{settings.FRONTEND_URL}/checkout/success',
+                cancel_url=f'http://{settings.FRONTEND_URL}/checkout/cancel',
+                # automatic_tax={'enabled': True},
+                customer=customer.source_id,
+                customer_update={'address': 'auto'}
             )
 
-            return Response({'url': checkout_session.url})
-        return Response(serializer.errors, status=400)
+            return Response({'url': session.url}, status=status.HTTP_201_CREATED)
+
+        except stripe.error.StripeError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class StripeWebhookView(APIView):
     @csrf_exempt
@@ -47,34 +62,13 @@ class StripeWebhookView(APIView):
 
         try:
             event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-        except ValueError as e:
-            return JsonResponse({'error': str(e)}, status=400)
-        except stripe.error.SignatureVerificationError as e:
+        except (ValueError, stripe.error.SignatureVerificationError) as e:
             return JsonResponse({'error': str(e)}, status=400)
 
         event_type = event['type']
-        data = event['data']['object']
-        user_id = data.get('metadata', {}).get('user_id')
+        if event_type == 'customer.subscription.created':
+            handle_subscription_created(event)
+        elif event_type in ['customer.subscription.updated', 'customer.subscription.deleted']:
+            handle_subscription_updated(event)
 
-        if not user_id:
-            return JsonResponse({'status': 'user_id missing'}, status=400)
-
-        user = User.objects.filter(id=user_id).first()
-
-        if user is None:
-            return JsonResponse({'status': 'user not found'}, status=404)
-
-        if event_type == 'invoice.paid':
-            user.has_active_subscription = True
-            user.stripeSubscriptionId = data['subscription']
-            user.save()
-
-        elif event_type == 'invoice.payment_failed':
-            user.has_active_subscription = False
-            user.save()
-
-        elif event_type == 'customer.subscription.deleted':
-            user.has_active_subscription = False
-            user.save()
-
-        return JsonResponse({'status': 'success'}, status=200)
+        return Response(status=status.HTTP_200_OK)

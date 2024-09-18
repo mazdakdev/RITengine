@@ -6,8 +6,9 @@ class PaymentRequiredMiddleware(MiddlewareMixin):
         # List of paths to exclude from payment check
         excluded_paths = [
             '/api/auth/me/',
-            '/api/payment/checkout/',
-            '/api/payment/webhook/stripe/',
+            '/api/payment/checkout/session/',
+            '/api/payment/checkout/webhook/',
+            '/api/auth/login/',
         ]
 
         if request.path in excluded_paths:
@@ -19,4 +20,4 @@ class PaymentRequiredMiddleware(MiddlewareMixin):
         return None
 
     def payment_required(self, request):
-        return not request.user.is_trial_active and not request.user.has_active_subscription
+        return 1
