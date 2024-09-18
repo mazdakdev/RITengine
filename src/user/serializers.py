@@ -179,12 +179,13 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserDetailsSerializer(serializers.ModelSerializer):
-    inv_code = serializers.CharField(min_length=16, max_length=17)
+    username_change_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             "username",
+            "username_change_count",
             "email",
             "first_name",
             "last_name",
@@ -200,9 +201,10 @@ class UserDetailsSerializer(serializers.ModelSerializer):
         #     "last_name": {"required": True},
         #     "birthday": {"required": True},
         # }
-        read_only_fields = ["username", "email", "phone_number", "preferred_2fa", "last_login"]
+        read_only_fields = ["username", "email", "phone_number", "preferred_2fa", "last_login", "username_change_count"]
 
-
+    def get_username_change_count(self, obj):
+        return obj.username_change_count
 
 class PasswordResetSerializer(serializers.Serializer):
     identifier = serializers.CharField()
