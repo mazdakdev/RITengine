@@ -31,10 +31,15 @@ def handle_subscription_updated(event):
     subscription = Subscription.objects.get(source_id=stripe_subscription['id'])
 
     subscription.status = stripe_subscription['status']
+    subscription.cancel_at_period_end = stripe_subscription['cancel_at_period_end']
+
     if stripe_subscription.get('canceled_at'):
         subscription.canceled_at = datetime.fromtimestamp(stripe_subscription['canceled_at'])
     if stripe_subscription.get('ended_at'):
         subscription.ended_at = datetime.fromtimestamp(stripe_subscription['ended_at'])
+
+    if stripe_subscription.cancel_at:
+        subscription.cancel_at = datetime.fromtimestamp(stripe_subscription['cancel_at'])
 
     subscription.save()
     return subscription

@@ -56,13 +56,15 @@ class Customer(models.Model):
 class Subscription(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='subscriptions')
     source_id = models.CharField(max_length=255)
-    plan = models.ForeignKey('Plan', on_delete=models.SET_NULL)
+    plan = models.ForeignKey('Plan', on_delete=models.SET_NULL, blank=True, null=True)
     currency = models.CharField(max_length=255, blank=True, null=True)
     amount = models.FloatField(blank=True, null=True)
     status = models.CharField(max_length=255, blank=True, null=True)
     started_at = models.DateTimeField(blank=True, null=True)
     ended_at = models.DateTimeField(blank=True, null=True)
     canceled_at = models.DateTimeField(blank=True, null=True)
+    cancel_at_period_end = models.BooleanField(default=False)
+    cancel_at = models.DateTimeField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

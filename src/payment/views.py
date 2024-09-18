@@ -71,3 +71,17 @@ class StripeWebhookView(APIView):
             handle_subscription_updated(event)
 
         return Response(status=status.HTTP_200_OK)
+
+class CustomerPortalView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+               session = stripe.billing_portal.Session.create(
+                   customer=request.user.customer.source_id,
+                   return_url="http://"+settings.FRONTEND_URL + '/subscriptions',
+               )
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+
+        return Response({'url': session.url}, status=201)

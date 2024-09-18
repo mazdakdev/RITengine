@@ -8,6 +8,7 @@ class PaymentRequiredMiddleware(MiddlewareMixin):
             '/api/auth/me/',
             '/api/payment/checkout/session/',
             '/api/payment/checkout/webhook/',
+            '/api/payment/portal/',
             '/api/auth/login/',
         ]
 
