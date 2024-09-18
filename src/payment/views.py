@@ -10,6 +10,7 @@ from RITengine.exceptions import CustomAPIException
 from django.http import JsonResponse
 from .utils import handle_subscription_created, handle_subscription_updated
 import stripe
+from .models import Plan
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -29,18 +30,16 @@ class CheckoutSessionView(APIView):
                 'source_id': stripe.Customer.create(email=user.email).id
             })
 
-            # Check if user has an active subscription
             current_subscription = customer.subscriptions.filter(status='active').last()
             if current_subscription:
                 raise CustomAPIException("You already have an active subscription.")
 
-            # Create Stripe checkout session
             session = stripe.checkout.Session.create(
                 line_items=[{'price': price_id, 'quantity': 1}],
                 mode='subscription',
                 success_url=f'http://{settings.FRONTEND_URL}/checkout/success',
                 cancel_url=f'http://{settings.FRONTEND_URL}/checkout/cancel',
-                # automatic_tax={'enabled': True},
+                automatic_tax={'enabled': True},
                 customer=customer.source_id,
                 customer_update={'address': 'auto'}
             )

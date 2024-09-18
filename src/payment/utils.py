@@ -1,16 +1,21 @@
 from .models import Customer, Subscription
 from datetime import datetime
 from django.db import transaction
+from .models import Plan
+import stripe
 
 @transaction.atomic
 def handle_subscription_created(event):
     stripe_subscription = event['data']['object']
     customer = Customer.objects.get(source_id=stripe_subscription['customer'])
+    price_id = stripe_subscription['items']['data'][0]['price']['id']
+    plan = Plan.objects.filter(stripe_price_id=price_id).first()
 
     subscription, created = Subscription.objects.get_or_create(
         customer=customer,
         source_id=stripe_subscription['id'],
         defaults={
+            'plan': plan,
             'status': stripe_subscription['status'],
             'currency': stripe_subscription['currency'],
             'amount': stripe_subscription['plan']['amount'] / 100,
