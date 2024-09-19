@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import timedelta
 from RITengine.utils import parse_duration
+from logging.handlers import TimedRotatingFileHandler
 import os
 
 
@@ -183,6 +184,45 @@ SOCIALACCOUNT_PROVIDERS = {
                 'access_type': 'online',
             }
         }
+}
+LOG_FILE_PATH = os.path.join(BASE_DIR, 'logs.txt')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': LOG_FILE_PATH,
+            'when': 'D',
+            'interval': 14,  # Every 14 days
+            'backupCount': 5,  # Keep 5 backups
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'django.request': {
+            'handlers': ['file'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    },
 }
 
 REST_AUTH = {
