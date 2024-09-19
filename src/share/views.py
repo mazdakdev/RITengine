@@ -143,7 +143,6 @@ class AccessSharedContentView(generics.GenericAPIView):
             object_id=obj.id
         )
 
-        # Notify the owner
         self.notify_owner(obj.user, access_request)
         return True
 
@@ -176,7 +175,6 @@ class ApproveAccessRequestView(APIView):
             },
             status=status.HTTP_403_FORBIDDEN)
 
-        # Add the user to the viewers list
         access_request.content_object.viewers.add(access_request.user)
         access_request.approved = True
         access_request.save()
@@ -206,10 +204,12 @@ class BaseViewersListView(generics.GenericAPIView):
         raise NotImplementedError("Subclasses must implement the get_object method.")
 
     def get(self, request, *args, **kwargs):
+        obj = self.get_object()
         viewers = self.get_queryset()
         serializer = self.get_serializer(viewers, many=True)
         response_data = {
-            "viewers": serializer.data
+            "viewers": serializer.data,
+            "sharable_key": obj.shareable_key
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
