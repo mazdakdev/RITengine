@@ -7,6 +7,8 @@ from django.db import models
 from .tasks import send_email, send_text_email
 from .otp_devices import SMSDevice, EmailDevice
 from .validators import no_spaces_validator, username_regex
+from django.utils import timezone
+from datetime import timedelta
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
 
@@ -73,6 +75,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         else:
             send_text_email.delay(subject, message, self.email, from_email)
 
+    @property
+    def is_trial_active(self):
+        if not self.created_at:
+            return False
+        return timezone.now() < self.created_at + timedelta(days=settings.TRIAL_DAYS)
 
     # def send_sms(self, message):
     #     sms_service = SMSService(get_sms_provider(settings.SMS_PROVIDER))
