@@ -4,7 +4,7 @@ from django.conf import settings
 from openai import AsyncOpenAI
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
-from share.views import GenerateShareableLinkView, BaseViewersListView
+from share.views import GenerateShareableLinkView, BaseViewersListView, SharedRetrieveUpdateDestroyView
 from rest_framework.response import Response
 from .filters import ChatFilter, MessageFilter
 from collections import defaultdict
@@ -27,6 +27,7 @@ from .models import (
     Assist,
     EngineCategory
 )
+
 
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
@@ -77,18 +78,13 @@ class UserChatsListView(generics.ListAPIView):
             grouped_chats[date_key].append(item)
         return grouped_chats
 
-class UserChatsDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated, IsOwnerOrViewer]
+class UserChatsDetailView(SharedRetrieveUpdateDestroyView):
     serializer_class = ChatSerializer
+    queryset = Chat.objects.all()
     lookup_field = 'slug'
 
-    def get_queryset(self):
-        user = self.request.user
-        slug = self.kwargs['slug']
-        return Chat.objects.filter(Q(slug=slug) & (Q(user=user) | Q(viewers=user)))
-
 class ChatsMessagesListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrViewer]
     serializer_class = MessageSerializer
     pagination_class = MessageCursorPagination
     filterset_class = MessageFilter
@@ -97,8 +93,8 @@ class ChatsMessagesListView(generics.ListAPIView):
     def get_queryset(self):
         chat_slug = self.kwargs['slug']
         user = self.request.user
-        chat = get_object_or_404(Chat, Q(slug=chat_slug) & (Q(user=user) | Q(viewers=user)))
-
+        queryset = Chat.objects.filter(Q(slug=chat_slug) & (Q(user=user) | Q(viewers=user))).distinct()
+        chat = get_object_or_404(queryset)
         return Message.objects.filter(chat=chat).order_by('timestamp')
 
     def get_serializer_context(self):

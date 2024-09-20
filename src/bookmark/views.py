@@ -1,4 +1,5 @@
-from rest_framework import generics
+from rest_framework import generics, request
+from rest_framework.exceptions import NotFound
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from bookmark.serializers import BookmarkSerializer
@@ -10,10 +11,12 @@ from engine.models import Message
 from engine.serializers import MessageSerializer
 from RITengine.exceptions import CustomAPIException
 from rest_framework.views import APIView
-from django.db.models import Q
 from share.permissions import IsOwnerOrViewer
 
 class BookmarksDetailView(generics.RetrieveUpdateAPIView):
+    """
+    Singleton like logic applied for now.
+    """
     permission_classes = [IsAuthenticated, IsOwnerOrViewer]
     serializer_class = BookmarkSerializer
 
@@ -22,11 +25,10 @@ class BookmarksDetailView(generics.RetrieveUpdateAPIView):
 
         if bookmark_id is not None:
             try:
-                bookmark = Bookmark.objects.get(
-                                    Q(id=bookmark_id) & (Q(user=self.request.user) | Q(viewers=self.request.user))
-                                )
+                bookmark = Bookmark.objects.get(id=bookmark_id)
+                self.check_object_permissions(self.request, bookmark)
             except Bookmark.DoesNotExist:
-                raise CustomAPIException("Bookmark not found", status_code=404)
+                raise NotFound("Bookmark not found.")
         else:
             bookmark, created = Bookmark.objects.get_or_create(user=self.request.user)
 

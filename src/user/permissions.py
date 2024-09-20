@@ -1,6 +1,7 @@
 from rest_framework import status
 from rest_framework.permissions import BasePermission
 from RITengine.exceptions import CustomAPIException
+
 class IsNotOAuthUser(BasePermission):
     message = "Access restricted for OAuth-based users."
 

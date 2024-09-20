@@ -18,6 +18,8 @@ from share.models import AccessRequest
 from .serializers import GenerateShareableLinkSerializer
 from user.serializers import UserSerializer
 from rest_framework.pagination import PageNumberPagination
+from .permissions import IsOwnerOrViewer
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -350,3 +352,14 @@ class SharedByMeView(APIView):
             'status': 'success',
             **data,
         }, status=status.HTTP_200_OK)
+
+
+class SharedRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated, IsOwnerOrViewer]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        user = self.request.user
+        return self.queryset.filter(
+            Q(user=user) | Q(viewers=user)
+        ).select_related('user').prefetch_related('viewers').distinct()
