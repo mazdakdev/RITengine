@@ -95,13 +95,18 @@ class ChatsMessagesListView(generics.ListAPIView):
         user = self.request.user
         queryset = Chat.objects.filter(Q(slug=chat_slug) & (Q(user=user) | Q(viewers=user))).distinct()
         chat = get_object_or_404(queryset)
-        return Message.objects.filter(chat=chat).order_by('timestamp')
+        return Message.objects.filter(chat=chat).order_by('-timestamp')
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['user'] = self.request.user
-        return context
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
 
+        response.data['next'], response.data['previous'] = response.data['previous'], response.data['next']
+
+        response.data['results'].reverse()
+
+        return response
+
+    
 class GenerateChatLinkView(GenerateShareableLinkView):
     def get_object(self):
         return get_object_or_404(Chat, slug=self.kwargs.get('slug'))
