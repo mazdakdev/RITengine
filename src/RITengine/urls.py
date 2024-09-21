@@ -19,7 +19,6 @@ urlpatterns = [
    path("api/projects/", include("project.urls")),
    path("api/bookmark/", include("bookmark.urls")),
    path("api/share/", include("share.urls")),
-   path("api/payment/", include("payment.urls")),
 ]
 
 if settings.DEBUG:
