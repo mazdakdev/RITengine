@@ -102,6 +102,12 @@ class ChatsMessagesListView(generics.ListAPIView):
 
         response.data['next'], response.data['previous'] = response.data['previous'], response.data['next']
 
+        if response.data['next']:
+            response.data['next'] = response.data['next'].split('cursor=')[1]
+        
+        if response.data['previous']:
+            response.data['previous'] = response.data['previous'].split('cursor=')[1]
+            
         response.data['results'].reverse()
 
         return response
