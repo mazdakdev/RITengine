@@ -23,4 +23,4 @@ class PaymentRequiredMiddleware(MiddlewareMixin):
         return None
 
     def payment_required(self, request):
-        return request.user.is_trial_active()
+        return request.user.is_trial_active
