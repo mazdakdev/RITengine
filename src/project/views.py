@@ -14,6 +14,7 @@ from .filters import ProjectFilter
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q
 from share.permissions import IsOwnerOrViewer
+from rest_framework.exceptions import PermissionDenied
 
 
 User = get_user_model()
@@ -27,8 +28,29 @@ class ProjectListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         return Project.objects.filter(user=self.request.user).order_by('-created_at')
 
+class ProjectListCreateView(generics.ListCreateAPIView):
+    serializer_class = ProjectSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_class = ProjectFilter
+    pagination_class = PageNumberPagination
+
+    def get_queryset(self):
+        return Project.objects.filter(user=self.request.user).order_by('-created_at')
+
     def perform_create(self, serializer):
+        if not hasattr(self.request.user, 'customer'):
+            if not self.request.user.is_trial_active:
+                raise PermissionDenied("You must have an active subscription to create projects.")
+
+        customer = self.request.user.customer
+        active_subscription = customer.subscriptions.filter(status='active').first()
+
+        if customer.projects_created >= active_subscription.plan.projects_total:
+            raise PermissionDenied("You have reached the maximum number of projects allowed by your subscription plan.")
+
         serializer.save(user=self.request.user)
+        customer.projects_created += 1
+        customer.save()
 
 class ProjectRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProjectSerializer

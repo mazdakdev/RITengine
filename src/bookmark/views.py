@@ -12,6 +12,7 @@ from RITengine.exceptions import CustomAPIException
 from rest_framework.views import APIView
 from django.db.models import Q
 from share.permissions import IsOwnerOrViewer
+from rest_framework.exceptions import PermissionDenied
 
 class BookmarksDetailView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated, IsOwnerOrViewer]
@@ -54,7 +55,21 @@ class BookmarkMessageView(APIView):
         user = request.user
         message = get_object_or_404(Message, id=message_id, chat__user=user)
 
+        if not hasattr(user, 'customer'):
+            if not user.is_trial_active:
+                raise PermissionDenied("You must have an active subscription to create more bookmarks.")
+
+        customer = user.customer
+        active_subscription = customer.subscriptions.filter(status='active').first()
+
+        if customer.bookmarks_created >= active_subscription.plan.bookmarks_total:
+            raise PermissionDenied("You have reached the maximum number of bookmarks allowed by your subscription plan.")
+
+
         bookmark = self.get_or_create_bookmark(user)
+
+        customer.bookmarks_created += 1
+        customer.save()
 
         if bookmark.messages.filter(id=message_id).exists():
             raise CustomAPIException(

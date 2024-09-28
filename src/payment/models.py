@@ -21,7 +21,13 @@ class Plan(models.Model):
            max_length=20,
            choices=[('day', 'Day'), ('week', 'Week'), ('month', 'Month'), ('year', 'Year')]
        )
+    messages_per_day = models.IntegerField(default=0, help_text="Max messages allowed per day")
+    projects_total = models.IntegerField(default=0, help_text="Max projects allowed for the subscription period")
+    bookmarks_total = models.IntegerField(default=0, help_text="Max bookmarks allowed for the subscription period")
     stripe_price_id = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.interval_count} {self.interval} / {self.price}"
 
     def create_stripe_plan(self):
         """
@@ -40,15 +46,17 @@ class Plan(models.Model):
         self.stripe_price_id = price.id
         self.save()
 
-        def save(self, *args, **kwargs):
-            if not self.stripe_price_id:
-                self.create_stripe_plan()
-            super().save(*args, **kwargs)
-
+    def save(self, *args, **kwargs):
+        if not self.stripe_price_id:
+            self.create_stripe_plan()
+        super().save(*args, **kwargs)
 
 class Customer(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='customer')
     source_id = models.CharField(max_length=255)
+    messages_sent_today = models.IntegerField(default=0)
+    projects_created = models.IntegerField(default=0)
+    bookmarks_created = models.IntegerField(default=0)
 
     def __str__(self):
         return self.user.email

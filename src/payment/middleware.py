@@ -9,6 +9,7 @@ class PaymentRequiredMiddleware(MiddlewareMixin):
             '/api/payment/checkout/webhook/',
             '/api/payment/portal/',
             '/api/auth/login/',
+            '/api/payment/plans/',
         ]
 
         if request.path in excluded_paths:

@@ -12,6 +12,7 @@ from .utils import handle_subscription_created, handle_subscription_updated
 import stripe
 from .models import Plan
 from django.contrib.auth import get_user_model
+from .serializers import PlanSerializer
 
 User = get_user_model()
 
@@ -37,8 +38,8 @@ class CheckoutSessionView(APIView):
             session = stripe.checkout.Session.create(
                 line_items=[{'price': price_id, 'quantity': 1}],
                 mode='subscription',
-                success_url=f'http://{settings.FRONTEND_URL}/checkout/success',
-                cancel_url=f'http://{settings.FRONTEND_URL}/checkout/cancel',
+                success_url=f'https://{settings.FRONTEND_URL}/checkout/success',
+                cancel_url=f'https://{settings.FRONTEND_URL}/checkout/cancel',
                 automatic_tax={'enabled': True},
                 customer=customer.source_id,
                 customer_update={'address': 'auto'}
@@ -85,3 +86,28 @@ class CustomerPortalView(APIView):
             return Response({'error': str(e)}, status=400)
 
         return Response({'url': session.url}, status=201)
+
+
+class PlanListView(APIView):
+    def get(self, request):
+        plans = Plan.objects.all()
+
+        categorized_plans = {
+            'daily': [],
+            'weekly': [],
+            'monthly': [],
+            'yearly': []
+        }
+
+        for plan in plans:
+            serialized_plan = PlanSerializer(plan).data
+            if plan.interval == 'day':
+                categorized_plans['daily'].append(serialized_plan)
+            elif plan.interval == 'week':
+                categorized_plans['weekly'].append(serialized_plan)
+            elif plan.interval == 'month':
+                categorized_plans['monthly'].append(serialized_plan)
+            elif plan.interval == 'year':
+                categorized_plans['yearly'].append(serialized_plan)
+
+        return Response(categorized_plans)

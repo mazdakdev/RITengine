@@ -1,5 +1,6 @@
 from .base import *
 import dj_database_url
+from celery.schedules import crontab
 
 DEBUG = False
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -16,6 +17,7 @@ CACHES = {
 }
 CELERY_BROKER_URL = f'{os.getenv("REDIS_URL")}/0'
 CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_BACKEND = None
 CELERY_BROKER_TRANSPORT_OPTIONS = {
     'visibility_timeout': 3600,  # Redis task visibility timeout
@@ -24,6 +26,13 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
         'interval_start': 0,  # Retry immediately
         'interval_step': 0.2,  # Increase between retries
         'interval_max': 0.5,  # Max retry delay
+    },
+}
+
+CELERY_BEAT_SCHEDULE = {
+    'reset_plan_limits_daily': {
+        'task': 'payment.tasks.reset_plan_limits',
+        'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
     },
 }
 

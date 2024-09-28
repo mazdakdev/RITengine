@@ -32,6 +32,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close(code=4401, reason="JWT token is invalid or expired.")
             return
 
+        user_has_customer = await database_sync_to_async(hasattr)(self.user, 'customer')
+
+        if not user_has_customer:
+            is_trial_active = await database_sync_to_async(lambda: self.user.is_trial_active)()
+            if not is_trial_active:
+                await self.close(code=4429, reason="You have reached the maximum number of messages allowed by your subscription plan.")
+                return
+
+        customer = await database_sync_to_async(lambda: self.user.customer)()
+        message_sent_today = await database_sync_to_async(lambda: customer.messages_sent_today)()
+        messages_per_day = await database_sync_to_async(lambda: customer.subscriptions.filter(status='active').first().plan.messages_per_day)()
+
+        if message_sent_today >= messages_per_day:
+            await self.close(code=4429, reason="You have reached the maximum number of messages allowed by your subscription plan.")
+            return
+
         if not message_text:
             await self.close(code=4400, reason="Message not provided.")
             return
@@ -62,6 +78,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         await save_message(self.chat, message_text, sender="user", engine_ids=engines_list, reply_to=reply_to_message)
         self.messages.append({"role": "user", "content": final_msg})
+        customer.messages_sent_today += 1
+        await database_sync_to_async(customer.save)()
 
         await self._generate_and_send_response(engines_list, reply_to_id)
 
