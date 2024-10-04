@@ -74,9 +74,17 @@ class GenerateShareableLinkView(generics.GenericAPIView):
             self.notify_user(user, obj)
 
     def notify_user(self, user, obj):
-        subject = "You have been granted access to shared content"
-        message = f"You have been granted access to {obj.user.first_name}'s {obj.__class__.__name__.lower()} called X."
-        user.send_text_email(subject, message)
+        print(obj.shareable_key)
+        user.send_email(
+            subject=f"RITengine Platform: {obj.user.first_name} has shared a page with you!",
+            template_name="emails/share.html",
+            context={
+                "sender_name": obj.user.first_name,
+                "reciever_name": user.first_name,
+                "link":  f"{settings.FRONTEND_URL}/access/{obj.shareable_key}"
+            }
+
+        )
 
     def get_object(self):
         raise NotImplementedError("Subclasses should implement this method.")

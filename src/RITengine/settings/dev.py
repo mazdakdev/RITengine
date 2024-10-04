@@ -16,13 +16,13 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
-# EMAIL_HOST = os.getenv('EMAIL_HOST')
-# EMAIL_PORT = os.getenv('EMAIL_PORT', default=587)
-# EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', default=True)
-# EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-# EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_HOST = os.getenv('EMAIL_HOST')
+EMAIL_PORT = os.getenv('EMAIL_PORT', default=587)
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', default=True)
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 EMAIL_FROM = os.getenv("EMAIL_FROM")
 # OTP_EMAIL_SENDER = EMAIL_FROM
 
@@ -40,6 +40,6 @@ CACHES = {
     }
 }
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = 'redis://localhost:6372/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'

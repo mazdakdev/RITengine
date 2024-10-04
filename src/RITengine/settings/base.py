@@ -77,6 +77,7 @@ TEMPLATES = [
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         'DIRS': [
             BASE_DIR / 'user/templates',
+            BASE_DIR / 'share/templates',
             BASE_DIR / 'templates',
         ],
         "APP_DIRS": True,
@@ -279,7 +280,7 @@ TWO_FA_USER_RATELIMIT = os.getenv("TWO_FA_USER_RATELIMIT")
 DARKOB_SECRET = os.getenv("DARKOB_SECRET")
 DARKOB_XFP = os.getenv("DARKOB_XFP")
 
-OTP_TOTP_ISSUER = "RITengie"
+OTP_TOTP_ISSUER = "RITengine"
 # TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
 # TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
 # TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER")
