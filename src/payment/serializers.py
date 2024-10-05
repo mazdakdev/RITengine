@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Plan
+from rest_framework.exceptions import NotFound
 
 class PlanSerializer(serializers.ModelSerializer):
     class Meta:
@@ -15,5 +16,5 @@ class SubscriptionSerializer(serializers.Serializer):
         try:
             plan = Plan.objects.get(id=plan_id)
         except Plan.DoesNotExist:
-            raise serializers.ValidationError("Plan not found")
+            raise NotFound("Plan not found")
         return plan.stripe_price_id

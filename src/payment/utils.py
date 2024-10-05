@@ -41,5 +41,12 @@ def handle_subscription_updated(event):
     if stripe_subscription.cancel_at:
         subscription.cancel_at = datetime.fromtimestamp(stripe_subscription['cancel_at'])
 
+    stripe_price_id = stripe_subscription['items']['data'][0]['price']['id']
+    new_plan = Plan.objects.get(stripe_price_id=stripe_price_id)
+
+    if subscription.plan != new_plan:
+        subscription.plan = new_plan
+        print(f"Updated subscription {subscription.id} to new plan {new_plan.name}")
+
     subscription.save()
     return subscription
