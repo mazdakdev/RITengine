@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Plan
+from .models import Plan, PlanPrice
 from rest_framework.exceptions import NotFound
 
 class PlanSerializer(serializers.ModelSerializer):
@@ -9,12 +9,12 @@ class PlanSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionSerializer(serializers.Serializer):
-    plan_id = serializers.IntegerField()
+    plan_price_id = serializers.IntegerField()
 
     def get_price_id(self):
-        plan_id = self.validated_data['plan_id']
+        plan_price_id = self.validated_data['plan_price_id']
         try:
-            plan = Plan.objects.get(id=plan_id)
+            plan_price = PlanPrice.objects.get(id=plan_price_id)
         except Plan.DoesNotExist:
             raise NotFound("Plan not found")
-        return plan.stripe_price_id
+        return plan_price.stripe_price_id
