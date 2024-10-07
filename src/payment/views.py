@@ -14,7 +14,6 @@ from .models import Plan
 from django.contrib.auth import get_user_model
 from .serializers import PlanSerializer
 
-User = get_user_model()
 
 class CheckoutSessionView(APIView):
     permission_classes = [IsAuthenticated]
@@ -31,8 +30,8 @@ class CheckoutSessionView(APIView):
                 'source_id': stripe.Customer.create(email=user.email).id
             })
 
-            current_subscription = customer.subscriptions.filter(status='active').last()
-            if current_subscription:
+
+            if customer.has_active_subscription():
                 raise CustomAPIException("You already have an active subscription.")
 
             session = stripe.checkout.Session.create(
@@ -42,7 +41,16 @@ class CheckoutSessionView(APIView):
                 cancel_url=f'https://{settings.FRONTEND_URL}/checkout/cancel',
                 automatic_tax={'enabled': True},
                 customer=customer.source_id,
-                customer_update={'address': 'auto'}
+                customer_update={'address': 'auto'},
+                subscription_data={
+                    'trial_period_days': settings.TRIAL_DAYS,
+                    'trial_settings': {
+                        'end_behavior': {
+                            'missing_payment_method': 'cancel'
+                        }
+                    }
+                },
+                payment_method_collection='if_required'
             )
 
             return Response({'url': session.url}, status=status.HTTP_201_CREATED)
@@ -51,7 +59,6 @@ class CheckoutSessionView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 class StripeWebhookView(APIView):
     @csrf_exempt
@@ -100,14 +107,25 @@ class PlanListView(APIView):
         }
 
         for plan in plans:
-            serialized_plan = PlanSerializer(plan).data
-            if plan.interval == 'day':
-                categorized_plans['daily'].append(serialized_plan)
-            elif plan.interval == 'week':
-                categorized_plans['weekly'].append(serialized_plan)
-            elif plan.interval == 'month':
-                categorized_plans['monthly'].append(serialized_plan)
-            elif plan.interval == 'year':
-                categorized_plans['yearly'].append(serialized_plan)
+            for price in plan.prices.all():
+                serialized_plan = PlanSerializer(plan).data
+                serialized_price = {
+                    'id': price.id,
+                    'price': str(price.price),
+                    'interval_count': price.interval_count,
+                    'interval': price.interval,
+                    'currency': price.currency
+                }
+
+                serialized_plan['prices'] = [serialized_price]
+
+                if price.interval == 'day':
+                    categorized_plans['daily'].append(serialized_plan)
+                elif price.interval == 'week':
+                    categorized_plans['weekly'].append(serialized_plan)
+                elif price.interval == 'month':
+                    categorized_plans['monthly'].append(serialized_plan)
+                elif price.interval == 'year':
+                    categorized_plans['yearly'].append(serialized_plan)
 
         return Response(categorized_plans)

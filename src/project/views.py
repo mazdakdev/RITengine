@@ -19,14 +19,6 @@ from rest_framework.exceptions import PermissionDenied
 
 User = get_user_model()
 
-class ProjectListCreateView(generics.ListCreateAPIView):
-    serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated]
-    filterset_class = ProjectFilter
-    pagination_class = PageNumberPagination
-
-    def get_queryset(self):
-        return Project.objects.filter(user=self.request.user).order_by('-created_at')
 
 class ProjectListCreateView(generics.ListCreateAPIView):
     serializer_class = ProjectSerializer
@@ -38,19 +30,20 @@ class ProjectListCreateView(generics.ListCreateAPIView):
         return Project.objects.filter(user=self.request.user).order_by('-created_at')
 
     def perform_create(self, serializer):
-        if not hasattr(self.request.user, 'customer'):
-            if not self.request.user.is_trial_active:
-                raise PermissionDenied("You must have an active subscription to create projects.")
+        customer = getattr(self.request.user, 'customer', None)
 
-        customer = self.request.user.customer
-        active_subscription = customer.subscriptions.filter(status='active').first()
+        if customer:
+            project = serializer.save(user=self.request.user)
+            customer.can_create_project()
+            customer.projects_created += 1
+            customer.save()
 
-        if customer.projects_created >= active_subscription.plan.projects_total:
-            raise PermissionDenied("You have reached the maximum number of projects allowed by your subscription plan.")
+            if 'viewers' in serializer.validated_data:
+                project.viewers.add(*serializer.validated_data['viewers'])
 
-        serializer.save(user=self.request.user)
-        customer.projects_created += 1
-        customer.save()
+            return project
+        else:
+            raise PermissionDenied("You must have an active subscription to create projects.")
 
 class ProjectRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProjectSerializer

@@ -30,15 +30,24 @@ from .models import (
 
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
+
 class EngineListCreateView(generics.ListCreateAPIView):
-    queryset = Engine.objects.all()
     serializer_class = EngineSerializer
     pagination_class = PageNumberPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated and hasattr(user, 'customer') and user.customer.has_active_subscription():
+            allowed_categories = user.customer.subscription.plan.engines_categories.all()
+            return Engine.objects.filter(category__in=allowed_categories)
+        else:
+            return Engine.objects.none()
 
     def get_permissions(self):
         if self.request.method == 'POST':
             return [IsAdminUser()]
         return [AllowAny()]
+
 
 class EngineDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Engine.objects.all()
@@ -126,8 +135,15 @@ class AssistsDetailView(generics.RetrieveUpdateDestroyAPIView):
 class EngineCategoryListCreateView(generics.ListCreateAPIView):
     serializer_class = EngineCategorySerializer
     lookup_field = 'id'
-    queryset = EngineCategory.objects.filter(is_default=False)
     pagination_class = PageNumberPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated and hasattr(user, 'customer') and user.customer.has_active_subscription():
+            print("hio")
+            return user.customer.subscription.plan.engines_categories.all()
+        else:
+            return EngineCategory.objects.none()
 
     def get_permissions(self):
         if self.request.method == 'POST':

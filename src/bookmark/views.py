@@ -19,19 +19,29 @@ class BookmarksDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = BookmarkSerializer
 
     def get_object(self):
-        bookmark_id = self.kwargs.get('id')
+            bookmark_id = self.kwargs.get('id')
+            customer = getattr(self.request.user, 'customer', None)
 
-        if bookmark_id is not None:
-            try:
-                bookmark = Bookmark.objects.get(
-                                    Q(id=bookmark_id) & (Q(user=self.request.user) | Q(viewers=self.request.user))
-                                )
-            except Bookmark.DoesNotExist:
-                raise CustomAPIException("Bookmark not found", status_code=404)
-        else:
-            bookmark, created = Bookmark.objects.get_or_create(user=self.request.user)
+            if bookmark_id is not None:
+                try:
+                    bookmark = Bookmark.objects.get(
+                        Q(id=bookmark_id) & (Q(user=self.request.user) | Q(viewers=self.request.user))
+                    )
+                except Bookmark.DoesNotExist:
+                    raise CustomAPIException("Bookmark not found", status_code=404)
+            else:
+                if customer:
+                    # Check if the customer can create more bookmarks
+                    if customer.bookmarks_created >= customer.subscription.plan.bookmarks_limit:
+                        raise PermissionDenied("You have reached the maximum number of bookmarks allowed by your subscription plan.")
+                    bookmark, created = Bookmark.objects.get_or_create(user=self.request.user)
+                    if created:
+                        customer.bookmarks_created += 1
+                        customer.save()
+                else:
+                    raise PermissionDenied("You must have an active subscription to create bookmarks.")
 
-        return bookmark
+            return bookmark
 
 class BookmarkMessageView(APIView):
     """
@@ -55,32 +65,34 @@ class BookmarkMessageView(APIView):
         user = request.user
         message = get_object_or_404(Message, id=message_id, chat__user=user)
 
-        if not hasattr(user, 'customer'):
-            if not user.is_trial_active:
-                raise PermissionDenied("You must have an active subscription to create more bookmarks.")
+        customer = getattr(user, 'customer', None)
+        if not customer or not customer.has_active_subscription():
+            raise PermissionDenied("You must have an active subscription to create more bookmarks.")
 
-        customer = user.customer
-        active_subscription = customer.subscriptions.filter(status='active').first()
-
-        if customer.bookmarks_created >= active_subscription.plan.bookmarks_total:
+        if customer.bookmarks_created >= customer.subscription.plan.bookmarks_limit:
             raise PermissionDenied("You have reached the maximum number of bookmarks allowed by your subscription plan.")
-
 
         bookmark = self.get_or_create_bookmark(user)
 
         customer.bookmarks_created += 1
         customer.save()
 
+        bookmark, created = Bookmark.objects.get_or_create(user=user)
+        if created:
+            customer.bookmarks_created += 1
+            customer.save()
+
         if bookmark.messages.filter(id=message_id).exists():
-            raise CustomAPIException(
-                detail='Message is already bookmarked',
-                status_code=400
-            )
+                        raise CustomAPIException(
+                            detail='Message is already bookmarked',
+                            status_code=400
+                        )
 
         bookmark.messages.add(message)
 
         serializer = MessageSerializer(message, context={'user': user})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
     def delete(self, request, message_id):
         user = request.user

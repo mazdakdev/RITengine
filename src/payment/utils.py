@@ -9,7 +9,7 @@ def handle_subscription_created(event):
     stripe_subscription = event['data']['object']
     customer = Customer.objects.get(source_id=stripe_subscription['customer'])
     price_id = stripe_subscription['items']['data'][0]['price']['id']
-    plan = Plan.objects.filter(stripe_price_id=price_id).first()
+    plan = Plan.objects.filter(prices__stripe_price_id=price_id).first()
 
     subscription, created = Subscription.objects.get_or_create(
         customer=customer,
@@ -18,7 +18,7 @@ def handle_subscription_created(event):
             'plan': plan,
             'status': stripe_subscription['status'],
             'currency': stripe_subscription['currency'],
-            'amount': stripe_subscription['plan']['amount'] / 100,
+            'amount': stripe_subscription['items']['data'][0]['plan']['amount'] / 100,
             'started_at': datetime.fromtimestamp(stripe_subscription['created']),
         }
     )
@@ -42,7 +42,7 @@ def handle_subscription_updated(event):
         subscription.cancel_at = datetime.fromtimestamp(stripe_subscription['cancel_at'])
 
     stripe_price_id = stripe_subscription['items']['data'][0]['price']['id']
-    new_plan = Plan.objects.get(stripe_price_id=stripe_price_id)
+    new_plan = Plan.objects.get(prices__stripe_price_id=stripe_price_id)
 
     if subscription.plan != new_plan:
         subscription.plan = new_plan
