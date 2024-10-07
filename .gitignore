@@ -86,7 +86,7 @@ local_settings.py
 *.sqlite3
 mediafiles/
 staticfiles/
-
+logs.txt
 
 ### .env ###
 .env.dev

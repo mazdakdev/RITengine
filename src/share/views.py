@@ -18,6 +18,8 @@ from share.models import AccessRequest
 from .serializers import GenerateShareableLinkSerializer
 from user.serializers import UserSerializer
 from rest_framework.pagination import PageNumberPagination
+from .permissions import IsOwnerOrViewer
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -72,9 +74,17 @@ class GenerateShareableLinkView(generics.GenericAPIView):
             self.notify_user(user, obj)
 
     def notify_user(self, user, obj):
-        subject = "You have been granted access to shared content"
-        message = f"You have been granted access to {obj.user.first_name}'s {obj.__class__.__name__.lower()} called X."
-        user.send_text_email(subject, message)
+        print(obj.shareable_key)
+        user.send_email(
+            subject=f"RITengine Platform: {obj.user.first_name} has shared a page with you!",
+            template_name="emails/share.html",
+            context={
+                "sender_name": obj.user.first_name,
+                "reciever_name": user.first_name,
+                "link":  f"{settings.FRONTEND_URL}/access/{obj.shareable_key}"
+            }
+
+        )
 
     def get_object(self):
         raise NotImplementedError("Subclasses should implement this method.")
@@ -143,7 +153,6 @@ class AccessSharedContentView(generics.GenericAPIView):
             object_id=obj.id
         )
 
-        # Notify the owner
         self.notify_owner(obj.user, access_request)
         return True
 
@@ -176,7 +185,6 @@ class ApproveAccessRequestView(APIView):
             },
             status=status.HTTP_403_FORBIDDEN)
 
-        # Add the user to the viewers list
         access_request.content_object.viewers.add(access_request.user)
         access_request.approved = True
         access_request.save()
@@ -206,10 +214,12 @@ class BaseViewersListView(generics.GenericAPIView):
         raise NotImplementedError("Subclasses must implement the get_object method.")
 
     def get(self, request, *args, **kwargs):
+        obj = self.get_object()
         viewers = self.get_queryset()
         serializer = self.get_serializer(viewers, many=True)
         response_data = {
-            "viewers": serializer.data
+            "viewers": serializer.data,
+            "sharable_key": obj.shareable_key
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -350,3 +360,14 @@ class SharedByMeView(APIView):
             'status': 'success',
             **data,
         }, status=status.HTTP_200_OK)
+
+
+class SharedRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated, IsOwnerOrViewer]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        user = self.request.user
+        return self.queryset.filter(
+            Q(user=user) | Q(viewers=user)
+        ).select_related('user').prefetch_related('viewers').distinct()

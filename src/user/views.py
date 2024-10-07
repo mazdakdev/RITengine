@@ -141,11 +141,16 @@ class CustomLoginView(APIView):
         user = serializer.validated_data["user"]
 
         if user.preferred_2fa:
+            method = user.preferred_2fa
             tmp_token = auth_utils.generate_tmp_token(user, "2fa")
             auth_utils.generate_2fa_challenge(user)
 
             return Response(
-                {"status": "2fa_required", "tmp_token": tmp_token},
+                {
+                    "status": "2fa_required",
+                    "tmp_token": tmp_token,
+                    "method": method
+                },
                 status=status.HTTP_202_ACCEPTED,
             )
 

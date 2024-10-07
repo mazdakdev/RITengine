@@ -115,6 +115,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         final_response = ""
         async for chunk in openai_response:
             message_chunk = chunk.choices[0].delta.content or ""
+            message_chunk = message_chunk.replace("CHATGPT", "RITengine").replace("chatgpt", "RITengine").replace("ChatGPT", "RITengine").replace("chatGPT", "RITengine")
+            message_chunk = message_chunk.replace("OPENAI", "RIT team").replace("openai", "RIT team").replace("OpenAI", "RIT team").replace("openAI", "RIT team")
+
             final_response += message_chunk
             if message_chunk:
                 await self.send(text_data=json.dumps({

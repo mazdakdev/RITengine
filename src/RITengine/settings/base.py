@@ -1,8 +1,9 @@
 from pathlib import Path
 from datetime import timedelta
 from RITengine.utils import parse_duration
+from logging.handlers import TimedRotatingFileHandler
 import os
-import stripe
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -54,8 +55,7 @@ INSTALLED_APPS += [
     "project",
     "bookmark",
     "share",
-    "stats",
-    "payment"
+    "stats"
 ]
 
 SITE_ID = 1
@@ -69,7 +69,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
-    "payment.middleware.PaymentRequiredMiddleware"
 ]
 
 ROOT_URLCONF = "RITengine.urls"
@@ -79,6 +78,7 @@ TEMPLATES = [
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         'DIRS': [
             BASE_DIR / 'user/templates',
+            BASE_DIR / 'share/templates',
             BASE_DIR / 'templates',
         ],
         "APP_DIRS": True,
@@ -187,6 +187,45 @@ SOCIALACCOUNT_PROVIDERS = {
             }
         }
 }
+LOG_FILE_PATH = os.path.join(BASE_DIR, 'logs.txt')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': LOG_FILE_PATH,
+            'when': 'D',
+            'interval': 14,  # Every 14 days
+            'backupCount': 5,  # Keep 5 backups
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'django.request': {
+            'handlers': ['file'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    },
+}
 
 REST_AUTH = {
     "USE_JWT": True,
@@ -241,10 +280,15 @@ TWO_FA_USER_RATELIMIT = os.getenv("TWO_FA_USER_RATELIMIT")
 
 DARKOB_SECRET = os.getenv("DARKOB_SECRET")
 DARKOB_XFP = os.getenv("DARKOB_XFP")
+<<<<<<< HEAD
 stripe.api_key = os.getenv("STRIPE_API_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 TRIAL_DAYS = 3
 
+=======
+
+OTP_TOTP_ISSUER = "RITengine"
+>>>>>>> main
 # TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
 # TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
 # TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER")

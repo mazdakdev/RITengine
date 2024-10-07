@@ -13,9 +13,9 @@ from .utils.auth import (
         send_otp_email
     )
 from .utils.general import get_user_by_identifier
+from django.contrib.auth.password_validation import validate_password
 
 User = get_user_model()
-
 
 class RegistrationSerializer(serializers.ModelSerializer):
     password1 = serializers.CharField(write_only=True, style={"input_type": "password"})
@@ -25,30 +25,18 @@ class RegistrationSerializer(serializers.ModelSerializer):
         model = User
         fields = ['email', 'username', 'password1', 'password2']
 
-    def validate(self, attrs):
-        email = attrs.get('email')
-        username = attrs.get('username')
-        password1 = attrs.get('password1')
-        password2 = attrs.get('password2')
+    def validate_password1(self, value):
+        password2 = self.initial_data.get('password2')
 
-        if password1 != password2:
+        if value != password2:
             raise serializers.ValidationError("Passwords must match.")
 
-        if User.objects.filter(email=email).exists():
-            user = User.objects.get(email=email)
-            if not user.is_email_verified:
-                return attrs
-            else:
-                raise serializers.ValidationError("Email is already registered.")
+        try:
+            validate_password(value)
+        except serializers.ValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
 
-        if User.objects.filter(username=username).exists():
-            user = User.objects.get(username=username)
-            if not user.is_email_verified:
-                return attrs
-            else:
-                raise serializers.ValidationError("Username is already taken.")
-
-        return attrs
+        return value
 
     def create(self, validated_data):
         email = validated_data['email']
@@ -179,12 +167,13 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserDetailsSerializer(serializers.ModelSerializer):
-    inv_code = serializers.CharField(min_length=16, max_length=17)
+    username_change_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             "username",
+            "username_change_count",
             "email",
             "first_name",
             "last_name",
@@ -200,9 +189,10 @@ class UserDetailsSerializer(serializers.ModelSerializer):
         #     "last_name": {"required": True},
         #     "birthday": {"required": True},
         # }
-        read_only_fields = ["username", "email", "phone_number", "preferred_2fa", "last_login"]
+        read_only_fields = ["username", "email", "phone_number", "preferred_2fa", "last_login", "username_change_count"]
 
-
+    def get_username_change_count(self, obj):
+        return obj.username_change_count
 
 class PasswordResetSerializer(serializers.Serializer):
     identifier = serializers.CharField()

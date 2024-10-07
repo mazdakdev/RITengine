@@ -42,11 +42,13 @@ class MessageSerializer(serializers.ModelSerializer):
     is_bookmarked = serializers.SerializerMethodField()
     projects_in = serializers.SerializerMethodField()
     reply_to = serializers.PrimaryKeyRelatedField(queryset=Message.objects.all(), required=False, allow_null=True)
+    username = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
         fields = [
-            'id', 'is_bookmarked', 'projects_in',
+            'id', 'username',
+            'is_bookmarked', 'projects_in',
             'text', 'sender', 'timestamp',
             'chat', 'engines', 'reply_to'
         ]
@@ -77,6 +79,10 @@ class MessageSerializer(serializers.ModelSerializer):
         user = self.context.get("user")
         project_ids = obj.projects.filter(user=user).values_list('id', flat=True)
         return list(project_ids)
+
+    def get_username(self, obj):
+        return obj.chat.user.username
+
 
 class AssistSerializer(serializers.ModelSerializer):
     class Meta:

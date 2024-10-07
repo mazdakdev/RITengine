@@ -1,4 +1,5 @@
-from rest_framework import generics
+from rest_framework import generics, request
+from rest_framework.exceptions import NotFound
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from bookmark.serializers import BookmarkSerializer
@@ -10,11 +11,13 @@ from engine.models import Message
 from engine.serializers import MessageSerializer
 from RITengine.exceptions import CustomAPIException
 from rest_framework.views import APIView
-from django.db.models import Q
 from share.permissions import IsOwnerOrViewer
 from rest_framework.exceptions import PermissionDenied
 
 class BookmarksDetailView(generics.RetrieveUpdateAPIView):
+    """
+    Singleton like logic applied for now.
+    """
     permission_classes = [IsAuthenticated, IsOwnerOrViewer]
     serializer_class = BookmarkSerializer
 
@@ -22,6 +25,7 @@ class BookmarksDetailView(generics.RetrieveUpdateAPIView):
             bookmark_id = self.kwargs.get('id')
             customer = getattr(self.request.user, 'customer', None)
 
+<<<<<<< HEAD
             if bookmark_id is not None:
                 try:
                     bookmark = Bookmark.objects.get(
@@ -40,6 +44,16 @@ class BookmarksDetailView(generics.RetrieveUpdateAPIView):
                         customer.save()
                 else:
                     raise PermissionDenied("You must have an active subscription to create bookmarks.")
+=======
+        if bookmark_id is not None:
+            try:
+                bookmark = Bookmark.objects.get(id=bookmark_id)
+                self.check_object_permissions(self.request, bookmark)
+            except Bookmark.DoesNotExist:
+                raise NotFound("Bookmark not found.")
+        else:
+            bookmark, created = Bookmark.objects.get_or_create(user=self.request.user)
+>>>>>>> main
 
             return bookmark
 
