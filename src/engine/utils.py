@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import Message, Engine, EngineCategory
+from .functions import call_openai_function
 
 @database_sync_to_async
 def save_message(chat, text, sender, engine_ids, reply_to=None):
@@ -64,14 +65,16 @@ async def get_prompts(message, engines_list, reply_to_text=""):
     if len(categories) > 1:
         return None, None, "All engines must be in the same category."
 
-    # aggregating data from engines prompts or from their external services
     extra_data = []
     for engine in engines:
         if engine.external_service:
             service_adapter = engine.get_service_adapter()
             if service_adapter:
-                data = await service_adapter.perform_action(message)
-                extra_data.append(data)
+                tool_result = await call_openai_function([{'role': 'user', 'content': message}], engine.external_service)
+
+                # adapter_result = await service_adapter.search(query=tool_result, function_name=engine.external_service)
+                
+                extra_data.append({"external_data": adapter_result})
         elif engine.prompt:
             extra_data.append({"filter": engine.prompt})
 
