@@ -108,7 +108,8 @@ class CustomUserAdmin(BaseUserAdmin):
                         CustomUser.objects.create_user(
                             username=username,
                             password=password,
-                            email=email
+                            email=email,
+                            is_email_verified=True 
                         )
                 messages.success(request, "CSV file processed successfully")
                 return redirect("..")  # Redirect back to the admin page
