@@ -1,3 +1,4 @@
+import csv
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
@@ -5,10 +6,14 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.urls import reverse, path
+from django.shortcuts import render, redirect
 from django.utils.html import format_html
 from .otp_devices import EmailDevice, SMSDevice
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from .utils.auth import remove_existing_2fa_devices
+from django.contrib import messages
+from .forms import CSVUploadForm
+from .models import CustomUser
 
 User = get_user_model()
 
@@ -56,6 +61,7 @@ class CustomUserAdmin(BaseUserAdmin):
         urls = super().get_urls()
         custom_urls = [
             path('<int:user_id>/reset-2fa/', self.admin_site.admin_view(self.reset_2fa), name='reset_2fa'),
+            path('upload-csv/', self.admin_site.admin_view(self.upload_csv), name='upload_csv'),
         ]
         return custom_urls + urls
 
@@ -83,6 +89,38 @@ class CustomUserAdmin(BaseUserAdmin):
             obj.is_email_verified = True
         super().save_model(request, obj, form, change)
 
+    def upload_csv(self, request):
+        """CSV upload handler view."""
+        if request.method == "POST":
+            form = CSVUploadForm(request.POST, request.FILES)
+            if form.is_valid():
+                csv_file = request.FILES["csv_file"]
+                decoded_file = csv_file.read().decode('utf-8').splitlines()
+                reader = csv.reader(decoded_file)
 
+                # Skip header row
+                next(reader)
+
+                # Add accounts to the database
+                for row in reader:
+                    username, password, email = row
+                    if not CustomUser.objects.filter(username=username).exists():
+                        CustomUser.objects.create_user(
+                            username=username,
+                            password=password,
+                            email=email
+                        )
+                messages.success(request, "CSV file processed successfully")
+                return redirect("..")  # Redirect back to the admin page
+
+        else:
+            form = CSVUploadForm()
+
+        # Render the form on a custom template
+        context = {
+            "form": form,
+        }
+        return render(request, "admin/csv_upload.html", context)
+    
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(SMSDevice)
