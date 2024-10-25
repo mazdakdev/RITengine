@@ -44,16 +44,6 @@ class GooglePatentsAdapter(SerpapiAdapter):
         return self.parse_response(response)
 
     def parse_response(self, response):
-        # results = response.get('organic_results', [])
-        # return [
-        #     {
-        #         "title": result.get("title", ""),
-        #         "snippet": result.get("snippet", ""),
-        #         "patent_id": result.get("patent_id", ""),
-        #         "link": f"https://patents.google.com/patent/{result.get('patent_id', '')}"
-        #     }
-        #     for result in results
-        # ]
 
         results = response.get('organic_results', [])
         parsed_results = [

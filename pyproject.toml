@@ -2,7 +2,7 @@
 name = "ritengine"
 version = "0.1.0"
 description = ""
-authors = ["Mazdak <me@mazdak.dev>"]
+authors = ["Alireza Arabi <me@alirezaarabi.com>"]
 
 
 [tool.poetry.dependencies]
