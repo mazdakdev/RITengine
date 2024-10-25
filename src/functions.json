@@ -18,6 +18,44 @@
             }
         }
     ],
+    "google_scholar_search": [
+        {
+            "type": "function",
+            "function": {
+                "name": "google_scholar_search",
+                "description": "Get keyword and description for finding articles related to the user's invention",
+                "strict": true,
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "keyword": {"type": "string", "description": "The keyword to search for in articles"},
+                        "description": {"type": "string", "description": "The description of the keyword"}
+                    },
+                    "required": ["keyword", "description"],
+                    "additionalProperties": false
+                }
+            }
+        }
+    ],
+    "google_shopping_search": [
+        {
+            "type": "function",
+            "function": {
+                "name": "google_patents_search",
+                "description": "Get patents related to the user's query",
+                "strict": true,
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "keyword": {"type": "string", "description": "The keyword to search for in patents"},
+                        "description": {"type": "string", "description": "The description of the keyword"}
+                    },
+                    "required": ["keyword", "description"],
+                    "additionalProperties": false
+                }
+            }
+        }
+    ],
     "google_autocomplete_search": [
         {
             "type": "function",

@@ -83,18 +83,13 @@ async def get_prompts(message, engines_list, reply_to_text=""):
                 
                 # Now you can safely access the 'keyword'
                 keyword = tool_result.get("keyword")
+
                 if keyword:
                     total_result = service_adapter.search(query=keyword)
                     
-                    # Debugging prints
-                    # print("Tool Result:")
-                    # print(tool_result)
-                    print("Total Result:")
-                    print(len(total_result[0]))
-
-                    # Add the external data to extra_data
+                    if len(total_result) <= 0:
+                        extra_data.append("Say the api is not responding")
                     extra_data.append({"external_data": tool_result, "service_data": total_result})
-
                     
                 else:
                     print("Error: 'keyword' not found in tool_result")
