@@ -1,13 +1,13 @@
 # adapter.py
 
-from engine.adapters import serpapi_adapter
+from engine.adapters.serpapi import (google_patent, google_scholar, google_shopping, google_autocomplete)
 
 # Centralized dictionary mapping OpenAI function names to adapter classes
 api_adapters = {
-    "google_patents_search": serpapi_adapter.GooglePatentsAdapter,
-    "google_scholar_search": serpapi_adapter.GoogleScholarAdapter,
-    "google_shopping_search": serpapi_adapter.GoogleShoppingAdapter,
-    "google_autocomplete_search": serpapi_adapter.GoogleAutocompleteAdapter,
+    "google_patents_search": google_patent.GooglePatentsAdapter,
+    "google_scholar_search": google_scholar.GoogleScholarAdapter,
+    "google_shopping_search": google_shopping.GoogleShoppingAdapter,
+    "google_autocomplete_search": google_autocomplete.GoogleAutocompleteAdapter,
 }
 
 def get_adapter(function_name):
