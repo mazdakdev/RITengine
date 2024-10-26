@@ -47,7 +47,7 @@
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "keyword": {"type": "string", "description": "The keyword to search for in patents"},
+                        "keyword": {"type": "string", "description": "The keyword is the name of the electronic part, product name or any other goods which user provide"},
                         "description": {"type": "string", "description": "The description of the keyword"}
                     },
                     "required": ["keyword", "description"],
@@ -61,14 +61,14 @@
             "type": "function",
             "function": {
                 "name": "get_autocomplete_suggestions",
-                "description": "Get autocomplete suggestions for the user's query",
+                "description": "Get the users keyword which related to the user's invention",
                 "strict": true,
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "query": {"type": "string", "description": "The query to get autocomplete suggestions for"}
+                        "keyword": {"type": "string", "description": "The query to get autocomplete suggestions for"}
                     },
-                    "required": ["query"],
+                    "required": ["keyword"],
                     "additionalProperties": false
                 }
             }

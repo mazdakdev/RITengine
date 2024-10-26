@@ -14,4 +14,4 @@ class GoogleShoppingAdapter(SerpapiAdapter):
 
     def parse_response(self, response):
         results = response.get('shopping_results', [])
-        return [{"title": item["title"], "price": item["price"]} for item in results]
+        return [{"title": item["title"], "price": item["price"], "thumbnail": item["thumbnail"]} for item in results]
