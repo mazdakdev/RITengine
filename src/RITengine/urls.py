@@ -8,7 +8,7 @@ from django.conf import settings
 from RITengine.admin import admin_site
 
 urlpatterns = [
-   path("admin/statstics", admin_site.urls),
+   path("admin/statistics", admin_site.urls),
    path("admin/", admin.site.urls),
    path("api/auth/", include("user.urls")),
    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
