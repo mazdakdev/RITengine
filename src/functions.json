@@ -9,7 +9,7 @@
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "keyword": {"type": "string", "description": "The keyword to search for in patents"},
+                        "keyword": {"type": "string", "description": "The keyword to search for in patents or inventor's name to search in the google patent"},
                         "description": {"type": "string", "description": "The description of the keyword"}
                     },
                     "required": ["keyword", "description"],
