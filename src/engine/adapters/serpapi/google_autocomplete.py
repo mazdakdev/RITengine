@@ -2,7 +2,7 @@ from engine.adapters.serpapi_adapter import SerpapiAdapter
 
 class GoogleAutocompleteAdapter(SerpapiAdapter):
     """Adapter for Google Autocomplete suggestions via SerpApi."""
-    def search(self, query: str, geo_location: str = None, language: str = None):
+    async def search(self, query: str, geo_location: str = None, language: str = None):
         params = {
             "engine": "google_autocomplete",
             "q": query,

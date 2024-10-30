@@ -2,7 +2,7 @@ from engine.adapters.serpapi_adapter import SerpapiAdapter
 
 class GoogleScholarAdapter(SerpapiAdapter):
     """Adapter for Google Scholar searches via SerpApi."""
-    def search(self, query: str, language: str = None):
+    async def search(self, query: str, language: str = None):
         params = {
             "engine": "google_scholar",
             "q": query,

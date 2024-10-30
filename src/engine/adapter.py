@@ -10,7 +10,7 @@ api_adapters = {
     "google_autocomplete_search": google_autocomplete.GoogleAutocompleteAdapter,
 }
 
-def get_adapter(function_name):
+async def get_adapter(function_name):
     """
     Returns the corresponding adapter instance for the given function name.
     

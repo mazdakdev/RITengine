@@ -69,7 +69,7 @@ async def get_prompts(message, engines_list, reply_to_text=""):
     extra_data = []
     for engine in engines:
         if engine.external_service:
-            service_adapter = engine.get_service_adapter()
+            service_adapter = await engine.get_service_adapter()
             if service_adapter:
                 tool_result = await call_openai_function([{'role': 'user', 'content': message}], engine.external_service)
                 
@@ -83,9 +83,9 @@ async def get_prompts(message, engines_list, reply_to_text=""):
                 
                 # Now you can safely access the 'keyword'
                 keyword = tool_result.get("keyword")
-
+                
                 if keyword:
-                    total_result = service_adapter.search(query=keyword)
+                    total_result = await service_adapter.search(query=keyword)
                     
                     if len(total_result) <= 0:
                         extra_data.append("Say the api is not responding")

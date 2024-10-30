@@ -2,7 +2,7 @@ from engine.adapters.serpapi_adapter import SerpapiAdapter
 
 class GooglePatentsAdapter(SerpapiAdapter):
     """Adapter for Google Patents searches via SerpApi."""
-    def search(self, query: str, number=100, sort=("new", "old"), type=("PATENT", "DESIGN"), status=("GRANT", "APPLICATION")):
+    async def search(self, query: str, number=100, sort=("new", "old"), type=("PATENT", "DESIGN"), status=("GRANT", "APPLICATION")):
         params = {
             "engine": "google_patents",
             "q": query,

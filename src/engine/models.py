@@ -65,9 +65,9 @@ class Engine(models.Model):
     def __str__(self):
         return self.name
 
-    def get_service_adapter(self):
+    async def get_service_adapter(self):
         if self.external_service:
-            return get_adapter(self.external_service)  # No API key passed
+            return await get_adapter(self.external_service)  # No API key passed
         return None
 
 

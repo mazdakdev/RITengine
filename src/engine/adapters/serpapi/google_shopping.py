@@ -2,7 +2,7 @@ from engine.adapters.serpapi_adapter import SerpapiAdapter
 
 class GoogleShoppingAdapter(SerpapiAdapter):
     """Adapter for Google Shopping searches via SerpApi."""
-    def search(self, query: str, language: str = None):
+    async def search(self, query: str, language: str = None):
         params = {
             "engine": "google_shopping",
             "google_domain": "google.com",
