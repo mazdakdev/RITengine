@@ -54,7 +54,8 @@ INSTALLED_APPS += [
     "project",
     "bookmark",
     "share",
-    "stats"
+    "stats",
+    "inventions",
 ]
 
 SITE_ID = 1
