@@ -4,12 +4,18 @@ from .models import Office, Form, Field
 class OfficeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Office
-        fields = '__all__'
+        exclude = ['id']
+        extra_kwargs = {
+            'slug': {'read_only': True}
+        }
 
 class FormSerializer(serializers.ModelSerializer):
     class Meta:
         model = Form
-        fields = '__all__'
+        exclude = ['id', 'office']
+        extra_kwargs = {
+            'slug': {'read_only': True}
+        }
 
 class FieldSerializer(serializers.ModelSerializer):
     class Meta:
