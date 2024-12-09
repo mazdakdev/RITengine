@@ -30,6 +30,8 @@ from .throttles import TwoFAAnonRateThrottle, TwoFAUserRateThrottle
 from rest_framework import generics
 from django.db.models import Q
 from .tasks import send_sms_otp_task
+from django.core.serializers.json import DjangoJSONEncoder
+from django.http import JsonResponse
 
 User = get_user_model()
 
@@ -326,6 +328,7 @@ class Enable2FAView(APIView):
         if method in ["email", "sms"]:
             device.generate_challenge()
             response_data["detail"] = "An email has been sent." if method == "email" else "An SMS has been sent."
+            response_data["device"] = {str(user.email) if method == "email" else str(user.phone_number)}
         else:
             response_data["provisioning_uri"] = device.config_url
 

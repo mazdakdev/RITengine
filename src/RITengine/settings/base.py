@@ -55,7 +55,8 @@ INSTALLED_APPS += [
     "project",
     "bookmark",
     "share",
-    "stats"
+    "stats",
+    "inventions",
 ]
 
 SITE_ID = 1
@@ -98,9 +99,6 @@ TEMPLATES = [
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
@@ -277,12 +275,12 @@ MAXIMUM_ALLOWED_USERNAME_CHANGE = 3
 OAUTH_BASE_CALLBACK_URL = os.getenv("OAUTH_BASE_CALLBACK_URL")
 TWO_FA_ANON_RATELIMIT = os.getenv("TWO_FA_ANON_RATELIMIT")
 TWO_FA_USER_RATELIMIT = os.getenv("TWO_FA_USER_RATELIMIT")
-
 DARKOB_SECRET = os.getenv("DARKOB_SECRET")
 DARKOB_XFP = os.getenv("DARKOB_XFP")
 stripe.api_key = os.getenv("STRIPE_API_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 TRIAL_DAYS = 3
+SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 
 OTP_TOTP_ISSUER = "RITengine"
 

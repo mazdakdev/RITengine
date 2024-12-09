@@ -117,6 +117,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             message_chunk = chunk.choices[0].delta.content or ""
             message_chunk = message_chunk.replace("CHATGPT", "RITengine").replace("chatgpt", "RITengine").replace("ChatGPT", "RITengine").replace("chatGPT", "RITengine")
             message_chunk = message_chunk.replace("OPENAI", "RIT team").replace("openai", "RIT team").replace("OpenAI", "RIT team").replace("openAI", "RIT team")
+            message_chunk = message_chunk.replace("OPEN AI", "RIT team").replace("open ai", "RIT team").replace("Open AI", "RIT team").replace("open AI", "RIT team")
 
             final_response += message_chunk
             if message_chunk:

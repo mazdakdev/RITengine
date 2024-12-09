@@ -2,7 +2,7 @@
 name = "ritengine"
 version = "0.1.0"
 description = ""
-authors = ["Mazdak <me@mazdak.dev>"]
+authors = ["Alireza Arabi <me@alirezaarabi.com>"]
 
 
 [tool.poetry.dependencies]
@@ -113,6 +113,7 @@ wcwidth = "^0.2.13"
 yarl = "^1.11.1"
 zope-interface = "^7.0.3"
 stripe = "^10.12.0"
+serpapi = "^0.1.5"
 
 
 [build-system]

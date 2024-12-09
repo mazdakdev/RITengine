@@ -3,6 +3,8 @@ from django.utils import timezone
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import Message, Engine, EngineCategory
+from .functions import call_openai_function
+import json
 
 @database_sync_to_async
 def save_message(chat, text, sender, engine_ids, reply_to=None):
@@ -64,14 +66,35 @@ async def get_prompts(message, engines_list, reply_to_text=""):
     if len(categories) > 1:
         return None, None, "All engines must be in the same category."
 
-    # aggregating data from engines prompts or from their external services
     extra_data = []
     for engine in engines:
         if engine.external_service:
-            service_adapter = engine.get_service_adapter()
+            service_adapter = await engine.get_service_adapter()
             if service_adapter:
-                data = await service_adapter.perform_action(message)
-                extra_data.append(data)
+                tool_result = await call_openai_function([{'role': 'user', 'content': message}], engine.external_service)
+                
+                # Check if tool_result is a string and needs to be parsed
+                if isinstance(tool_result, str):
+                    try:
+                        tool_result = json.loads(tool_result)  # Parse the JSON string into a dictionary
+                    except json.JSONDecodeError:
+                        print("Error: tool_result is not valid JSON")
+                        continue  # Skip the rest of the loop if the parsing fails
+                
+                # Now you can safely access the 'keyword'
+                keyword = tool_result.get("keyword")
+                
+                if keyword:
+                    total_result = await service_adapter.search(query=keyword)
+                    
+                    if len(total_result) <= 0:
+                        extra_data.append("Say the api is not responding")
+                    extra_data.append({"external_data": tool_result, "service_data": total_result})
+                    
+                else:
+                    print("Error: 'keyword' not found in tool_result")
+            else:
+                print("Error: service_adapter not found")
         elif engine.prompt:
             extra_data.append({"filter": engine.prompt})
 

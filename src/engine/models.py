@@ -3,6 +3,7 @@ from bookmark.models import Bookmark
 from share.models import ShareableModel
 from .factories import ExternalServiceFactory
 import uuid
+from .adapter import get_adapter
 
 class Chat(ShareableModel):
     title = models.CharField(max_length=100, blank=True, null=True)
@@ -52,7 +53,10 @@ class Engine(models.Model):
     prompt = models.TextField(null=True, blank=True)
     category = models.ForeignKey(EngineCategory, related_name="engines", on_delete=models.CASCADE)
     EXTERNAL_SERVICE_CHOICES = (
-        ('darkob', 'Darkob'),
+        ('google_shopping_search', 'Google Shopping Search'),
+        ('google_patents_search', 'Google Patents Search'),
+        ('google_scholar_search', 'Google Scholar Search'),
+        ('google_autocomplete_search', 'Google Autocomplete Search'),
     )
     external_service = models.CharField(max_length=255, choices=EXTERNAL_SERVICE_CHOICES, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -61,8 +65,10 @@ class Engine(models.Model):
     def __str__(self):
         return self.name
 
-    def get_service_adapter(self):
-        return ExternalServiceFactory.get_service_adapter(self.external_service)
+    async def get_service_adapter(self):
+        if self.external_service:
+            return await get_adapter(self.external_service)  # No API key passed
+        return None
 
 
 class Message(models.Model):
