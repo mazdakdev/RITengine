@@ -2,7 +2,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.conf import settings
 from openai import AsyncOpenAI
-from .models import Chat, Message
+from .models import Chat, Message, EngineCategory
 from .utils import save_message, authenticate_user, get_prompts, load_chat_history
 import json
 import asyncio
@@ -32,19 +32,40 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close(code=4401, reason="JWT token is invalid or expired.")
             return
 
+        customer = await database_sync_to_async(lambda: getattr(self.user, 'customer', None))()
+        if not customer or not await database_sync_to_async(customer.has_active_subscription)():
+            await self.close(code=4429, reason="You must have an active subscription to use the chat.")
+            return
+
+        # Check if the user has reached the daily message limit
+        messages_sent_today = await database_sync_to_async(lambda: customer.messages_sent_today)()
+        messages_per_day = await database_sync_to_async(lambda: customer.subscription.plan.messages_limit)()
+        if messages_sent_today >= messages_per_day:
+            await self.close(code=4429, reason="You have reached the maximum number of messages allowed by your subscription plan.")
+            return
+
         if not message_text:
             await self.close(code=4400, reason="Message not provided.")
+            return
+
+        # Validate engine categories based on the customer's plan
+        allowed_engine_categories = await database_sync_to_async(lambda: list(customer.subscription.plan.engines_categories.all()))()
+        if not all(engine in [category.id for category in allowed_engine_categories] for engine in engines_list):
+            await self.close(code=4405, reason="One or more engine categories are not allowed by your subscription plan.")
             return
 
         # Handle reply-to logic
         reply_to_text = None
         reply_to_message = None
         if reply_to_id:
-            reply_to_message = await database_sync_to_async(Message.objects.get)(
-                id=reply_to_id, chat__user=self.user
-            )
-            if reply_to_message:
+            try:
+                reply_to_message = await database_sync_to_async(Message.objects.get)(
+                    id=reply_to_id, chat__user=self.user
+                )
                 reply_to_text = reply_to_message.text
+            except Message.DoesNotExist:
+                await self.close(code=4404, reason="Reply-to message not found.")
+                return
 
         final_msg, initial_prompt, error_message = await get_prompts(
             message_text, engines_list, reply_to_text
@@ -62,18 +83,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         await save_message(self.chat, message_text, sender="user", engine_ids=engines_list, reply_to=reply_to_message)
         self.messages.append({"role": "user", "content": final_msg})
+        customer.messages_sent_today += 1
+        await database_sync_to_async(customer.save)()
 
         await self._generate_and_send_response(engines_list, reply_to_id)
 
     async def _retrieve_or_create_chat(self, message_text):
         if self.slug:
-            self.chat = await database_sync_to_async(Chat.objects.get)(
-                slug=self.slug, user=self.user
-            )
-            if not self.chat:
+            try:
+                self.chat = await database_sync_to_async(Chat.objects.get)(
+                    slug=self.slug, user=self.user
+                )
+                self.messages = await load_chat_history(self.chat)
+            except Chat.DoesNotExist:
                 await self.close(code=4404, reason="Chat not found")
                 return
-            self.messages = await load_chat_history(self.chat)
         else:
             self.chat = await database_sync_to_async(Chat.objects.create)(
                 user=self.user, title=message_text[:50].strip()

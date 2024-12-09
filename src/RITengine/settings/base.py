@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_totp",
     "channels",
     "django_filters",
+    'django_celery_beat',
 ]
 
 INSTALLED_APPS += [
@@ -274,10 +275,15 @@ MAXIMUM_ALLOWED_USERNAME_CHANGE = 3
 OAUTH_BASE_CALLBACK_URL = os.getenv("OAUTH_BASE_CALLBACK_URL")
 TWO_FA_ANON_RATELIMIT = os.getenv("TWO_FA_ANON_RATELIMIT")
 TWO_FA_USER_RATELIMIT = os.getenv("TWO_FA_USER_RATELIMIT")
-
+DARKOB_SECRET = os.getenv("DARKOB_SECRET")
+DARKOB_XFP = os.getenv("DARKOB_XFP")
+stripe.api_key = os.getenv("STRIPE_API_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+TRIAL_DAYS = 3
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 
 OTP_TOTP_ISSUER = "RITengine"
+
 # TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
 # TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
 # TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER")

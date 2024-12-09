@@ -11,8 +11,10 @@ from engine.serializers import MessageSerializer
 from .filters import ProjectFilter
 from rest_framework.pagination import PageNumberPagination
 from share.permissions import IsOwnerOrViewer
+from rest_framework.exceptions import PermissionDenied
 
 User = get_user_model()
+
 
 class ProjectListCreateView(generics.ListCreateAPIView):
     serializer_class = ProjectSerializer
@@ -24,7 +26,20 @@ class ProjectListCreateView(generics.ListCreateAPIView):
         return Project.objects.filter(user=self.request.user).order_by('-created_at')
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        customer = getattr(self.request.user, 'customer', None)
+
+        if customer:
+            project = serializer.save(user=self.request.user)
+            customer.can_create_project()
+            customer.projects_created += 1
+            customer.save()
+
+            if 'viewers' in serializer.validated_data:
+                project.viewers.add(*serializer.validated_data['viewers'])
+
+            return project
+        else:
+            raise PermissionDenied("You must have an active subscription to create projects.")
 
 class ProjectRetrieveUpdateDestroyView(SharedRetrieveUpdateDestroyView):
     queryset = Project.objects.all()
